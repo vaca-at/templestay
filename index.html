@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>큰법당 템플스테이</title>
+<meta name="description" content="산과 강과 바다가 보이는 3D 법당에서 함께 합장하고, 절하고, 소원을 올려요.">
+<meta property="og:title" content="큰법당 템플스테이">
+<meta property="og:description" content="수목원 숲, 두물머리 산꼭대기, 남해 절벽의 3D 법당에 함께 머물러요.">
+<meta name="theme-color" content="#2b2420">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="fade"></div>
+
+<!-- 1. 첫 화면 -->
+<section id="intro" class="screen">
+  <div class="intro-card">
+    <p class="eyebrow">산중 3D 법당</p>
+    <h1>큰법당 템플스테이</h1>
+    <p class="lead">숲과 강과 바다가 내려다보이는 법당에서<br>함께 합장하고, 절하고, 소원을 올려요.</p>
+    <div class="intro-actions">
+      <button id="btn-continue" class="primary" hidden><span class="lbl"></span><small class="cap">저장된 캐릭터로 바로 법당 고르기</small></button>
+      <button id="btn-new" class="primary"><span class="lbl">캐릭터 만들고 들어가기</span><small class="cap">유형·옷·장신구를 골라 내 모습 만들기</small></button>
+      <button id="btn-guest" class="ghost"><span class="lbl">캐릭터 없이 둘러보기</span><small class="cap">다른 분들만 보이고 나는 보이지 않아요</small></button>
+    </div>
+    <p class="fine">캐릭터가 있는 분들끼리 한 법당에서 서로 보여요.</p>
+    <p class="fine credit">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116), 공공누리 제1유형. 원본 3D 스캔 중 좌불만 골라 웹용 크기·텍스처·압축을 조정했어요.</p>
+  </div>
+</section>
+
+<!-- 2. 캐릭터 꾸미기 -->
+<section id="creator" class="screen" hidden>
+  <div class="creator">
+    <div class="preview-wrap"><canvas id="preview"></canvas><p class="hint">끌어서 돌려 보세요</p></div>
+    <div class="options">
+      <header class="panel-head">
+        <h2>내 캐릭터</h2>
+        <button class="icon-btn" data-close="creator" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button>
+      </header>
+      <label class="field" for="nick">법명(닉네임)
+        <span class="row"><input id="nick" maxlength="10" autocomplete="off"><button id="nick-dice" class="ghost small" type="button"><span class="lbl">다른 이름</span><small class="cap">무작위로 새 법명</small></button></span>
+      </label>
+      <div class="group"><h3>유형</h3><div id="opt-type" class="chips"></div></div>
+      <div class="group"><h3>피부·털 색</h3><div id="opt-skin" class="swatches"></div></div>
+      <div class="group"><h3>옷</h3><div id="opt-outfit" class="chips"></div></div>
+      <div class="group"><h3>장신구</h3><div id="opt-acc" class="chips"></div></div>
+      <button id="creator-done" class="primary wide"><span class="lbl">이 모습으로 다니기</span><small class="cap">저장하고 다음 단계로 · 이 기기에 기억돼요</small></button>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 법당 위치 고르기 -->
+<section id="places" class="screen" hidden>
+  <div class="places">
+    <header class="panel-head">
+      <div><p class="eyebrow">어디로 갈까요</p><h2>법당 위치</h2></div>
+      <button class="icon-btn" data-close="places" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button>
+    </header>
+    <div id="place-list" class="place-list"></div>
+  </div>
+</section>
+
+<!-- 4. 법당 안 화면 -->
+<section id="hud" hidden>
+  <div class="hud-top">
+    <div class="hud-left">
+      <button id="server-chip" class="glass chip-btn"><span class="lbl"><b id="hud-place"></b><span id="hud-server"></span></span><small class="cap">눌러서 서버 바꾸기</small></button>
+      <span id="hud-people" class="glass mini"></span>
+    </div>
+    <div class="hud-right">
+      <span id="hud-timer" class="glass mini" title="머문 시간"></span>
+      <button id="btn-inout" class="glass chip-btn"><span class="lbl"></span><small class="cap"></small></button>
+      <button id="btn-sound" class="glass icon-btn" aria-label="소리"><span class="lbl">🔈</span><small class="cap">소리</small></button>
+      <button id="btn-menu" class="glass icon-btn" aria-label="메뉴"><span class="lbl">☰</span><small class="cap">메뉴</small></button>
+    </div>
+  </div>
+  <div id="toasts"></div>
+  <div id="menu" class="glass menu" hidden>
+    <button data-menu="char"><span class="lbl">캐릭터 꾸미기</span><small class="cap">유형·옷·법명 바꾸기</small></button>
+    <button data-menu="place"><span class="lbl">법당 위치 옮기기</span><small class="cap">숲·두물머리·남해 중에서</small></button>
+    <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 인원이 달라요</small></button>
+    <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
+    <button data-menu="credit"><span class="lbl">자료 출처</span><small class="cap">불상 3D 스캔 출처</small></button>
+    <button data-menu="home"><span class="lbl">처음 화면</span><small class="cap">법당을 나가 첫 화면으로</small></button>
+  </div>
+  <div id="bae-counter" class="glass" hidden></div>
+  <div id="context-btns">
+    <button id="btn-wish" class="glass ctx" hidden><span class="lbl">복전함에 소원 올리기</span><small class="cap">소원지를 쓰면 연등으로 걸려요</small></button>
+    <button id="btn-enter" class="glass ctx" hidden><span class="lbl">법당 안으로 들어가기</span><small class="cap">방석에 앉고 절할 수 있어요</small></button>
+    <button id="btn-stand" class="glass ctx" hidden><span class="lbl">일어서기</span><small class="cap">방석에서 일어나 걷기</small></button>
+  </div>
+  <div id="guest-bar" class="glass" hidden>둘러보는 중이에요. <button id="guest-make" class="link"><span class="lbl">캐릭터 만들기</span><small class="cap">만들면 다른 분들께 보여요</small></button></div>
+  <nav id="actions" class="glass"></nav>
+  <div id="joystick"><div class="knob"></div></div>
+</section>
+
+<!-- 서버 고르기 -->
+<div id="server-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2 id="server-title"></h2><button class="icon-btn" data-close="server-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">어느 서버에서도 같은 법당을 이용할 수 있어요.</p>
+    <div class="row between"><span id="server-now" class="muted"></span><button id="server-refresh" class="link"><span class="lbl">인원 새로고침</span><small class="cap">지금 인원 다시 세기</small></button></div>
+    <p class="muted small">표시된 인원은 지금 캐릭터로 접속한 실제 방문객 수예요.</p>
+    <div id="server-grid" class="server-grid"></div>
+  </div>
+</div>
+
+<!-- 소원 쓰기 -->
+<div id="wish-modal" class="modal" hidden>
+  <form id="wish-form" class="sheet">
+    <header class="panel-head"><h2>소원지 쓰기</h2><button type="button" class="icon-btn" data-close="wish-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">쓴 소원은 연등이 되어 법당 천장에 걸려요. 같은 서버에 있는 분들도 볼 수 있어요.</p>
+    <label class="field" for="wish-text">소원
+      <textarea id="wish-text" maxlength="80" rows="3" placeholder="가족 모두 건강하게 해주세요" required></textarea>
+    </label>
+    <div class="group"><h3>연등 색</h3><div id="wish-colors" class="swatches"></div></div>
+    <div class="group"><h3>마음 시주</h3><div id="wish-amounts" class="chips"></div>
+      <p class="muted small">가상 시주예요. 실제로 돈이 나가지 않아요.</p></div>
+    <button class="primary wide" type="submit"><span class="lbl">복전함에 넣기</span><small class="cap">소원지가 복전함에 들어가고 연등이 올라가요</small></button>
+  </form>
+</div>
+
+<!-- 내 소원 목록 -->
+<div id="mywish-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2>내가 올린 소원</h2><button class="icon-btn" data-close="mywish-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <ul id="mywish-list" class="wish-list"></ul>
+  </div>
+</div>
+
+<!-- 자료 출처 -->
+<div id="credit-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2>자료 출처</h2><button class="icon-btn" data-close="credit-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116)<br>공공누리 제1유형(출처표시). 원본 3D 스캔 중 좌불만 골라 웹용 크기·텍스처·압축을 조정했어요.</p>
+    <p class="sub">법당, 풍경, 캐릭터는 모두 이 앱에서 직접 만든 3D 모형이에요.</p>
+  </div>
+</div>
+
+<div id="loading" class="screen"><p>법당 문을 여는 중…</p></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

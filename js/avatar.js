@@ -1,0 +1,434 @@
+// 캐릭터 모델과 동작 애니메이션.
+// 모든 부품은 기본 도형으로 만들고, 관절(hips, head, 팔다리) 회전값으로 동작을 표현한다.
+// 캐릭터는 +z 방향을 바라본다.
+import * as THREE from 'three';
+import { OUTFITS, SKIN_TONES } from './data.js';
+
+const FUR = ['#c27a45', '#a9643a', '#8a5a3c', '#d9a06b', '#6e4a35'];
+const RABBIT_FUR = ['#f3efe8', '#e2d6c6', '#cbbba6', '#a99a88', '#8a7d70'];
+
+const matCache = new Map();
+export function mat(color, opts = {}) {
+  const key = color + JSON.stringify(opts);
+  if (!matCache.has(key)) {
+    matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0, ...opts }));
+  }
+  return matCache.get(key);
+}
+
+const G = {
+  sphere: new THREE.SphereGeometry(1, 28, 20),
+  sphereLo: new THREE.SphereGeometry(1, 12, 10),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 20),
+  cone: new THREE.CylinderGeometry(0.62, 1, 1, 24, 1, true),
+  box: new THREE.BoxGeometry(1, 1, 1),
+  capsule: new THREE.CapsuleGeometry(1, 1, 6, 12),
+  torus: new THREE.TorusGeometry(1, 0.08, 8, 40),
+};
+
+function mesh(geo, material, sx = 1, sy = 1, sz = 1, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(geo, material);
+  m.scale.set(sx, sy, sz);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  return m;
+}
+
+function nameTag(text, mine) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 112;
+  const g = c.getContext('2d');
+  g.font = '600 46px "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+  const w = Math.min(500, g.measureText(text).width + 56);
+  const x = (512 - w) / 2;
+  g.fillStyle = mine ? 'rgba(126, 74, 34, 0.82)' : 'rgba(30, 28, 26, 0.5)';
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, 18, w, 76, 38); else g.rect(x, 18, w, 76);
+  g.fill();
+  g.fillStyle = '#fffaf0';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, 256, 58);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
+  s.scale.set(1.35, 0.3, 1);
+  s.renderOrder = 10;
+  return s;
+}
+
+// 자세: y(몸 낮추기), hip(상체 숙임), head, 팔·다리 [x회전, z회전]
+const STAND = { y: 0, hip: 0, head: 0, aL: [0, 0.08], aR: [0, -0.08], lL: [0, 0], lR: [0, 0] };
+const SIT = { y: -0.34, hip: 0.04, head: 0.05, aL: [-0.55, -0.4], aR: [-0.55, 0.4], lL: [-1.5, 0.8], lR: [-1.5, -0.8] };
+const HAPJANG_ARMS = { aL: [-1.25, -0.55], aR: [-1.25, 0.55] };
+const KEYS = ['y', 'hip', 'head'];
+const LIMBS = ['aL', 'aR', 'lL', 'lR'];
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+// 구간 [a,b] 안에서 0→1로 올라갔다가 [c,d]에서 1→0으로 내려오는 곡선
+const bump = (t, a, b, c, d) => ease((t - a) / (b - a)) * (1 - ease((t - c) / (d - c)));
+
+function mix(base, over, k) {
+  const out = { ...base };
+  for (const key of KEYS) if (over[key] !== undefined) out[key] = lerp(base[key], over[key], k);
+  for (const key of LIMBS) if (over[key]) out[key] = [lerp(base[key][0], over[key][0], k), lerp(base[key][1], over[key][1], k)];
+  return out;
+}
+
+// 동작별 자세 계산. t = 동작 시작 후 경과 초
+function actionPose(action, t, base, seated) {
+  switch (action) {
+    case 'hapjang':
+      return mix(base, { ...HAPJANG_ARMS, head: 0.15 }, bump(t, 0, 0.4, 1.9, 2.4));
+    case 'banbae': {
+      const p = mix(base, HAPJANG_ARMS, bump(t, 0, 0.35, 2.1, 2.6));
+      return mix(p, { hip: seated ? 0.5 : 0.55, head: 0.25 }, bump(t, 0.5, 1.0, 1.6, 2.1));
+    }
+    case 'keunjeol':
+    case 'bae108': {
+      const T = 4.2, u = t % T;
+      let p = mix(base, HAPJANG_ARMS, bump(u, 0, 0.4, 0.8, 1.1));
+      // 무릎 꿇기
+      if (!seated) p = mix(p, { y: -0.36, lL: [1.5, 0.12], lR: [1.5, -0.12] }, bump(u, 0.8, 1.4, 3.3, 3.9));
+      // 이마를 바닥에, 두 팔을 앞으로
+      return mix(p, { hip: 1.25, head: 0.3, aL: [-2.6, -0.15], aR: [-2.6, 0.15] }, bump(u, 1.3, 1.9, 2.8, 3.4));
+    }
+    case 'beads':
+      return mix(base, { aR: [-1.15, 0.45], aL: [-0.9, -0.25], head: 0.22 }, ease(t / 0.4));
+    case 'moktak': {
+      const hit = Math.max(0, Math.sin(t * Math.PI * 2 * 1.1)) ** 3;
+      return mix(base, { aL: [-1.0, -0.2], aR: [-1.25 - hit * 0.35, 0.35], head: 0.12 }, ease(t / 0.4));
+    }
+    case 'meditate':
+      return mix(base, { aL: [-0.62, -0.55], aR: [-0.62, 0.55], head: 0.18, hip: -0.04 }, ease(t / 0.8));
+    case 'wave': {
+      const k = bump(t, 0, 0.3, 1.6, 2.0);
+      return mix(base, { aR: [-0.3, -2.5 + Math.sin(t * 12) * 0.35] }, k);
+    }
+  }
+  return base;
+}
+
+export class Avatar {
+  constructor(look, name, { mine = false } = {}) {
+    this.group = new THREE.Group();
+    this.look = look;
+    this.mine = mine;
+    this.pose = { ...STAND, aL: [...STAND.aL], aR: [...STAND.aR], lL: [0, 0], lR: [0, 0] };
+    this.walkPhase = 0;
+    this.speed = 0;
+    this.seated = false;
+    this.action = null;
+    this.actionT = 0;
+    this.fresh = true;
+    this.build(look);
+    this.setName(name);
+  }
+
+  setName(name) {
+    if (this.tag) this.group.remove(this.tag);
+    this.name = name;
+    this.tag = nameTag(name, this.mine);
+    this.tag.position.y = 2.05;
+    this.group.add(this.tag);
+  }
+
+  build(look) {
+    if (this.body) this.group.remove(this.body);
+    this.look = look;
+    const outfit = OUTFITS.find((o) => o.id === look.outfit) || OUTFITS[0];
+    const skinIdx = Math.max(0, SKIN_TONES.indexOf(look.skin));
+    const animal = ['squirrel', 'bear', 'rabbit'].includes(look.type);
+    const skinColor = look.type === 'rabbit' ? RABBIT_FUR[skinIdx] : animal ? FUR[skinIdx] : look.skin;
+    const skin = mat(skinColor);
+    const top = mat(outfit.top), bottom = mat(outfit.bottom), sash = mat(outfit.sash);
+    const dark = mat('#2a2220');
+    const white = mat('#f7f3ea');
+
+    const body = new THREE.Group();
+    this.body = body;
+    this.group.add(body);
+
+    // 다리 (엉덩이 관절에 매달림)
+    const legY = 0.4;
+    const mkLeg = (side) => {
+      const g = new THREE.Group();
+      g.position.set(0.13 * side, legY, 0);
+      g.add(mesh(G.capsule, outfit.style === 'hanbok' || outfit.style === 'hiking' ? bottom : mat(outfit.bottom), 0.1, 0.13, 0.1, 0, -0.2, 0));
+      const foot = mesh(G.sphere, outfit.style === 'hiking' ? mat('#5a3c2a') : white, 0.11, 0.08, 0.15, 0, -0.38, 0.04);
+      g.add(foot);
+      body.add(g);
+      return g;
+    };
+    this.legL = mkLeg(1);
+    this.legR = mkLeg(-1);
+
+    const hips = new THREE.Group();
+    hips.position.y = legY;
+    body.add(hips);
+    this.hips = hips;
+
+    // 몸통: 위로 갈수록 좁아지는 원통 + 아래 치마(장삼 자락)
+    const torso = mesh(G.cyl, top, 1, 1, 1, 0, 0.27, 0);
+    torso.geometry = new THREE.CylinderGeometry(0.22, 0.3, 0.56, 22);
+    hips.add(torso);
+    const longSkirt = outfit.style === 'coat' || outfit.style === 'kasaya';
+    if (outfit.style !== 'hiking' && outfit.style !== 'hanbok') {
+      const skirt = mesh(G.cone, longSkirt ? top : bottom, 0.34, longSkirt ? 0.4 : 0.3, 0.32, 0, longSkirt ? -0.17 : -0.12, 0);
+      skirt.material = (longSkirt ? top : bottom).clone();
+      skirt.material.side = THREE.DoubleSide;
+      skirt.userData = { h: skirt.scale.y, y: skirt.position.y };
+      hips.add(skirt);
+      this.skirt = skirt;
+    } else {
+      this.skirt = null;
+      hips.add(mesh(G.cyl, bottom, 0.29, 0.12, 0.27, 0, -0.02, 0));
+    }
+
+    // 스타일별 장식
+    if (outfit.style === 'robe' || outfit.style === 'kasaya') {
+      const band = mesh(G.box, sash, outfit.style === 'kasaya' ? 0.2 : 0.13, 0.66, 0.05, 0.02, 0.28, 0.24);
+      band.rotation.z = 0.55;
+      band.rotation.x = -0.12;
+      hips.add(band);
+      if (outfit.style === 'kasaya') {
+        const back = band.clone(); back.position.z = -0.24; back.rotation.x = 0.12; hips.add(back);
+      }
+    }
+    if (outfit.style === 'hanbok') {
+      const collar = mesh(G.box, white, 0.07, 0.36, 0.03, 0.04, 0.38, 0.23); collar.rotation.z = 0.6; hips.add(collar);
+      hips.add(mesh(G.sphere, sash, 0.05, 0.05, 0.04, -0.06, 0.25, 0.27));
+      const ribbon = mesh(G.box, sash, 0.05, 0.22, 0.02, -0.08, 0.13, 0.27); ribbon.rotation.z = -0.25; hips.add(ribbon);
+    }
+    if (outfit.style === 'hiking') {
+      hips.add(mesh(G.box, mat('#f2f2f2'), 0.02, 0.5, 0.02, 0, 0.27, 0.27));
+      hips.add(mesh(G.cyl, sash, 0.2, 0.08, 0.2, 0, 0.56, 0));
+    }
+    if (outfit.style === 'coat') {
+      hips.add(mesh(G.box, white, 0.06, 0.3, 0.03, 0.05, 0.4, 0.22));
+      const tie = mesh(G.box, sash, 0.06, 0.26, 0.02, -0.05, 0.16, 0.29); tie.rotation.z = -0.3; hips.add(tie);
+    }
+
+    // 팔: 어깨 관절에서 아래로
+    const mkArm = (side) => {
+      const g = new THREE.Group();
+      g.position.set(0.25 * side, 0.48, 0);
+      g.add(mesh(G.capsule, top, 0.085, 0.16, 0.085, 0.01 * side, -0.16, 0));
+      const hand = mesh(G.sphere, skin, 0.085, 0.085, 0.085, 0.01 * side, -0.33, 0);
+      g.add(hand);
+      hips.add(g);
+      return { g, hand };
+    };
+    const L = mkArm(1), R = mkArm(-1);
+    this.armL = L.g; this.armR = R.g; this.handL = L.hand; this.handR = R.hand;
+
+    // 머리
+    const head = new THREE.Group();
+    head.position.y = 0.56;
+    hips.add(head);
+    this.head = head;
+    const hr = animal ? 0.36 : 0.4;
+    head.add(mesh(G.sphere, skin, hr, hr * 0.96, hr * 0.94, 0, 0.36, 0));
+    // 얼굴
+    const eyeY = 0.33, eyeZ = hr * 0.9;
+    head.add(mesh(G.sphereLo, dark, 0.035, 0.045, 0.02, 0.13, eyeY, eyeZ));
+    head.add(mesh(G.sphereLo, dark, 0.035, 0.045, 0.02, -0.13, eyeY, eyeZ));
+    const blush = mat('#f19a8e', { transparent: true, opacity: 0.55 });
+    head.add(mesh(G.sphereLo, blush, 0.06, 0.035, 0.015, 0.21, 0.25, eyeZ - 0.06));
+    head.add(mesh(G.sphereLo, blush, 0.06, 0.035, 0.015, -0.21, 0.25, eyeZ - 0.06));
+    head.add(mesh(G.sphereLo, mat('#b5544a'), 0.035, 0.015, 0.012, 0, 0.21, eyeZ + 0.005));
+
+    if (!animal) {
+      head.add(mesh(G.sphereLo, skin, 0.07, 0.09, 0.05, hr * 0.98, 0.33, 0));
+      head.add(mesh(G.sphereLo, skin, 0.07, 0.09, 0.05, -hr * 0.98, 0.33, 0));
+    }
+    const hair = mat('#2b2422');
+    if (look.type === 'bosal') {
+      const cap = mesh(G.sphere, hair, hr * 1.04, hr * 0.98, hr * 0.98, 0, 0.4, -0.03);
+      cap.scale.multiply(new THREE.Vector3(1, 1, 1));
+      head.add(cap);
+      head.add(mesh(G.sphere, hair, 0.16, 0.15, 0.15, 0, 0.36, -0.42));
+      const hairpin = mesh(G.cyl, mat('#d9b44a', { metalness: 0.4, roughness: 0.4 }), 0.015, 0.4, 0.015, 0, 0.36, -0.46);
+      hairpin.rotation.z = Math.PI / 2;
+      head.add(hairpin);
+      // 이마 아래 얼굴 부분이 보이도록 앞머리 영역을 피부로 덮는다
+      head.add(mesh(G.sphere, skin, hr * 0.96, hr * 0.78, hr * 0.5, 0, 0.29, hr * 0.48));
+    }
+    if (look.type === 'cheosa') {
+      head.add(mesh(G.sphere, hair, hr * 1.02, hr * 0.62, hr * 1.0, 0, 0.5, -0.02));
+      head.add(mesh(G.box, hair, 0.09, 0.02, 0.02, 0.13, 0.41, eyeZ - 0.01));
+      head.add(mesh(G.box, hair, 0.09, 0.02, 0.02, -0.13, 0.41, eyeZ - 0.01));
+    }
+    if (look.type === 'squirrel' || look.type === 'bear') {
+      const er = look.type === 'bear' ? 0.11 : 0.08;
+      head.add(mesh(G.sphere, skin, er, er * (look.type === 'squirrel' ? 1.5 : 1), er * 0.7, 0.24, 0.66, -0.02));
+      head.add(mesh(G.sphere, skin, er, er * (look.type === 'squirrel' ? 1.5 : 1), er * 0.7, -0.24, 0.66, -0.02));
+      head.add(mesh(G.sphere, mat('#f2dcc0'), 0.15, 0.1, 0.08, 0, 0.22, hr * 0.84));
+      head.add(mesh(G.sphereLo, dark, 0.035, 0.028, 0.02, 0, 0.26, hr * 0.84 + 0.07));
+    }
+    if (look.type === 'rabbit') {
+      const pink = mat('#f2b6bd');
+      for (const s of [1, -1]) {
+        const ear = new THREE.Group();
+        ear.position.set(0.12 * s, 0.62, -0.02);
+        ear.rotation.z = -0.18 * s;
+        ear.add(mesh(G.capsule, skin, 0.07, 0.3, 0.04, 0, 0.2, 0));
+        ear.add(mesh(G.capsule, pink, 0.04, 0.24, 0.02, 0, 0.2, 0.03));
+        head.add(ear);
+      }
+      head.add(mesh(G.sphereLo, pink, 0.03, 0.022, 0.02, 0, 0.26, hr * 0.96));
+    }
+    // 꼬리
+    if (look.type === 'squirrel') {
+      const tail = new THREE.Group();
+      for (let i = 0; i < 6; i++) {
+        const a = i / 5;
+        tail.add(mesh(G.sphere, skin, 0.15 + a * 0.06, 0.15 + a * 0.06, 0.13, 0, 0.05 + a * 0.75, -0.32 - Math.sin(a * 2.2) * 0.22));
+      }
+      hips.add(tail);
+    }
+    if (look.type === 'bear' || look.type === 'rabbit') {
+      hips.add(mesh(G.sphere, look.type === 'rabbit' ? white : skin, 0.08, 0.08, 0.08, 0, -0.02, -0.3));
+    }
+
+    // 장신구
+    const acc = look.acc;
+    if (acc === 'beads') {
+      const beadMat = mat('#6b3b22', { roughness: 0.4 });
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * Math.PI * 2;
+        head.add(mesh(G.sphereLo, beadMat, 0.035, 0.035, 0.035, Math.sin(a) * 0.22, -0.01 - Math.max(0, Math.cos(a)) * 0.08, Math.cos(a) * 0.22));
+      }
+    }
+    if (acc === 'satgat') {
+      const hat = mesh(new THREE.ConeGeometry(0.62, 0.28, 28, 1, true), mat('#c9a86a', { side: THREE.DoubleSide }), 1, 1, 1, 0, 0.78, 0);
+      head.add(hat);
+    }
+    if (acc === 'beanie') {
+      head.add(mesh(G.sphere, mat('#b23a3a'), hr * 1.04, hr * 0.7, hr * 1.04, 0, 0.5, 0));
+      head.add(mesh(G.sphere, mat('#f4efe6'), 0.08, 0.08, 0.08, 0, 0.8, 0));
+    }
+    if (acc === 'lotuspin') {
+      const pin = new THREE.Group();
+      pin.position.set(0.26, 0.62, 0.12);
+      for (let i = 0; i < 6; i++) {
+        const p = mesh(G.sphereLo, mat('#f59bb5'), 0.03, 0.07, 0.03, 0, 0.04, 0);
+        p.rotation.z = (i / 6) * Math.PI * 2;
+        const w = new THREE.Group(); w.rotation.y = (i / 6) * Math.PI; w.add(p); pin.add(w);
+      }
+      pin.add(mesh(G.sphereLo, mat('#f3d16a'), 0.03, 0.03, 0.03));
+      head.add(pin);
+    }
+    if (acc === 'backpack' || outfit.style === 'hiking') {
+      hips.add(mesh(G.box, mat(outfit.style === 'hiking' ? '#2f5d50' : '#7a6248'), 0.36, 0.4, 0.18, 0, 0.3, -0.3));
+    }
+
+    // 소품: 염주(오른손), 목탁(왼손)과 채(오른손)
+    const beads = new THREE.Group();
+    const bm = mat('#5a2f1c', { roughness: 0.35 });
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      beads.add(mesh(G.sphereLo, bm, 0.028, 0.028, 0.028, Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0));
+    }
+    beads.position.set(0, -0.36, 0.05);
+    beads.visible = false;
+    this.armR.add(beads);
+    this.beads = beads;
+
+    const moktak = new THREE.Group();
+    moktak.add(mesh(G.sphere, mat('#a0612f', { roughness: 0.5 }), 0.13, 0.11, 0.12));
+    moktak.add(mesh(G.box, mat('#3b2014'), 0.18, 0.012, 0.03, 0, 0, 0.11));
+    moktak.position.set(-0.02, -0.42, 0.06);
+    moktak.visible = false;
+    this.armL.add(moktak);
+    const stick = mesh(G.cyl, mat('#d8b27a'), 0.015, 0.26, 0.015, 0, -0.42, 0.08);
+    stick.rotation.x = Math.PI / 2;
+    stick.visible = false;
+    this.armR.add(stick);
+    this.moktak = moktak; this.stick = stick;
+
+    // 명상할 때 은은한 빛 고리
+    const aura = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.62, 48),
+      new THREE.MeshBasicMaterial({ color: '#ffd77a', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
+    );
+    aura.rotation.x = -Math.PI / 2;
+    aura.position.y = 0.03;
+    body.add(aura);
+    this.aura = aura;
+
+    body.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  }
+
+  // 동작 시작. 같은 반복 동작을 다시 누르면 멈춘다
+  play(action) {
+    if (this.action === action) { this.action = null; return false; }
+    this.action = action;
+    this.actionT = 0;
+    this.bowCount = 0;
+    return true;
+  }
+
+  stop() { this.action = null; }
+
+  update(dt, actionDefs) {
+    this.actionT += dt;
+    const def = this.action && actionDefs.find((a) => a.id === this.action);
+    if (def && def.dur && this.actionT > def.dur) this.action = null;
+    if (this.action === 'bae108') {
+      const n = Math.floor(this.actionT / 4.2);
+      if (n !== this.bowCount) { this.bowCount = n; this.onBow?.(n); }
+      if (n >= 108) this.action = null;
+    }
+
+    let target = this.seated ? SIT : STAND;
+    if (this.action) {
+      if (this.speed > 0.2) this.action = null;
+      else target = actionPose(this.action, this.actionT, target, this.seated);
+    }
+
+    // 걷기: 다리와 팔을 흔든다
+    if (!this.seated && this.speed > 0.05) {
+      this.walkPhase += dt * (6 + this.speed * 2.5);
+      const s = Math.sin(this.walkPhase) * Math.min(1, this.speed / 2) * 0.6;
+      target = { ...target, lL: [s, 0], lR: [-s, 0], aL: [-s * 0.8, 0.1], aR: [s * 0.8, -0.1] };
+    }
+
+    // 처음 나타날 때는 자세를 바로 맞춘다 (앉아 있던 사람이 서 있다가 앉는 모습 방지)
+    const k = this.fresh ? 1 : Math.min(1, dt * 9);
+    this.fresh = false;
+    const p = this.pose;
+    for (const key of KEYS) p[key] = lerp(p[key], target[key], k);
+    for (const key of LIMBS) { p[key][0] = lerp(p[key][0], target[key][0], k); p[key][1] = lerp(p[key][1], target[key][1], k); }
+
+    const bob = !this.seated && this.speed > 0.05 ? Math.abs(Math.sin(this.walkPhase)) * 0.04 : 0;
+    const breathe = Math.sin(performance.now() / 900) * 0.006;
+    this.body.position.y = p.y + bob;
+    this.hips.rotation.x = p.hip;
+    this.hips.scale.y = 1 + breathe;
+    this.head.rotation.x = p.head;
+    this.armL.rotation.set(p.aL[0], 0, p.aL[1]);
+    this.armR.rotation.set(p.aR[0], 0, p.aR[1]);
+    this.legL.rotation.set(p.lL[0], 0, p.lL[1]);
+    this.legR.rotation.set(p.lR[0], 0, p.lR[1]);
+    // 앉았을 때 치마 자락이 무릎을 덮도록 넓힌다
+    if (this.skirt) {
+      const sd = this.skirt.userData;
+      this.skirt.scale.x = this.skirt.scale.z = lerp(this.skirt.scale.x, this.seated ? 0.52 : 0.34, k);
+      this.skirt.scale.y = lerp(this.skirt.scale.y, this.seated ? 0.14 : sd.h, k);
+      this.skirt.position.y = lerp(this.skirt.position.y, this.seated ? -0.05 : sd.y, k);
+    }
+
+    this.beads.visible = this.action === 'beads';
+    if (this.beads.visible) this.beads.rotation.z += dt * 1.6;
+    this.moktak.visible = this.stick.visible = this.action === 'moktak';
+    const auraOn = this.action === 'meditate';
+    this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);
+    this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
+  }
+
+  dispose() {
+    this.tag?.material.map.dispose();
+    this.tag?.material.dispose();
+  }
+}
