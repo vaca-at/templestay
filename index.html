@@ -52,7 +52,7 @@
     <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><b class="ld-pct">0%</b></div>
     <p class="ld-msg" id="ld-next">큰법당 템플스테이</p>
   </div>
-  <p class="ld-credit">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116), 공공누리 제1유형</p>
+  <p class="ld-credit">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116), 공공누리 제1유형 · <a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>
 </section>
 
 <!-- 캐릭터 꾸미기 -->
@@ -95,9 +95,10 @@
     <div class="hud-left">
       <button id="server-chip" class="glass chip-btn"><span class="lbl"><b id="hud-place"></b><span id="hud-server"></span></span><small class="cap">눌러서 서버 바꾸기</small></button>
       <span id="hud-people" class="glass mini"></span>
-      <button id="sched-chip" class="glass chip-btn"><span class="lbl" id="sched-now"></span><small class="cap" id="sched-cap">눌러서 시간표 고치기</small></button>
+      <button id="sched-chip" class="glass chip-btn"><span class="lbl" id="sched-now"></span><small class="cap" id="sched-cap">눌러서 하루 일정 고치기</small></button>
     </div>
     <div class="hud-right">
+      <button id="btn-reload" class="glass icon-btn" aria-label="새로고침"><span class="lbl">↻</span><small class="cap">새로고침</small></button>
       <span id="hud-timer" class="glass mini" title="머문 시간"></span>
       <button id="btn-sound" class="glass icon-btn" aria-label="소리"><span class="lbl">🔈</span><small class="cap">소리</small></button>
       <button id="btn-menu" class="glass icon-btn" aria-label="메뉴"><span class="lbl">☰</span><small class="cap">메뉴</small></button>
@@ -106,32 +107,65 @@
   <nav id="scene-bar" class="glass" aria-label="장소"></nav>
   <div id="toasts"></div>
   <div id="menu" class="glass menu" hidden>
+    <button data-menu="calm"><span class="lbl">크게 보기</span><small class="cap">화면보호기처럼 버튼 없이 천천히 둘러보기</small></button>
     <button data-menu="char"><span class="lbl">캐릭터 꾸미기</span><small class="cap">캐릭터·옷·내 옆 친구 바꾸기</small></button>
-    <button data-menu="sched"><span class="lbl">내 시간표</span><small class="cap">산보·독서·공양 시간 정하기</small></button>
+    <button data-menu="sched"><span class="lbl">내 하루 일정</span><small class="cap">산보·독서·공양 시간 정하기</small></button>
     <button data-menu="record"><span class="lbl">내 기록</span><small class="cap">이 기기에 남은 하루 기록</small></button>
     <button data-menu="place"><span class="lbl">법당 위치 옮기기</span><small class="cap">숲·두물머리·남해 중에서</small></button>
     <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 100명까지</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
     <button data-menu="credit"><span class="lbl">자료 출처</span><small class="cap">불상 3D 스캔 출처</small></button>
+    <p class="menu-links"><a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener"><b>개인정보처리방침</b></a></p>
   </div>
   <div id="welcome" class="glass" hidden>
     <b>큰법당에 오신 걸 환영해요</b>
-    <p>지금은 기본 모습이에요. 꾸미기와 시간표는 언제든 메뉴에서 바꿀 수 있어요.</p>
+    <p>지금은 기본 모습이에요. 꾸미기와 하루 일정은 언제든 메뉴에서 바꿀 수 있어요.</p>
     <div class="row">
       <button id="welcome-char" class="primary small-btn"><span class="lbl">내 캐릭터 꾸미기</span><small class="cap">캐릭터·옷·친구 고르기</small></button>
-      <button id="welcome-sched" class="ghost small-btn"><span class="lbl">시간표 보기</span><small class="cap">점심엔 발우공양, 출퇴근엔 산보</small></button>
+      <button id="welcome-sched" class="ghost small-btn"><span class="lbl">하루 일정 보기</span><small class="cap">점심엔 발우공양, 출퇴근엔 산보</small></button>
       <button id="welcome-close" class="link"><span class="lbl">닫기</span><small class="cap">다시 안 보기</small></button>
+    </div>
+  </div>
+  <div id="sched-ask" class="glass" hidden>
+    <b id="sched-ask-t"></b>
+    <div class="row">
+      <button id="sched-ask-go" class="primary small-btn"><span class="lbl">네, 갈게요</span><small class="cap"></small></button>
+      <button id="sched-ask-stay" class="ghost small-btn"><span class="lbl">법당에 있을게요</span><small class="cap">나중에 '하루 일정으로 돌아가기'로 가요</small></button>
     </div>
   </div>
   <div id="bae-counter" class="glass" hidden></div>
   <div id="context-btns">
     <button id="btn-wish" class="glass ctx" hidden><span class="lbl">복전함에 소원 올리기</span><small class="cap">소원지를 쓰면 연등으로 걸려요</small></button>
-    <button id="btn-resume" class="glass ctx" hidden><span class="lbl">시간표로 돌아가기</span><small class="cap">지금 시간에 할 일로 가요</small></button>
+    <button id="btn-resume" class="glass ctx" hidden><span class="lbl">하루 일정으로 돌아가기</span><small class="cap">지금 시간에 할 일로 가요</small></button>
     <button id="btn-stand" class="glass ctx" hidden><span class="lbl">일어서기</span><small class="cap">자리에서 일어나 걷기</small></button>
   </div>
   <nav id="actions" class="glass"></nav>
   <div id="joystick"><div class="knob"></div></div>
+  <button id="admin-btn" aria-label="관리자">관리자</button>
 </section>
+
+<!-- 관리자 -->
+<div id="admin-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2>관리자</h2><button class="icon-btn" data-close="admin-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <form id="admin-form" class="admin-login" autocomplete="off">
+      <div id="admin-login">
+        <label class="field" for="admin-pw">비밀번호
+          <input id="admin-pw" type="password" autocomplete="current-password">
+        </label>
+        <p id="admin-err" class="admin-err" role="alert"></p>
+        <button class="primary wide" type="submit"><span class="lbl">들어가기</span><small class="cap">이 탭을 닫으면 다시 잠겨요</small></button>
+      </div>
+    </form>
+    <div id="admin-panel" hidden>
+      <div id="admin-stats"></div>
+      <div class="row wrap">
+        <button id="admin-refresh" class="ghost small-btn" type="button"><span class="lbl">새로 불러오기</span><small class="cap">지금 숫자로 다시 보기</small></button>
+        <button id="admin-logout" class="ghost small-btn" type="button"><span class="lbl">나가기</span><small class="cap">인원 숫자를 다시 숨겨요</small></button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 서버 고르기 -->
 <div id="server-modal" class="modal" hidden>
@@ -139,23 +173,23 @@
     <header class="panel-head"><h2 id="server-title"></h2><button class="icon-btn" data-close="server-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
     <p class="sub">어느 서버에서도 같은 법당을 이용할 수 있어요. 서버마다 100명까지 들어가요.</p>
     <div class="row between"><span id="server-now" class="muted"></span><button id="server-refresh" class="link"><span class="lbl">인원 새로고침</span><small class="cap">지금 인원 다시 세기</small></button></div>
-    <p class="muted small">표시된 인원은 실제 방문객 수예요.</p>
+    <p class="muted small server-note">표시된 인원은 실제 방문객 수예요.</p>
     <div id="server-grid" class="server-grid"></div>
   </div>
 </div>
 
-<!-- 내 시간표 -->
+<!-- 내 하루 일정 -->
 <div id="sched-modal" class="modal" hidden>
   <div class="sheet wide-sheet">
-    <header class="panel-head"><h2>내 시간표</h2><button class="icon-btn" data-close="sched-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <header class="panel-head"><h2>내 하루 일정</h2><button class="icon-btn" data-close="sched-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
     <p class="sub">정한 시간이 되면 캐릭터가 알아서 움직여요. 직접 움직이면 잠시 쉬었다가 다음 시간부터 다시 따라가요.</p>
     <div id="timeline" class="timeline" aria-hidden="true"></div>
-    <label class="check"><input type="checkbox" id="sched-auto"> 시간표대로 알아서 움직이기</label>
+    <label class="check"><input type="checkbox" id="sched-auto"> 하루 일정대로 알아서 움직이기</label>
     <label class="check"><input type="checkbox" id="sched-weekend"> 토요일·일요일은 자유</label>
     <div id="sched-rows" class="sched-rows"></div>
     <div class="row wrap">
       <button id="sched-add" class="ghost small-btn" type="button"><span class="lbl">+ 시간 더하기</span><small class="cap">새 칸을 아래에 붙여요</small></button>
-      <button id="sched-reset" class="ghost small-btn" type="button"><span class="lbl">기본 시간표로</span><small class="cap">출퇴근 산보·독서·점심 공양</small></button>
+      <button id="sched-reset" class="ghost small-btn" type="button"><span class="lbl">기본 일정으로</span><small class="cap">출퇴근 산보·독서·점심 공양</small></button>
     </div>
     <button id="sched-save" class="primary wide" type="button"><span class="lbl">저장하기</span><small class="cap">이 기기에 저장되고 바로 적용돼요</small></button>
   </div>
@@ -204,5 +238,6 @@
 </div>
 
 <script type="module" src="js/main.js"></script>
+<script type="module" src="js/admin.js"></script>
 </body>
 </html>

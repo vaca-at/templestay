@@ -198,7 +198,7 @@ async function goScene(which, { instant = false } = {}) {
   if (which === 'room') {
     sitOn(world.seats[0], { auto: true });
     // 책 읽는 얼굴이 보이도록 앞쪽 비스듬히
-    camera.position.set(1.9, 1.9, -2.2);
+    camera.position.set(2.5, 2.2, -2.7);
     controls.target.set(0, 0.8, -0.7);
     controls.update();
   }
@@ -309,6 +309,22 @@ function sitOn(seat, { auto = false } = {}) {
   updateHud();
   pushState(true);
   return true;
+}
+
+// 빈자리를 누르면 그 자리까지 천천히 걸어가서 앉는다 (내 방은 자리가 하나라 바로)
+function walkToSeat(seat) {
+  if (seat.id !== undefined && S.scene !== 'room' && seatTaken(seat.id)) { toast('다른 분이 앉아 계신 자리예요'); return; }
+  pauseAuto();
+  if (S.seat === seat.id) return;
+  if (S.me.action) { S.me.stop(); syncActionButtons(); }
+  const sit = () => {
+    if (!sitOn(seat)) return;
+    if (S.scene === 'meal') startLoop('eat');
+    if (S.scene === 'room') startLoop('read');
+  };
+  if (S.scene === 'room') { sit(); return; }
+  standUp();
+  S.target = { pos: new THREE.Vector3(seat.pos.x, 0, seat.pos.z), speed: SEAT_SPEED, onArrive: sit };
 }
 
 function standUp(silent) {
@@ -428,8 +444,12 @@ function schedTick() {
   if (key !== S.blockKey) {
     const first = S.blockKey === undefined;
     S.blockKey = key;
-    // 처음 들어올 때는 법당에 그대로 두고, 다음 칸이 시작될 때부터 따라간다
-    if (!first) {
+    // 처음에는 일단 법당으로 들어오고, 지금 칸이 법당 밖 일정이면 갈지 물어봐요
+    if (first) {
+      const def = b && ACTIVITIES[b.act];
+      if (b && S.schedule.auto && def.scene && def.scene !== 'in') askSched(b);
+    } else {
+      $('#sched-ask').hidden = true; askBlock = null;
       if (b) {
         toast(`${b.start} · ${b.label || ACTIVITIES[b.act].name} 시간이에요`);
         if (S.schedule.auto) applyActivity(b.act);
@@ -444,11 +464,25 @@ function schedTick() {
 }
 setInterval(schedTick, 5000);
 
+// "산보 시간이니 마당으로 갈까요?" 환영 창이 떠 있으면 닫힌 뒤에 물어봐요
+let askBlock = null;
+function askSched(b) {
+  askBlock = b;
+  if (!$('#welcome').hidden || !store.get('welcomed', false)) return;
+  const def = ACTIVITIES[b.act], place = SCENES[def.scene].name;
+  $('#sched-ask-t').textContent = `${b.label || def.name} 시간이니 ${place}으로 갈까요?`;
+  $('#sched-ask-go .cap').textContent = `${b.start}–${b.end} · ${place}에서 ${def.name}`;
+  $('#sched-ask').hidden = false;
+}
+$('#welcome').addEventListener('click', (e) => { if (e.target.closest('button') && askBlock) setTimeout(() => askBlock && askSched(askBlock)); });
+$('#sched-ask-go').onclick = () => { $('#sched-ask').hidden = true; const b = askBlock; askBlock = null; if (b && currentBlock() === b) applyActivity(b.act); };
+$('#sched-ask-stay').onclick = () => { $('#sched-ask').hidden = true; askBlock = null; updateSchedChip(); };
+
 function updateSchedChip() {
   const b = currentBlock();
   const n = nextBlock();
-  $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 시간표 끝';
-  $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '시간표대로 움직이는 중 · 눌러서 고치기' : '눌러서 시간표 고치기';
+  $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
+  $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
   const off = b && S.schedule.auto && !S.autoAct && ACTIVITIES[b.act].scene;
   $('#btn-resume').hidden = !off;
   if (off) $('#btn-resume .cap').textContent = `${ACTIVITIES[b.act].name} · ${SCENES[ACTIVITIES[b.act].scene].name}으로 가요`;
@@ -515,7 +549,7 @@ $('#sched-save').onclick = () => {
   $('#sched-modal').hidden = true;
   S.blockKey = null; // 저장하면 지금 칸을 새로 적용
   schedTick();
-  toast('시간표를 저장했어요');
+  toast('하루 일정을 저장했어요');
 };
 
 // ───────── 기록 (이 기기에만) ─────────
@@ -672,7 +706,8 @@ function updateTimer(dt) {
   timerTick = 0;
   const now = new Date();
   $('#hud-timer').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())} · 머문 시간 ${fmtTime((Date.now() - S.enteredAt) / 1000)}`;
-  $('#hud-timer').title = `${S.loc.name}에 머문 시간 모두 ${fmtLong(store.get(`stay:${S.loc.id}`, 0))}`;
+  // 누적 시간은 관리자에게만
+  $('#hud-timer').title = document.body.classList.contains('admin') ? `${S.loc.name}에 머문 시간 모두 ${fmtLong(store.get(`stay:${S.loc.id}`, 0))}` : '머문 시간';
 }
 
 // ───────── 서버 ─────────
@@ -912,8 +947,7 @@ canvas.addEventListener('pointerup', (e) => {
     if (o.userData.wish) { const wi = o.userData.wish; toast(`“${wi.t}” · ${wi.n}님의 연등`); return; }
     if (o.userData.seats) {
       const seat = w.seats[o.userData.seats === 'room' ? 0 : h.instanceId];
-      if (seat && sitOn(seat) && S.scene === 'meal') startLoop('eat');
-      if (seat && S.scene === 'room') startLoop('read');
+      if (seat) walkToSeat(seat);
       return;
     }
     if (o.userData.donation) return openWish();
@@ -934,7 +968,8 @@ canvas.addEventListener('pointerup', (e) => {
 
 // ───────── 이동 ─────────
 const tmpV = new THREE.Vector3();
-const SPEED = 3.4;
+const SPEED = 2.7;        // 걷는 속도
+const SEAT_SPEED = 1.8;   // 자리로 걸어갈 때는 더 천천히
 function moveMe(dt) {
   const me = S.me, g = me.group;
   let dx = 0, dz = 0;
@@ -1095,6 +1130,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.menu) {
     $('#menu').hidden = true;
     const m = t.dataset.menu;
+    if (m === 'calm') startCalm();
     if (m === 'char') openCreator();
     if (m === 'sched') openSched();
     if (m === 'record') openRecords();
@@ -1118,7 +1154,45 @@ $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivit
 $('#sched-chip').onclick = openSched;
 $('#server-chip').onclick = () => { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; };
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
-$('#btn-sound').onclick = () => { setSound(!sound.on); syncSoundBtn(); };
+$('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
+
+// 크게 보기 (화면보호기): 버튼을 모두 숨기고 전체 화면에서 카메라가 내 캐릭터 둘레를 천천히 돌아요.
+// 하루 일정은 그대로 따라가요. 화면을 누르거나 아무 키나 누르면 돌아와요. 5분 동안 손대지 않아도 저절로 켜져요.
+const CALM_IDLE = 5 * 60 * 1000;
+let lastInput = Date.now();
+function startCalm() {
+  if (S.calm || S.mode !== 'world') return;
+  S.calm = true;
+  document.body.classList.add('calm');
+  $('#menu').hidden = true;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.4;
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  toast('화면을 누르면 돌아와요');
+}
+function stopCalm() {
+  if (!S.calm) return;
+  S.calm = false;
+  document.body.classList.remove('calm');
+  controls.autoRotate = false;
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+}
+// 크게 보기 중의 첫 누름은 돌아오기만 하고, 걸어가기 같은 다른 일은 하지 않아요
+const wake = (e) => {
+  lastInput = Date.now();
+  if (!S.calm) return;
+  e.stopPropagation(); e.preventDefault();
+  stopCalm();
+};
+addEventListener('pointerdown', wake, { capture: true });
+addEventListener('keydown', wake, { capture: true });
+addEventListener('pointermove', () => { lastInput = Date.now(); }, { passive: true });
+addEventListener('wheel', () => { lastInput = Date.now(); }, { passive: true });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) stopCalm(); });
+setInterval(() => {
+  const busy = !$('#creator').hidden || document.querySelector('.modal:not([hidden])');
+  if (!S.calm && S.mode === 'world' && !busy && Date.now() - lastInput > CALM_IDLE) startCalm();
+}, 10000);
 $('#welcome-char').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); openCreator(); };
 $('#welcome-sched').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); openSched(); };
 $('#welcome-close').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); };

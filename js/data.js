@@ -2,7 +2,7 @@
 
 export const APP_ID = 'keunbeopdang-templestay-v1';
 // 방 중계 서버 주소 (server/ 폴더의 Cloudflare Worker). 비어 있으면 브라우저끼리 직접 연결한다
-export const RELAY_URL = '';
+export const RELAY_URL = 'https://templestay-rooms.bellachord.workers.dev';
 export const SERVER_COUNT = 12;
 export const SERVER_CAP = 100;
 
@@ -125,7 +125,8 @@ export const ACTIONS = [
   { id: 'banbae', name: '반배', cap: '합장하고 허리 숙이기', verb: '반배를 올렸어요', dur: 2.6 },
   { id: 'keunjeol', name: '큰절', cap: '엎드려 절 올리기', verb: '부처님께 큰절을 올렸어요', dur: 4.2 },
   { id: 'beads', name: '염주', cap: '염주 돌리기 · 다시 누르면 멈춤', verb: '염주를 돌리기 시작했어요', loop: true },
-  { id: 'moktak', name: '목탁', cap: '목탁 치기 · 다시 누르면 멈춤', verb: '목탁을 치기 시작했어요', loop: true },
+  // 목탁은 동작 막대에서 뺐어요. 예전 버전 이용자가 보내도 그려지도록 숨긴 동작으로만 남김
+  { id: 'moktak', name: '목탁', verb: '목탁을 치기 시작했어요', loop: true, auto: true },
   { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true },
   { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0 },
   { id: 'bae108', name: '108배', cap: '절 108번 · 횟수 세어 줌', verb: '108배를 시작했어요', loop: true },

@@ -1,0 +1,93 @@
+// 관리자: 화면 아래 투명한 버튼 → 비밀번호 → 방문 수·지금 접속·서버별 인원.
+// 관리자로 들어가 있는 동안만 body 에 .admin 을 붙여서, 숨겨 둔 인원·누적 숫자가 보이게 한다.
+// 방문은 기기마다 하루 한 번 숫자만 센다 (누가 왔는지는 남기지 않음).
+import { RELAY_URL, LOCATIONS } from './data.js';
+
+const $ = (s) => document.querySelector(s);
+const KEY = 'maeum:admin';
+const today = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const getPw = () => { try { return sessionStorage.getItem(KEY) || ''; } catch { return ''; } };
+const setPw = (v) => { try { v ? sessionStorage.setItem(KEY, v) : sessionStorage.removeItem(KEY); } catch {} };
+
+// 방문 세기
+if (RELAY_URL && !new URLSearchParams(location.search).has('demo')) {
+  let seen = null;
+  try { seen = localStorage.getItem('maeum:visited'); } catch {}
+  if (seen !== today()) {
+    fetch(`${RELAY_URL}/visit`, { method: 'POST' }).then(() => { try { localStorage.setItem('maeum:visited', today()); } catch {} }).catch(() => {});
+  }
+}
+
+async function fetchStats(pw) {
+  const r = await fetch(`${RELAY_URL}/admin/stats`, { headers: { Authorization: `Bearer ${pw}` } });
+  if (r.status === 401) throw new Error('wrong');
+  if (!r.ok) throw new Error('server');
+  return r.json();
+}
+
+function setAdmin(on) {
+  document.body.classList.toggle('admin', on);
+}
+
+function render(s) {
+  const locName = (id) => LOCATIONS.find((l) => l.id === id)?.name || id;
+  const days = Object.entries(s.days || {}).sort().slice(-14);
+  const max = Math.max(1, ...days.map(([, n]) => n));
+  $('#admin-stats').innerHTML = `
+    <div class="stats">
+      <div class="stat"><small>오늘 방문</small><b>${s.today}</b></div>
+      <div class="stat"><small>누적 방문</small><b>${s.total}</b></div>
+      <div class="stat"><small>지금 접속</small><b>${s.online}</b></div>
+    </div>
+    <h3 class="admin-h">최근 14일 방문</h3>
+    <div class="admin-bars">${days.map(([d, n]) => `<div title="${d} · ${n}명"><i style="height:${(n / max) * 100}%"></i><span>${d.slice(8)}</span></div>`).join('') || '<p class="muted small">아직 기록이 없어요</p>'}</div>
+    <h3 class="admin-h">지금 사람이 있는 서버</h3>
+    ${Object.keys(s.rooms || {}).length ? `<ul class="admin-rooms">${Object.entries(s.rooms).sort((a, b) => b[1] - a[1]).map(([k, n]) => { const [loc, no] = k.split('-'); return `<li><span>${locName(loc)} 서버 ${no}</span><b>${n}명</b></li>`; }).join('')}</ul>` : '<p class="muted small">지금은 접속한 사람이 없어요</p>'}
+    <p class="muted small">방문은 기기마다 하루 한 번만 세요. 누가 왔는지는 남기지 않아요.</p>`;
+}
+
+async function open() {
+  $('#admin-modal').hidden = false;
+  const pw = getPw();
+  $('#admin-login').hidden = !!pw;
+  $('#admin-panel').hidden = !pw;
+  if (pw) refresh();
+  else setTimeout(() => $('#admin-pw').focus(), 50);
+}
+
+async function refresh() {
+  const pw = getPw();
+  if (!pw) return;
+  $('#admin-stats').innerHTML = '<p class="muted small">불러오는 중…</p>';
+  try { render(await fetchStats(pw)); setAdmin(true); }
+  catch (e) {
+    if (e.message === 'wrong') { setPw(''); setAdmin(false); $('#admin-login').hidden = false; $('#admin-panel').hidden = true; }
+    else $('#admin-stats').innerHTML = '<p class="muted small">서버에 닿지 않았어요. 잠시 뒤 다시 눌러 주세요.</p>';
+  }
+}
+
+$('#admin-btn').addEventListener('click', open);
+$('#admin-refresh').addEventListener('click', refresh);
+$('#admin-logout').addEventListener('click', () => { setPw(''); setAdmin(false); $('#admin-modal').hidden = true; });
+$('#admin-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pw = $('#admin-pw').value.trim();
+  if (!pw) return;
+  $('#admin-err').textContent = '';
+  try {
+    render(await fetchStats(pw));
+    setPw(pw);
+    setAdmin(true);
+    $('#admin-pw').value = '';
+    $('#admin-login').hidden = true;
+    $('#admin-panel').hidden = false;
+  } catch (err) {
+    $('#admin-err').textContent = err.message === 'wrong' ? '비밀번호가 맞지 않아요' : '서버에 닿지 않았어요. 잠시 뒤 다시 해 주세요';
+  }
+});
+
+// 새로고침: 화면을 처음부터 다시 불러온다
+$('#btn-reload')?.addEventListener('click', () => location.reload());
+
+// 이 탭에서 이미 관리자로 들어와 있으면 그대로 유지
+if (getPw()) setAdmin(true);

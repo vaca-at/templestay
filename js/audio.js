@@ -6,7 +6,7 @@ function ensure() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
-    master.gain.value = 0.6;
+    master.gain.value = 0.4;   // 전체 소리는 은은하게
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
@@ -58,7 +58,7 @@ function startAmbient() {
   for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3; }
   const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
   const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
-  const g = ctx.createGain(); g.gain.value = 0.12;
+  const g = ctx.createGain(); g.gain.value = 0.07;
   src.connect(f).connect(g).connect(master); src.start();
   ambient = { src, g };
 }

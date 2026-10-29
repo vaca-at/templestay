@@ -193,9 +193,14 @@ button .cap { display: block; font-size: 10px; line-height: 1.3; font-weight: 40
 #sched-chip .lbl { font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* 첫 방문 안내 */
-#welcome { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 236px); width: min(460px, calc(100% - 24px)); border-radius: 20px; padding: 16px 18px; display: grid; gap: 6px; }
+#welcome, #sched-ask { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 236px); width: min(460px, calc(100% - 24px)); border-radius: 20px; padding: 16px 18px; display: grid; gap: 6px; }
 #welcome p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
-#welcome .row { flex-wrap: wrap; margin-top: 4px; }
+#welcome .row, #sched-ask .row { flex-wrap: wrap; margin-top: 4px; }
+#sched-ask b { font-family: var(--display); font-size: 17px; }
+#welcome[hidden], #sched-ask[hidden] { display: none; }
+
+/* 크게 보기 (화면보호기): 알림 말고는 모두 숨겨요 */
+body.calm #hud > :not(#toasts) { display: none !important; }
 .small-btn { padding: 9px 14px 7px; font-size: 13.5px; }
 
 /* 시간표 */
@@ -244,3 +249,27 @@ button .cap { display: block; font-size: 10px; line-height: 1.3; font-weight: 40
   .act { min-width: 52px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ───────── 관리자 ───────── */
+/* 아래 오른쪽 구석의 거의 투명한 버튼 */
+#admin-btn { position: absolute; right: max(10px, env(safe-area-inset-right)); bottom: max(6px, env(safe-area-inset-bottom)); font-size: 10px; padding: 4px 8px; border-radius: 8px; color: #fff; opacity: .12; transition: opacity .2s; }
+#admin-btn:hover, #admin-btn:focus-visible { opacity: .6; }
+body.admin #admin-btn { opacity: .5; }
+/* 방문 수·접속 인원·누적 숫자는 관리자에게만 */
+body:not(.admin) #hud-people,
+body:not(.admin) .server span,
+body:not(.admin) .server-note,
+body:not(.admin) .place .stay { display: none !important; }
+.admin-err { min-height: 1.2em; margin: 4px 0 8px; color: var(--vermilion); font-size: 13px; }
+.admin-h { font-size: 13px; font-weight: 600; margin: 8px 0 0; }
+.admin-bars { display: flex; align-items: flex-end; gap: 4px; height: 90px; padding-top: 4px; }
+.admin-bars div { flex: 1; height: 100%; display: grid; grid-template-rows: 1fr auto; align-items: end; min-width: 0; }
+.admin-bars i { display: block; background: var(--jade); border-radius: 4px 4px 0 0; min-height: 2px; }
+.admin-bars span { font-size: 10px; color: var(--ink-soft); text-align: center; font-variant-numeric: tabular-nums; }
+.admin-rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.admin-rooms li { display: flex; justify-content: space-between; padding: 6px 10px; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
+#admin-panel { display: grid; gap: 10px; }
+#admin-panel .stats { grid-template-columns: repeat(3, 1fr); }
+.menu-links { margin: 6px 0 2px; padding: 8px 14px 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-soft); }
+.menu-links a { color: inherit; }
+.ld-credit a { color: inherit; }

@@ -23,6 +23,24 @@ export default {
       if (!ROOM_RE.test(room)) return new Response('bad room', { status: 400 });
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(req);
     }
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: { ...cors(req), 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '86400' } });
+    }
+    // 방문: 기기마다 하루 한 번 숫자만 센다 (누가 왔는지는 남기지 않음)
+    if (url.pathname === '/visit' && req.method === 'POST') {
+      await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/visit', { method: 'POST' });
+      return json(req, { ok: true });
+    }
+    // 관리자: 비밀번호가 맞을 때만 방문 수와 접속 인원을 보여 준다
+    if (url.pathname === '/admin/stats') {
+      const auth = req.headers.get('Authorization') || '';
+      if (!env.ADMIN_PASSWORD || !(await same(auth.replace(/^Bearer /, '').trim(), env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
+      const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
+      const rooms = {};
+      await Promise.all(['forest', 'river', 'sea'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
+        env.ROOMS.get(env.ROOMS.idFromName(`${loc}-${i + 1}`)).fetch('https://room/count').then((r) => r.json()).then((j) => { if (j.n) rooms[`${loc}-${i + 1}`] = j.n; }).catch(() => {}))));
+      return json(req, { ...stats, rooms, online: Object.values(rooms).reduce((a, b) => a + b, 0) });
+    }
     if (url.pathname === '/counts') {
       const loc = url.searchParams.get('loc') || '';
       const n = Math.min(20, Math.max(1, +url.searchParams.get('n') || 12));
@@ -36,6 +54,37 @@ export default {
 };
 
 const clean = (s, n) => String(s ?? '').slice(0, n);
+
+// 비밀번호 비교: 해시끼리 비교해서 글자 수나 앞부분으로 알아낼 수 없게
+async function same(a, b) {
+  const h = async (s) => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  const [x, y] = await Promise.all([h(a), h(b)]);
+  let d = 0;
+  for (let i = 0; i < x.length; i++) d |= x[i] ^ y[i];
+  return d === 0;
+}
+
+// 한국 시간 기준 날짜
+const kstDay = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+// 방문 수 저장소 (하나뿐)
+export class Stats extends DurableObject {
+  async fetch(req) {
+    const url = new URL(req.url);
+    const s = (await this.ctx.storage.get('s')) || { total: 0, days: {} };
+    if (url.pathname === '/visit') {
+      const d = kstDay();
+      s.total++;
+      s.days[d] = (s.days[d] || 0) + 1;
+      // 최근 90일만 남긴다
+      const keys = Object.keys(s.days).sort();
+      for (const k of keys.slice(0, Math.max(0, keys.length - 90))) delete s.days[k];
+      await this.ctx.storage.put('s', s);
+      return Response.json({ ok: true });
+    }
+    return Response.json({ total: s.total, today: s.days[kstDay()] || 0, days: s.days });
+  }
+}
 
 export class Room extends DurableObject {
   constructor(ctx, env) {
