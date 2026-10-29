@@ -457,11 +457,14 @@ function skyDome(top, bottom) {
 export function buildInterior(loc) {
   const c = loc.interior;
   const g = new THREE.Group();
-  const HW = 13, HD = 16, CEIL = 9;
+  // 불상 쪽(뒤) 16, 입구 쪽(앞) 20. 방석 100개가 들어가도록 앞으로 길게 늘였다
+  const HW = 13, HD = 16, HF = 20, CEIL = 9;
+  const L = HD + HF, ZC = (HF - HD) / 2;
 
   const floorTex = woodFloor(c.floor);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, HD * 2), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55, metalness: 0.05 }));
-  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  floorTex.repeat.set(6, 9);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, L), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55, metalness: 0.05 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.z = ZC; floor.receiveShadow = true; g.add(floor);
 
   // 벽: 아래는 나무 판벽, 위는 회벽. 양옆 벽에는 창호
   const plaster = new THREE.MeshStandardMaterial({ color: c.wall, roughness: 0.95 });
@@ -471,39 +474,40 @@ export function buildInterior(loc) {
     m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true; g.add(m); return m;
   };
   wall(HW * 2, CEIL, 0, CEIL / 2, -HD, 0);
-  wall(HW * 2, CEIL, 0, CEIL / 2, HD, Math.PI);
-  wall(HD * 2, CEIL, -HW, CEIL / 2, 0, Math.PI / 2);
-  wall(HD * 2, CEIL, HW, CEIL / 2, 0, -Math.PI / 2);
-  wall(HD * 2, 1.2, -HW + 0.02, 0.6, 0, Math.PI / 2, wood);
-  wall(HD * 2, 1.2, HW - 0.02, 0.6, 0, -Math.PI / 2, wood);
-  wall(HW * 2, 1.2, 0, 0.6, HD - 0.02, Math.PI, wood);
+  wall(HW * 2, CEIL, 0, CEIL / 2, HF, Math.PI);
+  wall(L, CEIL, -HW, CEIL / 2, ZC, Math.PI / 2);
+  wall(L, CEIL, HW, CEIL / 2, ZC, -Math.PI / 2);
+  wall(L, 1.2, -HW + 0.02, 0.6, ZC, Math.PI / 2, wood);
+  wall(L, 1.2, HW - 0.02, 0.6, ZC, -Math.PI / 2, wood);
+  wall(HW * 2, 1.2, 0, 0.6, HF - 0.02, Math.PI, wood);
 
   const viewTex = windowView(loc);
   const viewMat = new THREE.MeshBasicMaterial({ map: viewTex });
   const frameTex = lattice(c.pillar, 'rgba(0,0,0,0)', false);
   const frameMat = new THREE.MeshStandardMaterial({ map: frameTex, transparent: true, alphaTest: 0.4 });
-  for (const s of [-1, 1]) for (const z of [-8, 0, 8]) {
+  for (const s of [-1, 1]) for (const z of [-8, 0, 8, 16]) {
     const v = wall(4.6, 4.0, s * (HW - 0.03), 4.2, z, -s * Math.PI / 2, viewMat);
     const f = wall(4.6, 4.0, s * (HW - 0.06), 4.2, z, -s * Math.PI / 2, frameMat);
     v.receiveShadow = f.receiveShadow = false;
   }
   // 입구 문 (밖으로 나가는 곳)
   const doorTex = lattice(c.pillar);
-  const exitDoor = wall(5, 5, 0, 2.5, HD - 0.05, Math.PI, new THREE.MeshStandardMaterial({ map: doorTex, emissive: '#ffe9c0', emissiveIntensity: 0.15 }));
+  const exitDoor = wall(5, 5, 0, 2.5, HF - 0.05, Math.PI, new THREE.MeshStandardMaterial({ map: doorTex, emissive: '#ffe9c0', emissiveIntensity: 0.15 }));
 
   // 기둥과 들보
   const pillarMat = mat(c.pillar);
   const dc = dancheong(c.beam, c.accent); dc.wrapS = THREE.RepeatWrapping; dc.repeat.set(5, 1);
   const beamMat = new THREE.MeshStandardMaterial({ map: dc, roughness: 0.7 });
-  for (const x of [-10.8, 10.8]) for (const z of [-12, -4, 4, 12]) {
+  const PZ = [-12, -3, 6, 15];
+  for (const x of [-11.7, 11.7]) for (const z of PZ) {
     const p = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, CEIL, 18), pillarMat);
     p.position.set(x, CEIL / 2, z); p.castShadow = true; g.add(p);
   }
-  for (const z of [-12, -4, 4, 12]) {
+  for (const z of PZ) {
     const b = new THREE.Mesh(new THREE.BoxGeometry(HW * 2, 0.9, 0.7), beamMat); b.position.set(0, CEIL - 0.6, z); g.add(b);
   }
-  for (const x of [-10.8, 10.8]) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, HD * 2), beamMat); b.position.set(x, CEIL - 0.6, 0); g.add(b);
+  for (const x of [-11.7, 11.7]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, L), beamMat); b.position.set(x, CEIL - 0.6, ZC); g.add(b);
   }
   // 우물천장
   const ceilTex = canvasTex(256, 256, (cg, w, h) => {
@@ -516,9 +520,9 @@ export function buildInterior(loc) {
       cg.beginPath(); cg.ellipse(128 + Math.cos(a) * 42, 128 + Math.sin(a) * 42, 36, 16, a, 0, Math.PI * 2); cg.fill();
     }
     cg.fillStyle = '#f2e7c9'; cg.beginPath(); cg.arc(128, 128, 22, 0, Math.PI * 2); cg.fill();
-  }, [9, 11]);
-  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, HD * 2), new THREE.MeshStandardMaterial({ map: ceilTex, roughness: 0.9 }));
-  ceil.rotation.x = Math.PI / 2; ceil.position.y = CEIL; g.add(ceil);
+  }, [9, 12]);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, L), new THREE.MeshStandardMaterial({ map: ceilTex, roughness: 0.9 }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(0, CEIL, ZC); g.add(ceil);
 
   // 수미단과 불상, 탱화
   const altar = new THREE.Group();
@@ -570,23 +574,21 @@ export function buildInterior(loc) {
   spot.target.position.set(0, 3, -13);
   g.add(spot, spot.target);
 
-  // 방석
+  // 방석 100개 (10줄 × 가운데 통로 양쪽 5개씩). 한 번에 그리도록 InstancedMesh
   const cushions = [];
-  const cushionGeo = new THREE.BoxGeometry(1.25, 0.12, 1.25);
-  const cushionMat = mat('#5d5a50');
-  const cushionTop = mat('#6d6a5e');
-  const cols = [-8.6, -6.3, -4.0, -1.8, 1.8, 4.0, 6.3, 8.6];
-  let id = 0;
-  for (let r = 0; r < 7; r++) for (const x of cols) {
-    const z = -5.4 + r * 2.35;
-    const cu = new THREE.Mesh(cushionGeo, cushionMat);
-    cu.position.set(x, 0.06, z); cu.receiveShadow = true; cu.castShadow = true;
-    const t = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.02, 1.05), cushionTop); t.position.y = 0.07; cu.add(t);
-    cu.userData.seat = id;
-    g.add(cu);
-    cushions.push({ id, pos: new THREE.Vector3(x, 0, z), mesh: cu });
-    id++;
+  const cols = [-9.9, -7.85, -5.8, -3.75, -1.7, 1.7, 3.75, 5.8, 7.85, 9.9];
+  const cushionMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.15, 0.12, 1.15), mat('#625e53'), cols.length * 10);
+  const M = new THREE.Matrix4();
+  for (let r = 0; r < 10; r++) for (const x of cols) {
+    const z = -5.6 + r * 2.0;
+    const id = cushions.length;
+    M.makeTranslation(x, 0.06, z);
+    cushionMesh.setMatrixAt(id, M);
+    cushions.push({ id, pos: new THREE.Vector3(x, 0, z), rot: Math.PI, y: 0.12 });
   }
+  cushionMesh.receiveShadow = true;
+  cushionMesh.userData.seats = 'cushion';
+  g.add(cushionMesh);
 
   // 복전함 (불전함)
   const box = new THREE.Group();
@@ -611,7 +613,7 @@ export function buildInterior(loc) {
   const lanternRoot = new THREE.Group();
   g.add(lanternRoot);
   const lanternSlots = [];
-  for (let r = 0; r < 6; r++) for (let k = 0; k < 10; k++) {
+  for (let r = 0; r < 7; r++) for (let k = 0; k < 10; k++) {
     lanternSlots.push(new THREE.Vector3(-9 + k * 2, 6.6 + ((k + r) % 2) * 0.25, -9 + r * 3.6));
   }
   const decoColors = ['#f08aa0', '#f2c45a', '#f6f2e8', '#9ad0a8', '#f2a05a'];
@@ -629,9 +631,10 @@ export function buildInterior(loc) {
   sun.position.set(8, 14, 10);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 18, bottom: -18, near: 1, far: 50 });
+  Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 60 });
   sun.shadow.bias = -0.0008;
-  g.add(sun);
+  sun.target.position.set(0, 0, ZC);
+  g.add(sun, sun.target);
 
   return {
     group: g,
@@ -643,10 +646,12 @@ export function buildInterior(loc) {
     flames,
     buddhaSlot,
     exitDoor,
-    spawn: new THREE.Vector3(0, 0, 10.5),
+    spawn: new THREE.Vector3(0, 0, 15),
     spawnRot: Math.PI,
-    exitPos: new THREE.Vector3(0, 0, 15),
-    bounds: { minX: -HW + 0.8, maxX: HW - 0.8, minZ: -HD + 0.8, maxZ: HD - 0.8 },
+    exitZ: HF - 1.4,
+    camDist: 4.2,
+    seats: cushions,
+    bounds: { minX: -HW + 0.8, maxX: HW - 0.8, minZ: -HD + 0.8, maxZ: HF - 0.8 },
     blockers: [{ minX: -5, maxX: 5, minZ: -16, maxZ: -10.6 }, { minX: -0.95, maxX: 0.95, minZ: -8.95, maxZ: -7.85 }],
     fog: null,
     background: new THREE.Color('#1c1410'),
@@ -874,11 +879,173 @@ export function buildExterior(loc) {
     door,
     spawn: new THREE.Vector3(0, 0, 12),
     spawnRot: Math.PI,
+    camDist: 8,
+    // 산보 길: 법당 뒤를 돌아 마당 가장자리를 한 바퀴
+    walkPath: [[-11, -16.5], [11, -16.5], [14, -4], [15, 8], [7, 16], [-7, 16], [-15, 8], [-14, -4]].map(([x, z]) => new THREE.Vector3(x, 0, z)),
     radius: R0 - 2.2,
     blockers: [{ minX: -hall.userData.footprint.w, maxX: hall.userData.footprint.w, minZ: -9 - hall.userData.footprint.d, maxZ: -9 + hall.userData.footprint.d }],
     fog: new THREE.Fog(loc.fog, 120, 700),
     background: new THREE.Color(loc.sky[1]),
     update: (t) => animated.forEach((f) => f(t)),
+  };
+}
+
+// ───────── 방 공통 ─────────
+function roomShell(g, loc, { HW, HD, CEIL, floorMap, windows = [], doorW = 3 }) {
+  const c = loc.interior;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, HD * 2), new THREE.MeshStandardMaterial({ map: floorMap, roughness: 0.6 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  const plaster = new THREE.MeshStandardMaterial({ color: c.wall, roughness: 0.95 });
+  const wood = mat('#5a3826');
+  const wall = (w, h, x, y, z, ry, material = plaster) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+    m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true; g.add(m); return m;
+  };
+  wall(HW * 2, CEIL, 0, CEIL / 2, -HD, 0);
+  wall(HW * 2, CEIL, 0, CEIL / 2, HD, Math.PI);
+  wall(HD * 2, CEIL, -HW, CEIL / 2, 0, Math.PI / 2);
+  wall(HD * 2, CEIL, HW, CEIL / 2, 0, -Math.PI / 2);
+  for (const [w, x, z, ry] of [[HW * 2, 0, -HD + 0.02, 0], [HW * 2, 0, HD - 0.02, Math.PI], [HD * 2, -HW + 0.02, 0, Math.PI / 2], [HD * 2, HW - 0.02, 0, -Math.PI / 2]]) wall(w, 0.6, x, 0.3, z, ry, wood);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, HD * 2), mat('#6b4a33'));
+  ceil.rotation.x = Math.PI / 2; ceil.position.y = CEIL; g.add(ceil);
+  for (let x = -HW + 1; x < HW; x += 1.6) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, HD * 2), mat('#4a2f22')); r.position.set(x, CEIL - 0.1, 0); g.add(r);
+  }
+  const viewMat = new THREE.MeshBasicMaterial({ map: windowView(loc) });
+  const frameMat = new THREE.MeshStandardMaterial({ map: lattice(c.pillar, 'rgba(0,0,0,0)', false), transparent: true, alphaTest: 0.4 });
+  for (const [x, z, ry, w, h] of windows) { wall(w, h, x, CEIL * 0.55, z, ry, viewMat); wall(w, h, x + Math.sin(ry) * 0.03, CEIL * 0.55, z + Math.cos(ry) * 0.03, ry, frameMat); }
+  const door = wall(doorW, Math.min(CEIL - 0.4, 2.8), 0, Math.min(CEIL - 0.4, 2.8) / 2, HD - 0.04, Math.PI, new THREE.MeshStandardMaterial({ map: lattice(c.pillar), emissive: '#ffe9c0', emissiveIntensity: 0.12 }));
+  return { floor, door };
+}
+
+function roomLights(g, warm, { size = 12, at = [6, 10, 8] } = {}) {
+  g.add(new THREE.HemisphereLight('#fff4e2', '#3a2a20', 1.0));
+  const sun = new THREE.DirectionalLight('#fff0d8', 1.3);
+  sun.position.set(...at);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  Object.assign(sun.shadow.camera, { left: -size, right: size, top: size, bottom: -size, near: 0.5, far: 40 });
+  sun.shadow.bias = -0.0008;
+  g.add(sun);
+  const p = new THREE.PointLight(warm, 3, 14, 1.5); p.position.set(0, 3, 0); g.add(p);
+}
+
+function scroll(text, sub) {
+  return canvasTex(256, 640, (cg, w, h) => {
+    cg.fillStyle = '#efe4c8'; cg.fillRect(0, 0, w, h);
+    cg.fillStyle = '#6b4a33'; cg.fillRect(0, 0, w, 24); cg.fillRect(0, h - 24, w, 24);
+    cg.fillStyle = '#2b2220'; cg.font = `700 64px ${FONT_TITLE}`; cg.textAlign = 'center';
+    [...text].forEach((ch, i) => cg.fillText(ch, w / 2, 110 + i * 78));
+    if (sub) { cg.font = `400 22px ${FONT_TITLE}`; cg.fillStyle = '#7a5a40'; [...sub].forEach((ch, i) => cg.fillText(ch, w - 40, 100 + i * 28)); }
+    cg.fillStyle = '#b8463f'; cg.fillRect(w / 2 - 18, h - 90, 36, 36);
+  });
+}
+
+// ───────── 공양간 (발우공양) ─────────
+// 두 줄씩 마주 보고 앉는 자리 4줄 × 15 = 60자리. 자리마다 앞에 발우 네 그릇
+export function buildMealHall(loc) {
+  const g = new THREE.Group();
+  const HW = 12, HD = 9, CEIL = 5.5;
+  const { floor, door } = roomShell(g, loc, {
+    HW, HD, CEIL, floorMap: woodFloor('#6a4a34'),
+    windows: [[-HW + 0.03, -4, Math.PI / 2, 3.4, 2.4], [-HW + 0.03, 4, Math.PI / 2, 3.4, 2.4], [HW - 0.03, -4, -Math.PI / 2, 3.4, 2.4], [HW - 0.03, 4, -Math.PI / 2, 3.4, 2.4]],
+  });
+  const seats = [];
+  const rows = [[-6.4, 0], [-2.4, Math.PI], [2.0, 0], [6.0, Math.PI]];
+  const xs = []; for (let x = -10.5; x <= 10.51; x += 1.5) xs.push(x);
+  const n = rows.length * xs.length;
+  const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.1, 1.0), mat('#5d5a50'), n);
+  const bowl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.1, 0.11, 16), mat('#4a2418', { roughness: 0.3 }), n * 4);
+  const rice = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 14), mat('#f4efe2'), n * 4);
+  const M = new THREE.Matrix4();
+  let bi = 0;
+  for (const [z, rot] of rows) for (const x of xs) {
+    const id = seats.length;
+    M.makeTranslation(x, 0.05, z); cushion.setMatrixAt(id, M);
+    seats.push({ id, pos: new THREE.Vector3(x, 0, z), rot, y: 0.1 });
+    const dir = rot === 0 ? 1 : -1;
+    for (const [dx, dz] of [[-0.18, 0.62], [0.18, 0.62], [-0.18, 0.95], [0.18, 0.95]]) {
+      M.makeTranslation(x + dx, 0.07, z + dz * dir); bowl.setMatrixAt(bi, M);
+      M.makeTranslation(x + dx, 0.125, z + dz * dir); rice.setMatrixAt(bi, M);
+      bi++;
+    }
+  }
+  cushion.userData.seats = 'meal';
+  cushion.receiveShadow = true;
+  bowl.castShadow = true;
+  g.add(cushion, bowl, rice);
+  // 마주 보는 두 줄 사이에 흰 천
+  for (const z of [-4.4, 4.0]) {
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(23, 0.02, 1.0), mat('#f3efe6'));
+    cloth.position.set(0, 0.012, z); cloth.receiveShadow = true; g.add(cloth);
+  }
+  // 앞쪽 벽: 작은 불단과 오관게 족자
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(3, 1.1, 0.8), new THREE.MeshStandardMaterial({ map: dancheong('#5a2a1e', loc.interior.accent) }));
+  shelf.position.set(-HW + 0.6, 0.55, 0); shelf.rotation.y = Math.PI / 2; g.add(shelf);
+  const sc = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.5), new THREE.MeshStandardMaterial({ map: scroll('오관게', '이음식이어디서왔는가') }));
+  sc.position.set(0, 3.0, -HD + 0.06); g.add(sc);
+  // 밥솥과 국통
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.5, 0.7, 20), mat('#2f2b28', { metalness: 0.4, roughness: 0.5 }));
+  pot.position.set(HW - 1.4, 0.35, -HD + 1.4); pot.castShadow = true; g.add(pot);
+  const pot2 = pot.clone(); pot2.position.x -= 1.6; pot2.scale.setScalar(0.75); g.add(pot2);
+  roomLights(g, loc.interior.lamp, { size: 14 });
+  return {
+    group: g, floor, seats, exitDoor: door,
+    spawn: new THREE.Vector3(0, 0, HD - 1.6), spawnRot: Math.PI,
+    exitZ: HD - 0.9, camDist: 5,
+    bounds: { minX: -HW + 0.6, maxX: HW - 0.6, minZ: -HD + 0.6, maxZ: HD - 0.6 },
+    blockers: [], fog: null, background: new THREE.Color('#1c1410'),
+  };
+}
+
+// ───────── 내 방 (혼자 책 읽는 요사채 방) ─────────
+export function buildRoom(loc) {
+  const g = new THREE.Group();
+  const HW = 3.2, HD = 3.2, CEIL = 3.2;
+  const jangpan = canvasTex(256, 256, (cg, w, h) => {
+    cg.fillStyle = '#d9b46a'; cg.fillRect(0, 0, w, h);
+    cg.strokeStyle = 'rgba(120, 80, 30, 0.35)'; cg.lineWidth = 3;
+    for (let i = 0; i <= w; i += 64) { cg.beginPath(); cg.moveTo(i, 0); cg.lineTo(i, h); cg.stroke(); cg.beginPath(); cg.moveTo(0, i); cg.lineTo(w, i); cg.stroke(); }
+  }, [4, 4]);
+  const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 1.8, 1.4]], doorW: 1.8 });
+  // 경상(낮은 책상), 책, 등, 찻잔
+  const desk = new THREE.Group();
+  desk.position.set(0, 0, -1.55);
+  const woodM = mat('#7a4a2c', { roughness: 0.5 });
+  const topM = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.7), woodM); topM.position.y = 0.42; desk.add(topM);
+  for (const [x, z] of [[-0.65, -0.28], [0.65, -0.28], [-0.65, 0.28], [0.65, 0.28]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), woodM); l.position.set(x, 0.2, z); desk.add(l); }
+  const colors = ['#2f5d50', '#8a3a2c', '#c9a86a', '#3b4a6b'];
+  colors.forEach((c, i) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.24), mat(c)); b.position.set(-0.5, 0.49 + i * 0.06, -0.1); b.rotation.y = i * 0.15; desk.add(b); });
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.07, 12), mat('#e9e2d2')); cup.position.set(0.52, 0.5, 0.05); desk.add(cup);
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.18), new THREE.MeshStandardMaterial({ color: '#f3e6c3', emissive: '#ffcf7a', emissiveIntensity: 0.9 }));
+  lamp.position.set(0.55, 0.6, -0.2); desk.add(lamp);
+  desk.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.add(desk);
+  const lampLight = new THREE.PointLight('#ffcf8a', 2.5, 6, 1.5); lampLight.position.set(0.55, 0.9, -1.75); g.add(lampLight);
+  // 책장, 개어 둔 이불, 족자
+  const shelf = new THREE.Group();
+  shelf.position.set(HW - 0.3, 0, -0.6);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 1.6), mat('#6b4128')); frame.position.y = 0.9; shelf.add(frame);
+  const rr = rng(4);
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 7; i++) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32 + rr() * 0.1, 0.16), mat(['#2f5d50', '#8a3a2c', '#c9a86a', '#3b4a6b', '#d9d2c0'][Math.floor(rr() * 5)]));
+    b.position.set(-0.12, 0.3 + r * 0.55, -0.6 + i * 0.19); shelf.add(b);
+  }
+  g.add(shelf);
+  const quilt = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 0.8), mat('#c97a7a')); quilt.position.set(-HW + 0.8, 0.2, HD - 0.8); quilt.castShadow = true; g.add(quilt);
+  const quilt2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.8), mat('#f2ead8')); quilt2.position.set(-HW + 0.8, 0.52, HD - 0.8); g.add(quilt2);
+  const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.5), new THREE.MeshStandardMaterial({ map: scroll('고요히') }));
+  sc.position.set(0, 2.0, -HD + 0.05); g.add(sc);
+  const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), mat('#5d5a50')); cushion.position.set(0, 0.05, -0.65); cushion.receiveShadow = true; g.add(cushion);
+  cushion.userData.seats = 'room';
+  roomLights(g, '#ffd9a0', { size: 5, at: [-4, 6, 2] });
+  const seat = { id: 0, pos: new THREE.Vector3(0, 0, -0.65), rot: Math.PI, y: 0.1 };
+  return {
+    group: g, floor, seats: [seat], exitDoor: door,
+    spawn: seat.pos.clone(), spawnRot: Math.PI,
+    exitZ: HD - 0.5, camDist: 2.8, minDist: 1.4, maxDist: 4.6,
+    bounds: { minX: -HW + 0.4, maxX: HW - 0.4, minZ: -HD + 0.4, maxZ: HD - 0.4 },
+    blockers: [{ minX: -0.8, maxX: 0.8, minZ: -1.95, maxZ: -1.15 }], fog: null, background: new THREE.Color('#1c1410'),
   };
 }
 

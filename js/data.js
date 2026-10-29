@@ -37,6 +37,15 @@ export const LOCATIONS = [
   },
 ];
 
+// 불상 후보 (모두 국립중앙박물관 3D 데이터, 공공누리 제1유형). zUp: 스캔이 Z축 위로 되어 있어 눕혀 세워야 함
+export const BUDDHAS = {
+  duk2116: { file: 'assets/buddha.glb', name: '금동불좌상', from: '고려', no: '덕수2116' },
+  kwanseum: { file: 'assets/buddha-kwanseum.glb', name: '금동관음보살좌상', from: '조선', no: '덕수3310' },
+  iron: { file: 'assets/buddha-iron.glb', name: '철제여래좌상', from: '통일신라', no: '본관5191', zUp: true },
+  stone: { file: 'assets/buddha-stone.glb', name: '부여 군수리 석조여래좌상', from: '백제', no: 'M번435' },
+  gold: { file: 'assets/buddha-gold.glb', name: '경주 구황동 금제여래좌상', from: '통일신라', no: '본관14752', zUp: true },
+};
+
 export const SKIN_TONES = ['#f4c9a6', '#e8b48c', '#d79b72', '#b97a55', '#8d5a3b'];
 
 // 캐릭터 유형: head 모양과 장식(머리카락, 귀, 꼬리)이 다르다
