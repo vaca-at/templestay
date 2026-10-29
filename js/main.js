@@ -4,7 +4,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, randomName, defaultLook } from './data.js';
+import { LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS, randomName, defaultLook } from './data.js';
+import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildLantern, paintView } from './world.js';
 import { Net, preloadNet } from './net.js';
@@ -570,6 +571,8 @@ let preview = null, draft = null, creatorReturn = 'places';
 function openCreator(ret) {
   creatorReturn = ret;
   draft = S.profile ? structuredClone(S.profile) : { name: randomName(), look: defaultLook() };
+  draft.look = { ...defaultLook(), ...draft.look };
+  if (!CHAR_TYPES.some((t) => t.id === draft.look.type)) draft.look.type = defaultLook().type;
   $('#creator').hidden = false;
   $('#nick').value = draft.name;
   renderCreatorOptions();
@@ -612,6 +615,8 @@ function renderPreview(dt) {
 
 function renderCreatorOptions() {
   const L = draft.look;
+  $('#opt-gender').innerHTML = GENDERS.map((g) => `<button class="chip" data-gender="${g.id}" aria-pressed="${L.gender === g.id}"><span class="lbl">${g.name}</span><small class="cap">${g.cap}</small></button>`).join('');
+  $('#opt-pet').innerHTML = PETS.map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
   $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${t.name}</span><small class="cap">${t.desc}</small></button>`).join('');
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl"><span class="dot" style="background:${o.top}"></span><span class="dot" style="background:${o.sash}"></span>${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
@@ -853,11 +858,8 @@ document.addEventListener('click', (e) => {
   if (t.dataset.act) return doAction(t.dataset.act);
   if (t.dataset.place) { if (!sound.on && !params.has('mute')) { setSound(true); syncSoundBtn(); } return enterLocation(t.dataset.place); }
   if (t.dataset.server) { $('#server-modal').hidden = true; return switchServer(+t.dataset.server); }
-  if (t.dataset.type) { draft.look.type = t.dataset.type; }
-  else if (t.dataset.skin) { draft.look.skin = t.dataset.skin; }
-  else if (t.dataset.outfit) { draft.look.outfit = t.dataset.outfit; }
-  else if (t.dataset.acc) { draft.look.acc = t.dataset.acc; }
-  if (t.dataset.type || t.dataset.skin || t.dataset.outfit || t.dataset.acc) { renderCreatorOptions(); preview.avatar.build(draft.look); return; }
+  const pick = ['type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
+  if (pick) { draft.look[pick] = t.dataset[pick]; renderCreatorOptions(); preview.avatar.build(draft.look); return; }
   if (t.dataset.c) { wishColor = t.dataset.c; return renderWishForm(); }
   if (t.dataset.v != null && t.closest('#wish-amounts')) { wishAmount = +t.dataset.v; return renderWishForm(); }
   if (t.dataset.menu) {
@@ -909,26 +911,28 @@ function gallery(kind) {
   const d = new THREE.DirectionalLight('#ffffff', 2.4); d.position.set(3, 6, 5); d.castShadow = true; scene.add(d);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), new THREE.MeshStandardMaterial({ color: '#e6d9c2' }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-  const items = kind === 'types' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, outfit: OUTFITS[i].id, skin: SKIN_TONES[i % 3] }, name: t.name }))
-    : kind === 'outfits' ? OUTFITS.map((o) => ({ look: { ...defaultLook(), outfit: o.id }, name: o.name }))
-    : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: ['dongja', 'bosal', 'cheosa', 'dongja', 'bosal', 'cheosa'][i], acc: a.id, outfit: OUTFITS[i].id }, name: a.name }));
+  const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' }, name: t.name }))
+    : kind === 'outfits' ? OUTFITS.map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' }, name: o.name }))
+    : kind === 'pets' ? PETS.slice(1).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id }, name: p.name }))
+    : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', acc: a.id, pet: 'none' }, name: a.name }));
   const acts = (params.get('acts') || '').split(',');
   items.forEach((it, i) => {
     const av = new Avatar(it.look, it.name);
-    av.group.position.set((i - (items.length - 1) / 2) * 1.55, 0, 0);
+    const gap = kind === 'pets' ? 1.7 : 1.3;
+    av.group.position.set((i - (items.length - 1) / 2) * gap - (kind === 'pets' ? 0.35 : 0), 0, 0);
     if (acts[i]) av.play(acts[i]);
     scene.add(av.group);
     galleryAvatars.push(av);
   });
   camera.fov = 40; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.6, 9.2);
+  camera.position.set(0, 1.6, kind === 'pets' ? 15 : 9.6);
   camera.lookAt(0, 0.85, 0);
   controls.enabled = false;
 }
 
 function demo(which) {
   S.guest = false;
-  S.profile = { name: '맑은 빗방울', look: { type: params.get('type') || 'dongja', skin: SKIN_TONES[0], outfit: params.get('outfit') || 'seungbok', acc: 'none' } };
+  S.profile = { name: '맑은 빗방울', look: { ...defaultLook(), type: params.get('type') || 'beige', outfit: params.get('outfit') || 'own' } };
   S.loc = LOCATIONS.find((l) => l.id === (params.get('loc') || 'forest'));
   S.mode = 'world';
   S.server = 6;
@@ -944,7 +948,7 @@ function demo(which) {
   const rnd = (() => { let s = 9; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   const world = S.active;
   for (let i = 0; i < n; i++) {
-    const look = { type: looks[Math.floor(rnd() * looks.length)], skin: SKIN_TONES[Math.floor(rnd() * 3)], outfit: OUTFITS[Math.floor(rnd() * OUTFITS.length)].id, acc: ACCESSORIES[Math.floor(rnd() * ACCESSORIES.length)].id };
+    const look = { type: looks[Math.floor(rnd() * looks.length)], gender: rnd() < 0.5 ? 'f' : 'm', skin: SKIN_TONES[Math.floor(rnd() * 3)], outfit: rnd() < 0.5 ? 'own' : OUTFITS[Math.floor(rnd() * OUTFITS.length)].id, acc: rnd() < 0.7 ? 'none' : ACCESSORIES[Math.floor(rnd() * ACCESSORIES.length)].id, pet: rnd() < 0.5 ? PETS[1 + Math.floor(rnd() * (PETS.length - 1))].id : 'none' };
     const seat = which === 'in' && rnd() < 0.7 ? world.cushions[Math.floor(rnd() * world.cushions.length)] : null;
     const pos = seat ? [seat.pos.x, seat.pos.z] : which === 'in' ? [(rnd() - 0.5) * 18, (rnd() - 0.3) * 18] : [(rnd() - 0.5) * 24, rnd() * 16];
     const act = ['hapjang', 'beads', 'meditate', 'moktak', null, null][Math.floor(rnd() * 6)];

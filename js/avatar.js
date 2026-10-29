@@ -3,6 +3,7 @@
 // 캐릭터는 +z 방향을 바라본다.
 import * as THREE from 'three';
 import { OUTFITS, SKIN_TONES } from './data.js';
+import { buildBlock, buildPet, PRESETS } from './blocky.js';
 
 const FUR = ['#c27a45', '#a9643a', '#8a5a3c', '#d9a06b', '#6e4a35'];
 const RABBIT_FUR = ['#f3efe8', '#e2d6c6', '#cbbba6', '#a99a88', '#8a7d70'];
@@ -59,6 +60,8 @@ function nameTag(text, mine) {
 // 자세: y(몸 낮추기), hip(상체 숙임), head, 팔·다리 [x회전, z회전]
 const STAND = { y: 0, hip: 0, head: 0, aL: [0, 0.08], aR: [0, -0.08], lL: [0, 0], lR: [0, 0] };
 const SIT = { y: -0.34, hip: 0.04, head: 0.05, aL: [-0.55, -0.4], aR: [-0.55, 0.4], lL: [-1.5, 0.8], lR: [-1.5, -0.8] };
+// 블록 사람은 다리가 길고 네모나서 무릎을 덜 벌리고 앉는다
+const SIT_BLOCK = { ...SIT, y: -0.38, lL: [-1.5, 0.28], lR: [-1.5, -0.28] };
 const HAPJANG_ARMS = { aL: [-1.25, -0.55], aR: [-1.25, 0.55] };
 const KEYS = ['y', 'hip', 'head'];
 const LIMBS = ['aL', 'aR', 'lL', 'lR'];
@@ -136,7 +139,10 @@ export class Avatar {
   build(look) {
     if (this.body) this.group.remove(this.body);
     this.look = look;
-    const outfit = OUTFITS.find((o) => o.id === look.outfit) || OUTFITS[0];
+    const isBlock = !!PRESETS[look.type];
+    this.block = isBlock;
+    let outfit = OUTFITS.find((o) => o.id === look.outfit) || OUTFITS[0];
+    if (outfit.style === 'own' && !isBlock) outfit = OUTFITS.find((o) => o.id === 'seungbok');
     const skinIdx = Math.max(0, SKIN_TONES.indexOf(look.skin));
     const animal = ['squirrel', 'bear', 'rabbit'].includes(look.type);
     const skinColor = look.type === 'rabbit' ? RABBIT_FUR[skinIdx] : animal ? FUR[skinIdx] : look.skin;
@@ -148,6 +154,15 @@ export class Avatar {
     const body = new THREE.Group();
     this.body = body;
     this.group.add(body);
+    this.handY = -0.36;
+
+    // 내 옆 친구
+    if (this.pet) this.pet.removeFromParent();
+    this.pet = buildPet(look.pet || 'none');
+    this.petFresh = true;
+
+    if (isBlock) buildBlock(this, body, look, outfit, look.skin);
+    else {
 
     // 다리 (엉덩이 관절에 매달림)
     const legY = 0.4;
@@ -177,7 +192,7 @@ export class Avatar {
       const skirt = mesh(G.cone, longSkirt ? top : bottom, 0.34, longSkirt ? 0.4 : 0.3, 0.32, 0, longSkirt ? -0.17 : -0.12, 0);
       skirt.material = (longSkirt ? top : bottom).clone();
       skirt.material.side = THREE.DoubleSide;
-      skirt.userData = { h: skirt.scale.y, y: skirt.position.y };
+      skirt.userData = { sx: skirt.scale.x, sz: skirt.scale.z, h: skirt.scale.y, y: skirt.position.y };
       hips.add(skirt);
       this.skirt = skirt;
     } else {
@@ -323,6 +338,8 @@ export class Avatar {
       hips.add(mesh(G.box, mat(outfit.style === 'hiking' ? '#2f5d50' : '#7a6248'), 0.36, 0.4, 0.18, 0, 0.3, -0.3));
     }
 
+    }
+
     // 소품: 염주(오른손), 목탁(왼손)과 채(오른손)
     const beads = new THREE.Group();
     const bm = mat('#5a2f1c', { roughness: 0.35 });
@@ -330,7 +347,7 @@ export class Avatar {
       const a = (i / 16) * Math.PI * 2;
       beads.add(mesh(G.sphereLo, bm, 0.028, 0.028, 0.028, Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0));
     }
-    beads.position.set(0, -0.36, 0.05);
+    beads.position.set(0, this.handY, 0.08);
     beads.visible = false;
     this.armR.add(beads);
     this.beads = beads;
@@ -338,10 +355,10 @@ export class Avatar {
     const moktak = new THREE.Group();
     moktak.add(mesh(G.sphere, mat('#a0612f', { roughness: 0.5 }), 0.13, 0.11, 0.12));
     moktak.add(mesh(G.box, mat('#3b2014'), 0.18, 0.012, 0.03, 0, 0, 0.11));
-    moktak.position.set(-0.02, -0.42, 0.06);
+    moktak.position.set(-0.02, this.handY - 0.06, 0.08);
     moktak.visible = false;
     this.armL.add(moktak);
-    const stick = mesh(G.cyl, mat('#d8b27a'), 0.015, 0.26, 0.015, 0, -0.42, 0.08);
+    const stick = mesh(G.cyl, mat('#d8b27a'), 0.015, 0.26, 0.015, 0, this.handY - 0.06, 0.1);
     stick.rotation.x = Math.PI / 2;
     stick.visible = false;
     this.armR.add(stick);
@@ -381,7 +398,7 @@ export class Avatar {
       if (n >= 108) this.action = null;
     }
 
-    let target = this.seated ? SIT : STAND;
+    let target = this.seated ? (this.block ? SIT_BLOCK : SIT) : STAND;
     if (this.action) {
       if (this.speed > 0.2) this.action = null;
       else target = actionPose(this.action, this.actionT, target, this.seated);
@@ -414,10 +431,12 @@ export class Avatar {
     // 앉았을 때 치마 자락이 무릎을 덮도록 넓힌다
     if (this.skirt) {
       const sd = this.skirt.userData;
-      this.skirt.scale.x = this.skirt.scale.z = lerp(this.skirt.scale.x, this.seated ? 0.52 : 0.34, k);
+      this.skirt.scale.x = lerp(this.skirt.scale.x, this.seated ? sd.sx * 1.5 : sd.sx, k);
+      this.skirt.scale.z = lerp(this.skirt.scale.z, this.seated ? sd.sz * 1.5 : sd.sz, k);
       this.skirt.scale.y = lerp(this.skirt.scale.y, this.seated ? 0.14 : sd.h, k);
       this.skirt.position.y = lerp(this.skirt.position.y, this.seated ? -0.05 : sd.y, k);
     }
+    this.updatePet(dt);
 
     this.beads.visible = this.action === 'beads';
     if (this.beads.visible) this.beads.rotation.z += dt * 1.6;
@@ -427,7 +446,36 @@ export class Avatar {
     this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
   }
 
+  // 친구는 주인의 왼쪽 뒤를 졸졸 따라오고, 주인이 앉으면 방석 옆에 앉는다
+  updatePet(dt) {
+    const pet = this.pet;
+    if (!pet) return;
+    const parent = this.group.parent;
+    if (!parent) return;
+    if (pet.parent !== parent) parent.add(pet);
+    pet.visible = this.group.visible;
+    const g = this.group, ry = g.rotation.y;
+    const lx = this.seated ? 0.85 : 0.72, lz = this.seated ? 0.15 : -0.45;
+    const tx = g.position.x + lx * Math.cos(ry) + lz * Math.sin(ry);
+    const tz = g.position.z - lx * Math.sin(ry) + lz * Math.cos(ry);
+    const before = pet.position.clone();
+    const kk = this.petFresh ? 1 : Math.min(1, dt * 4);
+    this.petFresh = false;
+    pet.position.x += (tx - pet.position.x) * kk;
+    pet.position.z += (tz - pet.position.z) * kk;
+    const moved = Math.hypot(pet.position.x - before.x, pet.position.z - before.z) / Math.max(dt, 1e-4);
+    const t = performance.now() / 1000;
+    const hover = pet.userData.hover;
+    pet.position.y = hover ? 0.95 + Math.sin(t * 2.4) * 0.06 : moved > 0.3 ? Math.abs(Math.sin(t * 11)) * 0.07 : 0;
+    const want = moved > 0.3 ? Math.atan2(pet.position.x - before.x, pet.position.z - before.z) : ry;
+    const diff = Math.atan2(Math.sin(want - pet.rotation.y), Math.cos(want - pet.rotation.y));
+    pet.rotation.y += diff * Math.min(1, dt * 6);
+    for (const f of pet.userData.anim) f(t);
+    pet.userData.legs?.forEach((l, i) => { l.rotation.x = moved > 0.3 ? Math.sin(t * 14 + i * 1.6) * 0.5 : 0; });
+  }
+
   dispose() {
+    this.pet?.removeFromParent();
     this.tag?.material.map.dispose();
     this.tag?.material.dispose();
   }

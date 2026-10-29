@@ -38,17 +38,22 @@ export const LOCATIONS = [
 export const SKIN_TONES = ['#f4c9a6', '#e8b48c', '#d79b72', '#b97a55', '#8d5a3b'];
 
 // 캐릭터 유형: head 모양과 장식(머리카락, 귀, 꼬리)이 다르다
+// block: true 는 네모난 블록 사람(우리 캐릭터). 'own' 옷을 고르면 캐릭터 고유 차림을 입는다
 export const CHAR_TYPES = [
-  { id: 'dongja', name: '동자', desc: '동글동글 민머리 꼬마 스님' },
-  { id: 'bosal', name: '보살', desc: '쪽진 머리의 단정한 보살님' },
-  { id: 'cheosa', name: '처사', desc: '짧은 머리의 듬직한 처사님' },
-  { id: 'squirrel', name: '다람쥐', desc: '수목원에서 내려온 아기 다람쥐' },
-  { id: 'bear', name: '아기곰', desc: '산에서 온 느긋한 아기곰' },
-  { id: 'rabbit', name: '토끼', desc: '귀가 긴 조용한 산토끼' },
+  { id: 'moral', name: '도덕 선생님', desc: '남색 카디건, 단정한 깃', block: true },
+  { id: 'appteacher', name: '앱 만드는 선생님', desc: '까만 머리, 안경, 초록 셔츠', block: true },
+  { id: 'tycoon', name: '타이쿤 사장님', desc: '검은 정장에 빨간 넥타이', block: true },
+  { id: 'trainee', name: '연수 듣는 선생님', desc: '파란 모자, 흰 셔츠, 목걸이 명찰', block: true },
+  { id: 'planner', name: '시안 고르는 기획자', desc: '베레모, 분홍 니트', block: true },
+  { id: 'knitdev', name: '초록 니트 개발자', desc: '줄무늬 초록 니트', block: true },
+  { id: 'hoodie', name: '초록 후드 사장님', desc: '초록 후드티와 끈', block: true },
+  { id: 'beige', name: '베이지 재킷 사장님', desc: '베이지 재킷, 검은 상의·바지', block: true },
 ];
+// 예전에 저장된 둥근 캐릭터(동자, 보살 등)도 계속 그려지도록 avatar.js 에 남겨 둔다
 
 // 옷: top 상의, bottom 하의, sash 가사·띠, style 별 세부 장식
 export const OUTFITS = [
+  { id: 'own', name: '캐릭터 기본 옷', cap: '블록 캐릭터 고유 차림', top: '#2f8a8c', bottom: '#2c3450', sash: '#3d8fc4', style: 'own' },
   { id: 'seungbok', name: '승복', cap: '회색 승복에 노란 띠', top: '#c9ccc8', bottom: '#b9bcb8', sash: '#e9d27a', style: 'robe' },
   { id: 'gasa', name: '가사장삼', cap: '갈색 장삼에 붉은 가사', top: '#8a6a4f', bottom: '#7a5c44', sash: '#c4532f', style: 'kasaya' },
   { id: 'hanbok', name: '생활한복', cap: '쪽빛 저고리와 고름', top: '#4f5f8f', bottom: '#d9d2c0', sash: '#e8a3a3', style: 'hanbok' },
@@ -83,9 +88,13 @@ const NOUN = ['빗방울', '솔바람', '연꽃', '물안개', '풍경소리', '
 export const randomName = () =>
   ADJ[Math.floor(Math.random() * ADJ.length)] + ' ' + NOUN[Math.floor(Math.random() * NOUN.length)];
 
+export const GENDERS = [{ id: 'f', name: '여자', cap: '긴 웨이브 머리' }, { id: 'm', name: '남자', cap: '짧은 머리' }];
+
 export const defaultLook = () => ({
-  type: 'dongja',
+  type: 'beige',
+  gender: 'f',
+  pet: 'claude',
   skin: SKIN_TONES[0],
-  outfit: 'seungbok',
+  outfit: 'own',
   acc: 'none',
 });
