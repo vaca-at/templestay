@@ -1,7 +1,35 @@
 // 우리 캐릭터: 네모난 블록 사람과 '내 옆 친구'(따라다니는 작은 친구).
 // 블록 사람은 Avatar 와 같은 관절(hips, head, 팔다리)을 써서 모든 동작이 그대로 된다.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mat } from './avatar.js';
+
+// 관절(다리·몸통·팔·머리)마다 붙은 불투명 상자들을 정점 색이 있는 메시 하나로 합친다
+const BAKED = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
+export function bakeBlock(av) {
+  for (const node of [av.legL, av.legR, av.hips, av.armL, av.armR, av.head]) {
+    const parts = node.children.filter((o) => o.isMesh && !o.material.transparent && o.material.color && o !== av.skirt);
+    if (parts.length < 2) continue;
+    const geos = parts.map((m) => {
+      m.updateMatrix();
+      const g = m.geometry.clone().applyMatrix4(m.matrix);
+      const c = m.material.color;
+      const n = g.attributes.position.count;
+      const col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      return g;
+    });
+    const merged = mergeGeometries(geos);
+    geos.forEach((g) => g.dispose());
+    if (!merged) continue;
+    parts.forEach((m) => node.remove(m));
+    const one = new THREE.Mesh(merged, BAKED);
+    one.castShadow = true;
+    node.add(one);
+  }
+  av.baked = true;
+}
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 export function box(parent, color, w, h, d, x = 0, y = 0, z = 0, opts) {
@@ -140,6 +168,13 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     const a = (i / 14) * Math.PI * 2;
     box(head, '#6b3b22', 0.05, 0.05, 0.05, Math.sin(a) * 0.2, -0.02 - Math.max(0, Math.cos(a)) * 0.07, Math.cos(a) * 0.17);
   }
+  if (acc === 'bracelet') {
+    // 왼쪽 손목을 한 바퀴 두르는 작은 구슬
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      box(av.armL, i === 0 ? '#c9a86a' : '#6b3b22', 0.045, 0.045, 0.045, Math.cos(a) * 0.1, -0.35, Math.sin(a) * 0.11);
+    }
+  }
   if (acc === 'satgat') {
     const hat = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.26, 4, 1), mat('#c9a86a'));
     hat.rotation.y = Math.PI / 4;
@@ -149,7 +184,7 @@ export function buildBlock(av, body, look, outfit, skinColor) {
   }
   if (acc === 'beanie') { box(head, '#b23a3a', S + 0.1, 0.2, S + 0.1, 0, hy + 0.06, 0); box(head, '#f4efe6', 0.12, 0.1, 0.12, 0, hy + 0.22, 0); }
   if (acc === 'lotuspin') { box(head, '#f59bb5', 0.1, 0.1, 0.06, 0.24, hy, 0.18); box(head, '#f3d16a', 0.04, 0.04, 0.07, 0.24, hy, 0.19); }
-  if (acc === 'backpack' || (!own && outfit.style === 'hiking')) box(hips, outfit.style === 'hiking' ? '#2f5d50' : '#7a6248', 0.38, 0.42, 0.18, 0, 0.3, -0.23);
+  if (acc === 'backpack' || (!own && outfit.style === 'hiking')) { box(hips, '#8a8d8a', 0.38, 0.42, 0.18, 0, 0.3, -0.23); box(hips, '#6f726f', 0.3, 0.12, 0.04, 0, 0.18, -0.33); }
 }
 
 // ───────── 내 옆 친구 ─────────

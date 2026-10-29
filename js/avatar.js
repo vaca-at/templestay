@@ -2,8 +2,8 @@
 // 모든 부품은 기본 도형으로 만들고, 관절(hips, head, 팔다리) 회전값으로 동작을 표현한다.
 // 캐릭터는 +z 방향을 바라본다.
 import * as THREE from 'three';
-import { OUTFITS, SKIN_TONES } from './data.js';
-import { buildBlock, buildPet, PRESETS } from './blocky.js';
+import { OUTFITS, SKIN_TONES, dressFor } from './data.js';
+import { buildBlock, buildPet, bakeBlock, PRESETS } from './blocky.js';
 
 const FUR = ['#c27a45', '#a9643a', '#8a5a3c', '#d9a06b', '#6e4a35'];
 const RABBIT_FUR = ['#f3efe8', '#e2d6c6', '#cbbba6', '#a99a88', '#8a7d70'];
@@ -108,6 +108,17 @@ function actionPose(action, t, base, seated) {
       const k = bump(t, 0, 0.3, 1.6, 2.0);
       return mix(base, { aR: [-0.3, -2.5 + Math.sin(t * 12) * 0.35] }, k);
     }
+    case 'eat': {
+      // 왼손은 발우를 받치고, 오른손 숟가락이 3초마다 입으로
+      const u = t % 3;
+      const lift = bump(u, 0.6, 1.1, 1.5, 2.0);
+      return mix(base, { aL: [-1.05, -0.4], aR: [-0.95 - lift * 0.9, 0.35 + lift * 0.2], head: 0.25 - lift * 0.2 }, ease(t / 0.5));
+    }
+    case 'read': {
+      // 두 손으로 책을 들고 고개를 숙인다. 가끔 책장을 넘긴다
+      const flip = bump(t % 9, 7.6, 7.9, 8.2, 8.6);
+      return mix(base, { aL: [-1.0, -0.42], aR: [-1.0 - flip * 0.3, 0.42 + flip * 0.3], head: 0.38, hip: 0.08 }, ease(t / 0.6));
+    }
   }
   return base;
 }
@@ -124,8 +135,25 @@ export class Avatar {
     this.action = null;
     this.actionT = 0;
     this.fresh = true;
+    this.baseLook = look;
+    this.dressKey = JSON.stringify(look);
     this.build(look);
     this.setName(name);
+  }
+
+  // 고른 모습(baseLook)은 그대로 두고, 장소에 맞는 옷으로 갈아입힌다
+  setLook(look, scene) {
+    this.baseLook = look;
+    this.dressKey = null;
+    this.dress(scene);
+  }
+
+  dress(scene) {
+    const eff = dressFor(this.baseLook, scene);
+    const key = JSON.stringify(eff);
+    if (key === this.dressKey) return;
+    this.dressKey = key;
+    this.build(eff);
   }
 
   setName(name) {
@@ -156,10 +184,14 @@ export class Avatar {
     this.group.add(body);
     this.handY = -0.36;
 
-    // 내 옆 친구
-    if (this.pet) this.pet.removeFromParent();
-    this.pet = buildPet(look.pet || 'none');
-    this.petFresh = true;
+    // 내 옆 친구 (옷만 갈아입을 때는 그대로 둔다)
+    const petId = look.pet || 'none';
+    if (petId !== this.petId) {
+      if (this.pet) this.pet.removeFromParent();
+      this.pet = buildPet(petId);
+      this.petId = petId;
+      this.petFresh = true;
+    }
 
     if (isBlock) buildBlock(this, body, look, outfit, look.skin);
     else {
@@ -315,6 +347,13 @@ export class Avatar {
         head.add(mesh(G.sphereLo, beadMat, 0.035, 0.035, 0.035, Math.sin(a) * 0.22, -0.01 - Math.max(0, Math.cos(a)) * 0.08, Math.cos(a) * 0.22));
       }
     }
+    if (acc === 'bracelet') {
+      const bm2 = mat('#6b3b22', { roughness: 0.4 });
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        this.armL.add(mesh(G.sphereLo, bm2, 0.025, 0.025, 0.025, Math.cos(a) * 0.09, -0.27, Math.sin(a) * 0.09));
+      }
+    }
     if (acc === 'satgat') {
       const hat = mesh(new THREE.ConeGeometry(0.62, 0.28, 28, 1, true), mat('#c9a86a', { side: THREE.DoubleSide }), 1, 1, 1, 0, 0.78, 0);
       head.add(hat);
@@ -335,10 +374,12 @@ export class Avatar {
       head.add(pin);
     }
     if (acc === 'backpack' || outfit.style === 'hiking') {
-      hips.add(mesh(G.box, mat(outfit.style === 'hiking' ? '#2f5d50' : '#7a6248'), 0.36, 0.4, 0.18, 0, 0.3, -0.3));
+      hips.add(mesh(G.box, mat('#8a8d8a'), 0.36, 0.4, 0.18, 0, 0.3, -0.3));
     }
 
     }
+    // 100명이 한 방에 있어도 버티도록 블록 몸은 관절마다 한 덩어리로 합친다
+    if (isBlock) bakeBlock(this);
 
     // 소품: 염주(오른손), 목탁(왼손)과 채(오른손)
     const beads = new THREE.Group();
@@ -363,6 +404,33 @@ export class Avatar {
     stick.visible = false;
     this.armR.add(stick);
     this.moktak = moktak; this.stick = stick;
+
+    // 발우(가슴 앞)와 숟가락(오른손), 책(가슴 앞)
+    const bowl = new THREE.Group();
+    const lacquer = mat('#4a2418', { roughness: 0.3 });
+    bowl.add(mesh(new THREE.CylinderGeometry(0.13, 0.08, 0.09, 20), lacquer));
+    bowl.add(mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.01, 20), mat('#f4efe2'), 1, 1, 1, 0, 0.042, 0));
+    bowl.position.set(0, 0.16, 0.3);
+    bowl.visible = false;
+    this.hips.add(bowl);
+    const spoon = mesh(G.box, mat('#c9a86a', { metalness: 0.5, roughness: 0.4 }), 0.025, 0.2, 0.025, 0, this.handY - 0.05, 0.06);
+    spoon.visible = false;
+    this.armR.add(spoon);
+    const book = new THREE.Group();
+    const cover = mat('#2f5d50');
+    const page = mat('#f7f1e1');
+    for (const s of [1, -1]) {
+      const half = new THREE.Group();
+      half.rotation.y = -0.3 * s;
+      half.add(mesh(G.box, cover, 0.18, 0.24, 0.015, 0.09 * s, 0, 0));
+      half.add(mesh(G.box, page, 0.16, 0.22, 0.012, 0.085 * s, 0, 0.012));
+      book.add(half);
+    }
+    book.position.set(0, 0.2, 0.36);
+    book.rotation.x = -0.7;
+    book.visible = false;
+    this.hips.add(book);
+    this.bowl = bowl; this.spoon = spoon; this.book = book;
 
     // 명상할 때 은은한 빛 고리
     const aura = new THREE.Mesh(
@@ -441,6 +509,8 @@ export class Avatar {
     this.beads.visible = this.action === 'beads';
     if (this.beads.visible) this.beads.rotation.z += dt * 1.6;
     this.moktak.visible = this.stick.visible = this.action === 'moktak';
+    this.bowl.visible = this.spoon.visible = this.action === 'eat';
+    this.book.visible = this.action === 'read';
     const auraOn = this.action === 'meditate';
     this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);
     this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
@@ -476,6 +546,7 @@ export class Avatar {
 
   dispose() {
     this.pet?.removeFromParent();
+    this.body?.traverse((o) => { if (o.isMesh && o.material?.vertexColors) o.geometry.dispose(); });
     this.tag?.material.map.dispose();
     this.tag?.material.dispose();
   }

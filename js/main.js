@@ -307,7 +307,7 @@ const ICONS = {
 };
 
 function renderActions() {
-  $('#actions').innerHTML = ACTIONS.map((a) =>
+  $('#actions').innerHTML = ACTIONS.filter((a) => !a.auto).map((a) =>
     `<button class="act" data-act="${a.id}" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[a.id]}</svg>${a.name}<small class="cap">${a.cap}</small></button>`).join('');
 }
 
@@ -619,7 +619,7 @@ function renderCreatorOptions() {
   $('#opt-pet').innerHTML = PETS.map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
   $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${t.name}</span><small class="cap">${t.desc}</small></button>`).join('');
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
-  $('#opt-outfit').innerHTML = OUTFITS.map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl"><span class="dot" style="background:${o.top}"></span><span class="dot" style="background:${o.sash}"></span>${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
+  $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
   $('#opt-acc').innerHTML = ACCESSORIES.map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
 }
 

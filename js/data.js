@@ -1,6 +1,8 @@
 // 앱 전체에서 쓰는 고정 데이터: 법당 위치, 캐릭터 유형, 옷, 동작, 닉네임
 
 export const APP_ID = 'keunbeopdang-templestay-v1';
+// 방 중계 서버 주소 (server/ 폴더의 Cloudflare Worker). 비어 있으면 브라우저끼리 직접 연결한다
+export const RELAY_URL = '';
 export const SERVER_COUNT = 12;
 export const SERVER_CAP = 100;
 
@@ -40,14 +42,14 @@ export const SKIN_TONES = ['#f4c9a6', '#e8b48c', '#d79b72', '#b97a55', '#8d5a3b'
 // 캐릭터 유형: head 모양과 장식(머리카락, 귀, 꼬리)이 다르다
 // block: true 는 네모난 블록 사람(우리 캐릭터). 'own' 옷을 고르면 캐릭터 고유 차림을 입는다
 export const CHAR_TYPES = [
-  { id: 'moral', name: '도덕 선생님', desc: '남색 카디건, 단정한 깃', block: true },
-  { id: 'appteacher', name: '앱 만드는 선생님', desc: '까만 머리, 안경, 초록 셔츠', block: true },
-  { id: 'tycoon', name: '타이쿤 사장님', desc: '검은 정장에 빨간 넥타이', block: true },
-  { id: 'trainee', name: '연수 듣는 선생님', desc: '파란 모자, 흰 셔츠, 목걸이 명찰', block: true },
-  { id: 'planner', name: '시안 고르는 기획자', desc: '베레모, 분홍 니트', block: true },
-  { id: 'knitdev', name: '초록 니트 개발자', desc: '줄무늬 초록 니트', block: true },
-  { id: 'hoodie', name: '초록 후드 사장님', desc: '초록 후드티와 끈', block: true },
-  { id: 'beige', name: '베이지 재킷 사장님', desc: '베이지 재킷, 검은 상의·바지', block: true },
+  { id: 'moral', name: '남색 카디건', desc: '흰 깃이 보이는 단정한 차림', block: true },
+  { id: 'appteacher', name: '안경과 초록 셔츠', desc: '동그란 안경, 까만 머리', block: true },
+  { id: 'tycoon', name: '검은 정장', desc: '빨간 넥타이를 맨 정장', block: true },
+  { id: 'trainee', name: '파란 모자', desc: '흰 셔츠에 목걸이 명찰', block: true },
+  { id: 'planner', name: '베레모와 분홍 니트', desc: '빨간 베레모, 연분홍 니트', block: true },
+  { id: 'knitdev', name: '초록 줄무늬 니트', desc: '포근한 줄무늬 스웨터', block: true },
+  { id: 'hoodie', name: '초록 후드티', desc: '모자 달린 후드와 끈', block: true },
+  { id: 'beige', name: '베이지 재킷', desc: '검은 상의와 바지', block: true },
 ];
 // 예전에 저장된 둥근 캐릭터(동자, 보살 등)도 계속 그려지도록 avatar.js 에 남겨 둔다
 
@@ -60,15 +62,52 @@ export const OUTFITS = [
   { id: 'lotus', name: '연꽃 법회복', cap: '하얀 옷에 연분홍 띠', top: '#f6f2ea', bottom: '#efe7d8', sash: '#e58fa6', style: 'robe' },
   { id: 'hiking', name: '등산복', cap: '산길 오르는 차림과 배낭', top: '#e2603d', bottom: '#3c4552', sash: '#2b7a6a', style: 'hiking' },
   { id: 'durumagi', name: '단풍 두루마기', cap: '가을빛 긴 두루마기', top: '#b5502e', bottom: '#d8c7a6', sash: '#f0c05a', style: 'coat' },
+  // 법당 안에서는 누구나 이 옷으로 갈아입는다 (고르는 목록에는 안 나옴)
+  { id: 'monkgray', name: '스님 회색 옷', cap: '법당 안 차림', top: '#9b9e9b', bottom: '#8e918e', sash: '#7f827f', style: 'robe', hidden: true },
 ];
+
+// 장소(scene)별로 입는 옷. 법당 안에서는 회색 승복, 모자·배낭은 벗는다
+export function dressFor(look, scene) {
+  if (scene !== 'in') return look;
+  return { ...look, outfit: 'monkgray', acc: ['beads', 'bracelet', 'lotuspin'].includes(look.acc) ? look.acc : 'none' };
+}
+
+// 하루 활동. scene: 그 활동을 하러 가는 곳
+export const ACTIVITIES = {
+  walk: { name: '산보', scene: 'out', color: '#6f9a5a', desc: '절 주변을 천천히 걸어요' },
+  read: { name: '독서', scene: 'room', color: '#5a7fb0', desc: '내 방에서 혼자 책을 읽어요' },
+  meal: { name: '발우공양', scene: 'meal', color: '#c9953a', desc: '공양간에서 발우로 밥을 먹어요' },
+  pray: { name: '예불', scene: 'in', color: '#b8463f', desc: '법당 방석에 앉아 기도해요' },
+  free: { name: '자유', scene: null, color: '#b9ada0', desc: '마음대로 다녀요' },
+};
+
+// 기본 시간표: 출근·퇴근 한 시간은 산보, 일하는 시간은 독서, 점심은 발우공양
+export const DEFAULT_SCHEDULE = {
+  auto: true,
+  weekendOff: true,
+  blocks: [
+    { start: '08:00', end: '09:00', act: 'walk', label: '출근 산보' },
+    { start: '09:00', end: '12:00', act: 'read', label: '오전 독서' },
+    { start: '12:00', end: '13:00', act: 'meal', label: '점심 발우공양' },
+    { start: '13:00', end: '18:00', act: 'read', label: '오후 독서' },
+    { start: '18:00', end: '19:00', act: 'walk', label: '퇴근 산보' },
+  ],
+};
+
+export const SCENES = {
+  out: { name: '마당', cap: '절 주변 산보' },
+  in: { name: '법당', cap: '방석에 앉아 예불' },
+  meal: { name: '공양간', cap: '발우공양 하는 곳' },
+  room: { name: '내 방', cap: '혼자 책 읽는 곳' },
+};
 
 export const ACCESSORIES = [
   { id: 'none', name: '없음', cap: '장신구 빼기' },
   { id: 'beads', name: '염주 목걸이', cap: '목에 거는 염주' },
+  { id: 'bracelet', name: '염주 팔찌', cap: '왼쪽 손목에 두른 염주' },
   { id: 'satgat', name: '삿갓', cap: '넓은 대나무 삿갓' },
-  { id: 'beanie', name: '털모자', cap: '산바람 막는 모자' },
   { id: 'lotuspin', name: '연꽃 핀', cap: '머리에 꽂는 연꽃' },
-  { id: 'backpack', name: '배낭', cap: '등에 메는 가방' },
+  { id: 'backpack', name: '배낭', cap: '등에 메는 회색 가방' },
 ];
 
 // 동작. seatedOk: 앉은 채로 할 수 있는지. loop: 다시 누를 때까지 계속
@@ -81,6 +120,9 @@ export const ACTIONS = [
   { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true },
   { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0 },
   { id: 'bae108', name: '108배', cap: '절 108번 · 횟수 세어 줌', verb: '108배를 시작했어요', loop: true },
+  // 시간표가 알아서 하는 동작 (동작 막대에는 안 나옴)
+  { id: 'eat', name: '발우공양', verb: '발우공양을 시작했어요', loop: true, auto: true },
+  { id: 'read', name: '독서', verb: '책을 펼쳤어요', loop: true, auto: true },
 ];
 
 const ADJ = ['맑은', '고요한', '포근한', '푸른', '은은한', '따스한', '느린', '작은', '새벽', '단정한', '환한', '조용한'];
