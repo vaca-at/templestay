@@ -7,7 +7,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, randomName, defaultLook } from './data.js';
 import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildLantern, paintView } from './world.js';
-import { Net } from './net.js';
+import { Net, preloadNet } from './net.js';
 import { setSound, sound, moktak, bowl, coin } from './audio.js';
 
 const $ = (s) => document.querySelector(s);
@@ -965,9 +965,16 @@ function demo(which) {
 
 // ───────── 시작 ─────────
 (async () => {
+  if (!params.has('demo') && !params.has('gallery')) preloadNet();
   try { await Promise.race([document.fonts.load('700 40px "Gowun Batang"'), new Promise((r) => setTimeout(r, 2500))]); } catch {}
   if (params.get('gallery')) gallery(params.get('gallery'));
   else if (params.get('demo')) demo(params.get('demo'));
+  else if (params.get('auto')) {
+    // 바로 입장 (공유 링크·접속 테스트용): ?auto=forest|river|sea
+    if (!S.profile) { S.profile = { name: randomName(), look: defaultLook() }; store.set('profile', S.profile); }
+    S.guest = false;
+    enterLocation(LOCATIONS.some((l) => l.id === params.get('auto')) ? params.get('auto') : 'forest');
+  }
   else showIntro();
   if (params.get('screen') === 'creator') openCreator('places');
   if (params.get('screen') === 'places') showPlaces();

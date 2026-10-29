@@ -8,6 +8,9 @@ async function lib() {
   return trystero;
 }
 
+// 첫 화면에서 미리 불러 두면 입장할 때 기다리는 시간이 줄어든다
+export const preloadNet = () => lib().catch(() => {});
+
 export class Net {
   constructor(handlers) {
     this.h = handlers;
