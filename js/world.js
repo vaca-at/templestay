@@ -1645,6 +1645,8 @@ export function buildMealHall(loc) {
   roomLights(g, loc.interior.lamp, { size: 14 });
   return {
     group: g, floor, seats, exitDoor: door,
+    // 족자: 내 방처럼 각자 고른 문구를 걸어요 (scrolls.js)
+    setScroll(text, sub) { sc.material.map.dispose(); sc.material.map = scroll(text, sub); sc.material.needsUpdate = true; },
     spawn: new THREE.Vector3(0, 0, HD - 1.6), spawnRot: Math.PI,
     exitZ: HD - 0.9, camDist: 5,
     bounds: { minX: -HW + 0.6, maxX: HW - 0.6, minZ: -HD + 0.6, maxZ: HD - 0.6 },
@@ -1695,6 +1697,9 @@ export function buildRoom(loc) {
   cushion.userData.seats = 'room';
   roomLights(g, '#ffd9a0', { size: 5, at: [-4, 6, 2] });
   const seat = { id: 0, pos: new THREE.Vector3(0, 0, -0.65), rot: Math.PI, y: 0.1 };
+  // 절하는 방석: 책상에서 조금 물러난 자리 (108배 · 큰절 · 반배는 여기서)
+  const bowSpot = new THREE.Vector3(0, 0, 0.55);
+  const bowMat = new THREE.Mesh(cushionGeo(1.0, 0.09), cushionMat('#6e2c27', '#c9a24a', '#e8b8a0')); bowMat.position.set(0, 0.045, 0.55); bowMat.receiveShadow = true; g.add(bowMat);
   return {
     group: g, floor, seats: [seat], exitDoor: door,
     // 족자 문구 바꿔 걸기
@@ -1703,6 +1708,7 @@ export function buildRoom(loc) {
       sc.material.map = scroll(text, sub);
       sc.material.needsUpdate = true;
     },
+    bowSpot,
     spawn: seat.pos.clone(), spawnRot: Math.PI,
     exitZ: HD - 0.5, camDist: 2.8, minDist: 1.4, maxDist: 4.6,
     bounds: { minX: -HW + 0.4, maxX: HW - 0.4, minZ: -HD + 0.4, maxZ: HD - 0.4 },

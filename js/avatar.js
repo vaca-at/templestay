@@ -72,6 +72,22 @@ const LIMBS = ['aL', 'aR', 'lL', 'lR'];
 
 const lerp = (a, b, t) => a + (b - a) * t;
 let HALO_TEX = null;   // 명상 두광 그림 (모두 같이 씀)
+// 사경 종이 그림: full = 경전(글자가 다 적힘), 아니면 칸 공책에 앞부분만 옮겨 쓴 모습. 세로쓰기 · 오른쪽부터
+const SAG_TEX = {};
+const SUTRA_TEXT = '마하반야바라밀다심경관자재보살행심반야바라밀다시조견오온개공도일체고액사리자색불이공공불이색색즉시공공즉시색수상행식역부여시';
+function sagyeongTex(full) {
+  if (SAG_TEX[full]) return SAG_TEX[full];
+  const c = document.createElement('canvas'); c.width = 384; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = full ? '#efe2c2' : '#f8f2e2'; g.fillRect(0, 0, 384, 512);
+  const cols = 8, rows = 10, cw = 384 / (cols + 1), ch = 512 / (rows + 1);
+  if (!full) { g.strokeStyle = 'rgba(190,60,50,0.55)'; g.lineWidth = 1.5; for (let i = 0; i <= cols; i++) { g.beginPath(); g.moveTo(cw * (i + 0.5), ch * 0.5); g.lineTo(cw * (i + 0.5), ch * (rows + 0.5)); g.stroke(); } for (let j = 0; j <= rows; j++) { g.beginPath(); g.moveTo(cw * 0.5, ch * (j + 0.5)); g.lineTo(cw * (cols + 0.5), ch * (j + 0.5)); g.stroke(); } }
+  g.fillStyle = '#1d1a18'; g.font = `700 ${Math.floor(ch * 0.72)}px "Gowun Batang", "Nanum Myeongjo", serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const n = full ? cols * rows : 23;   // 옮겨 쓰는 쪽은 아직 앞부분만
+  for (let k = 0; k < n && k < SUTRA_TEXT.length * 2; k++) { const col = Math.floor(k / rows), row = k % rows; g.fillText(SUTRA_TEXT[k % SUTRA_TEXT.length], 384 - cw * (col + 1), ch * (row + 1)); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return (SAG_TEX[full] = t);
+}
 const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 // 구간 [a,b] 안에서 0→1로 올라갔다가 [c,d]에서 1→0으로 내려오는 곡선
 const bump = (t, a, b, c, d) => ease((t - a) / (b - a)) * (1 - ease((t - c) / (d - c)));
@@ -500,9 +516,13 @@ export class Avatar {
     cup.scale.setScalar(1.8);   // 손에 비해 너무 작아 보이지 않게
     cup.visible = false;
     this.armR.add(cup);
+    // 사경: 왼쪽엔 반야심경이 적힌 경전, 오른쪽엔 옮겨 쓰는 사경지(칸 공책)
     const paper = new THREE.Group();
-    paper.add(mesh(G.box, mat('#f6efdc'), 0.34, 0.01, 0.46));
-    for (let c = 0; c < 4; c++) for (let r = 0; r < 6; r++) if ((c * 7 + r * 3) % 5) paper.add(mesh(G.box, mat('#2a2420'), 0.035, 0.004, 0.035, 0.11 - c * 0.07, 0.007, -0.17 + r * 0.06));
+    const sutra = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), new THREE.MeshStandardMaterial({ map: sagyeongTex(true), roughness: 0.9 }));
+    sutra.rotation.x = -Math.PI / 2; sutra.rotation.z = 0.12; sutra.position.set(0.19, 0.012, -0.02); paper.add(sutra);
+    paper.add(mesh(G.box, mat('#7a2c22'), 0.31, 0.012, 0.41, 0.19, 0.004, -0.02));   // 경전 표지
+    const copy = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), new THREE.MeshStandardMaterial({ map: sagyeongTex(false), roughness: 0.9 }));
+    copy.rotation.x = -Math.PI / 2; copy.rotation.z = -0.05; copy.position.set(-0.14, 0.008, 0.02); paper.add(copy);
     paper.position.set(0, 0.16, 0.42);   // 책 읽기의 책과 같은 높이 (내 방 책상 위)
     paper.visible = false;
     this.hips.add(paper);

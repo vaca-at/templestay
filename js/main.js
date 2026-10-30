@@ -292,7 +292,7 @@ async function goScene(which, { instant = false } = {}) {
   S.me.propLift = which === 'room' ? 0.07 : 0;   // 내 방: 책·사경 종이가 책상 위에
   renderActions();   // 장소마다 동작 줄이 달라요
   // 내 방 족자는 들어올 때마다 문구가 바뀐다
-  if (which === 'room') hangScroll(world); else stopScrolls();
+  if (which === 'room' || which === 'meal') hangScroll(world); else stopScrolls();
   refreshRemoteVisibility();
   updateHud();
   pushState(true);
@@ -506,6 +506,11 @@ function doAction(id) {
     if (on) startStones();
     net.sendAct({ a: id, on }); pushState(true); syncActionButtons();
     return;
+  }
+  // 내 방에서 절은 책상에서 물러나 절하는 방석 위에서 (책상에 머리를 박지 않게)
+  if (S.scene === 'room' && ['bae108', 'keunjeol', 'banbae'].includes(id) && S.active.bowSpot) {
+    S.seat = null; S.me.seated = false;
+    S.me.group.position.copy(S.active.bowSpot); S.me.group.rotation.y = Math.PI;
   }
   // 방석에 앉아서 하는 동작(발우공양 · 발우 씻기 · 책 읽기 · 사경)은 서 있으면 먼저 빈 방석에 앉는다
   if (ACTIONS.find((a) => a.id === id)?.seat && S.seat == null && S.active.seats?.length && S.me.action !== id) {
@@ -826,6 +831,7 @@ function updateHud() {
   // 오른쪽 상황 단추는 장소마다 두 개: 법당 [내 방으로][일어서기] · 마당 [법당으로][산보하기]
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
+  $('#btn-yard').hidden = S.scene !== 'room';
   $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
   $('#btn-sanbo').hidden = S.scene !== 'out';
   $('#jump-btn').hidden = !canRun(); // 휴대폰 점프 단추: 점프할 수 있는 곳(마당·내 방)에서만
@@ -1412,6 +1418,7 @@ $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { stopWalk(); standUp(); };
 $('#btn-sanbo').onclick = () => doAction('walk');   // 마당 자동 산보: 다시 누르면 멈춤
 $('#btn-go').onclick = () => { stopWalk(); goScene(S.scene === 'in' ? 'room' : 'in'); };
+$('#btn-yard').onclick = () => { stopWalk(); goScene('out'); };   // 내 방: [법당으로] [마당으로]
 // 산보: 먼저 합장하고, 마당을 오른쪽(시계 방향, 법당을 오른쪽에 두고)으로 계속 돈다. 다시 누르면 멈춘다
 $('#btn-wish').onclick = openWish;
 $('#design-chip').onclick = showPlaces;
