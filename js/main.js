@@ -14,6 +14,7 @@ import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls } from './scrolls.js';
+import { openTyping, onTypingOpen } from './typing.js';
 import { setSound, sound, moktak, bowl, coin, bigBell, TRACKS, setMusic, music } from './audio.js';
 import { daylight, applyDaylight } from './daytime.js';
 
@@ -1438,6 +1439,10 @@ $('#pick-pop').addEventListener('click', (e) => { if (e.target.closest('button')
 $('#side-char').onclick = openCreator;
 $('#side-music').onclick = () => { renderMusic(); $('#music-modal').hidden = false; };
 $('#side-photo').onclick = () => startPhoto();
+// 반야심경 타자 사경: 내 방이면 캐릭터도 책상 앞에서 사경을 해요
+$('#side-typing').onclick = () => openTyping();
+onTypingOpen(() => { if (S.scene === 'room' && S.me.action !== 'sagyeong') doAction('sagyeong'); });
+document.addEventListener('typing-done', () => { bowl(0.6); addRecord('sagyeong', 1); toast('반야심경 한 편을 옮겨 썼어요'); });
 $('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
 // 숫자 키 1~8 = 아래 동작 칸 차례대로
 addEventListener('keydown', (e) => {

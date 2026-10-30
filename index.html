@@ -147,6 +147,7 @@
     <button id="side-place" aria-label="장소"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg><small class="cap">디자인 · 서버</small></button>
     <button id="side-wish" aria-label="소원"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3"/><ellipse cx="12" cy="11" rx="6" ry="5.5"/><path d="M9 7.5c-1 2-1 5 0 7M15 7.5c1 2 1 5 0 7M10 16.5v4h4v-4"/></svg><small class="cap">소원 올리기</small></button>
     <button id="side-music" aria-label="법당 음악"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><small class="cap">법당 음악</small></button>
+    <button id="side-typing" aria-label="반야심경 타자 사경"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v11H3z"/><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h0M7 13h1M10 13h1M13 13h1M16 13h1M8 16h8"/></svg><small class="cap">반야심경 타자</small></button>
     <button id="side-photo" aria-label="사진 찍기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><small class="cap">사진 찍기</small></button>
   </nav>
   <!-- 위치 단추 옆 작은 창: 디자인 이름 3개 · 서버 번호만 -->
@@ -292,6 +293,33 @@
 <div id="photo-flash"></div>
 
 <!-- 법당 음악 -->
+<!-- 반야심경 타자 사경 -->
+<div id="typing-modal" class="modal" hidden>
+  <div class="sheet typing-sheet">
+    <header class="panel-head"><h2>반야심경 타자 사경</h2><button class="icon-btn" data-close="typing-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <div id="ty-play">
+      <div class="ty-stats">
+        <div><small>타자 속도</small><b id="ty-speed">0</b><u>타/분</u></div>
+        <div><small>정확도</small><b id="ty-acc">100</b><u>%</u></div>
+        <div><small>시간</small><b id="ty-time">0:00</b></div>
+        <div><small>진행</small><b id="ty-prog">0 / 28</b></div>
+      </div>
+      <div class="ty-track"><i id="ty-bar"></i></div>
+      <div class="ty-scroll">
+        <p id="ty-prev" class="ty-side"></p>
+        <p id="ty-target" class="ty-target" aria-live="polite"></p>
+        <p id="ty-next" class="ty-side"></p>
+      </div>
+      <input id="ty-in" class="ty-in" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="위 경전 줄을 그대로 쳐요" placeholder="여기에 위 줄을 그대로 쳐요">
+      <p class="sub ty-help">한 줄을 다 맞게 치면 다음 줄로 넘어가요. 띄어쓰기도 똑같이. <span id="ty-best"></span></p>
+    </div>
+    <div id="ty-done" class="ty-done" hidden>
+      <p id="ty-done-text"></p>
+      <button id="ty-again" class="primary"><span class="lbl">다시 옮겨 쓰기</span></button>
+    </div>
+  </div>
+</div>
+
 <div id="music-modal" class="modal" hidden>
   <div class="sheet">
     <header class="panel-head"><h2>법당 음악</h2><button class="icon-btn" data-close="music-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>

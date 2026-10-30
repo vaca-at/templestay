@@ -510,3 +510,25 @@ html body #music-modal .sheet { width: min(700px, calc(100vw - 32px)); max-width
 .mala-n { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #fff; font-family: var(--display); font-variant-numeric: tabular-nums; }
 .mala-n b { font-size: 34px; line-height: 1; } .mala-n small { font-size: 12px; opacity: .75; } .mala-n em { font-style: normal; font-size: 11px; opacity: .75; min-height: 1em; }
 @media (max-width: 760px) { #mala { width: 150px; height: 150px; top: calc(max(12px, env(safe-area-inset-top)) + 110px); } .mala-n b { font-size: 26px; } }
+
+/* 반야심경 타자 사경 */
+html body .typing-sheet { width: min(720px, calc(100vw - 32px)); max-width: none; }
+.ty-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ty-stats div { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 8px 10px; display: grid; }
+.ty-stats small { font-size: 12px; color: var(--ink-soft); }
+.ty-stats b { font-family: var(--display); font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.ty-stats u { text-decoration: none; font-size: 12px; color: var(--ink-soft); }
+.ty-track { height: 6px; border-radius: 3px; background: var(--line); margin: 12px 0 4px; overflow: hidden; }
+.ty-track i { display: block; height: 100%; background: var(--jade); width: 0; transition: width .3s; }
+.ty-scroll { margin: 10px 0; padding: 14px 18px; border-radius: 16px; background: #f4ead2; border: 1px solid #e0cfa6; text-align: center; font-family: var(--display); }
+.ty-side { margin: 4px 0; color: #9a8a6a; font-size: 16px; min-height: 1.4em; }
+.ty-target { margin: 8px 0; font-size: clamp(22px, 5vw, 32px); letter-spacing: .06em; color: #8a7a5a; word-break: keep-all; }
+.ty-target .ok { color: #1d1a18; }
+.ty-target .bad { color: #c0392b; text-decoration: underline wavy #c0392b; }
+.ty-target .cur { color: #2f6f62; }
+.ty-target .at { box-shadow: inset 0 -3px 0 var(--jade); }
+.ty-in { width: 100%; box-sizing: border-box; font: 22px var(--display); padding: 12px 14px; border-radius: 14px; border: 2px solid var(--jade); background: #fff; }
+.ty-help { margin-top: 8px; }
+.ty-done { text-align: center; padding: 18px 0; display: grid; gap: 14px; justify-items: center; }
+.ty-done p { font-size: 18px; line-height: 1.7; margin: 0; } .ty-done b { font-size: 28px; color: var(--jade); } .ty-done em { font-style: normal; color: #c9822a; font-weight: 700; }
+@media (max-width: 520px) { .ty-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
