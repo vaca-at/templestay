@@ -3,6 +3,15 @@
 // 2) 브라우저끼리 직접 연결(Trystero, WebRTC): 중계 서버가 없을 때. 한 방 30명 안팎까지.
 import { APP_ID, RELAY_URL, SERVER_COUNT } from './data.js';
 
+// 이 탭의 열쇠: 잠깐 끊겼다 다시 붙어도(다른 창에 다녀오기, 새로고침) 서버가 같은 사람으로 알아보게
+const TAB_KEY = (() => {
+  try {
+    let k = sessionStorage.getItem('maeum:tab');
+    if (!k) { k = crypto.randomUUID().slice(0, 12); sessionStorage.setItem('maeum:tab', k); }
+    return k;
+  } catch { return crypto.randomUUID().slice(0, 12); }
+})();
+
 let trystero = null;
 async function lib() {
   if (!trystero) trystero = await import('https://esm.sh/trystero@0.21.8/nostr');
@@ -117,20 +126,21 @@ export class Net {
     room.onPeerLeave((peer) => this.h.onLeave?.(peer));
   }
 
-  // 중계 서버 방에 웹소켓으로 들어간다. 끊기면 2초, 4초 … 뒤 다시 붙는다
+  // 중계 서버 방에 웹소켓으로 들어간다. 끊기면 2초, 4초 … 뒤 다시 붙고, 화면이 가려져 끊겼으면 돌아오자마자 붙는다.
+  // 서버는 끊긴 뒤 30초 동안 자리를 남겨 두므로, 그 안에 붙으면 다른 분 화면에서는 나간 적 없는 것처럼 보인다
   openSocket(n, attempt = 0) {
-    const url = `${RELAY_URL.replace(/^http/, 'ws')}/ws?room=${this.locId}-${n}`;
+    const url = `${RELAY_URL.replace(/^http/, 'ws')}/ws?room=${this.locId}-${n}&k=${TAB_KEY}`;
     const ws = new WebSocket(url);
     this.ws = ws;
     const send = (o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
     this._st = (d) => send({ t: 'st', d });
     this._act = (d) => send({ t: 'act', d });
     this._wish = (d) => send({ t: 'wish', d });
-    ws.onopen = () => { if (this.lastState) send({ t: 'st', d: this.lastState }); };
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === 'hello') {
         this.selfId = m.id;
+        this.h.onKeep?.(m.peers.map((p) => p.id));
         m.peers.forEach((p) => this.h.onState?.(p.id, p.st));
         m.wishes.forEach((w) => this.h.onWish?.('relay', w, true));
       } else if (m.t === 'st') this.h.onState?.(m.id, m.d);
@@ -139,10 +149,15 @@ export class Net {
       else if (m.t === 'leave') this.h.onLeave?.(m.id);
       else if (m.t === 'full') { ws.onclose = null; ws.close(); this.h.onFull?.(n); }
     };
+    ws.onopen = () => { attempt = 0; if (this.lastState) send({ t: 'st', d: this.lastState }); };
+    // 끊겨도 다른 분들을 바로 지우지 않는다: 다시 붙으면 hello 에서 정리하고, 끝내 못 붙으면 40초 뒤 저절로 사라진다
     ws.onclose = () => {
       if (this.ws !== ws) return;
-      this.h.onReset?.();
-      setTimeout(() => { if (this.ws === ws) this.openSocket(n, attempt + 1); }, Math.min(15000, 2000 * 2 ** attempt));
+      const again = () => { if (this.ws === ws) this.openSocket(n, attempt + 1); };
+      if (document.hidden) {
+        const back = () => { if (document.hidden) return; removeEventListener('visibilitychange', back); again(); };
+        addEventListener('visibilitychange', back);
+      } else setTimeout(again, Math.min(15000, 2000 * 2 ** attempt));
     };
     // 웹소켓을 살려 두는 신호
     clearInterval(this.pinger);

@@ -1,9 +1,13 @@
 // 큰법당 템플스테이 방 중계 서버.
 // 방(예: forest-3) 하나가 Durable Object 하나. 최대 100명이 웹소켓으로 붙고,
-// 서로의 위치·동작·소원을 그대로 나눠 준다. 소원(연등)은 방 저장소에 60개까지 남는다.
+// 서로의 위치·동작을 그대로 나눠 준다. 연등은 모든 서버가 함께 보는 저장소(Stats)에 60개까지 남는다
+// (색·법명만, 소원 글은 받지 않음). 한 접속에서 연등은 1분에 하나.
 import { DurableObject } from 'cloudflare:workers';
 
 const CAP = 100;
+const SERVERS = 12;   // 큰법당 서버 hall-1 ~ hall-12 (js/data.js 의 SERVER_COUNT)
+const WISH_GAP = 60e3; // 연등은 1분에 하나
+const GRACE = 30e3;    // 끊긴 분 자리를 남겨 두는 시간 (다른 창에 잠깐 다녀오기, 휴대폰 화면 끄기)
 // 'hall' 이 큰법당 서버 1~12. 예전 위치별 방 이름도 받아 둔다
 const ROOM_RE = /^(hall|forest|river|sea)-([1-9]|1[0-9]|20)$/;
 const ORIGINS = ['https://templestay.site', 'https://www.templestay.site', 'https://vaca-at.github.io', 'http://127.0.0.1:8765', 'http://localhost:8765'];
@@ -173,6 +177,15 @@ export class Stats extends DurableObject {
       if (old.length) await this.ctx.storage.delete(old);
       return Response.json({ ok: true });
     }
+    // 연등: 모든 서버가 함께 보는 목록, 최근 60개. 여러 개를 한 번에 받기도 한다 (예전 방별 연등 옮기기)
+    if (url.pathname === '/wish/add') {
+      const add = [].concat(await req.json());
+      const list = (await this.ctx.storage.get('wishes')) || [];
+      const fresh = add.filter((w) => w?.id && !list.some((x) => x.id === w.id));
+      if (fresh.length) await this.ctx.storage.put('wishes', [...list, ...fresh].slice(-60));
+      return Response.json({ added: fresh.map((w) => w.id) });
+    }
+    if (url.pathname === '/wish/list') return Response.json({ wishes: (await this.ctx.storage.get('wishes')) || [] });
     if (url.pathname === '/report/list') {
       const all = await this.ctx.storage.list({ prefix: 'r:', reverse: true, limit: 100 });
       return Response.json({ reports: [...all.values()].map(({ who, ...x }) => x) });
@@ -206,12 +219,14 @@ export class Room extends DurableObject {
 
   // 캐릭터가 있는(상태를 보낸) 사람만 센다
   members() {
-    return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((m) => m.a?.st);
+    return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((m) => m.a?.st && !m.a.quiet);
   }
 
   async fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === '/count') return Response.json({ n: this.members().length });
+    // 다른 서버에서 올라온 연등을 이 방 사람들에게
+    if (url.pathname === '/push') { this.broadcast({ t: 'wish', id: 'relay', d: await req.json() }); return Response.json({ ok: true }); }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -221,10 +236,32 @@ export class Room extends DurableObject {
       server.close(4001, 'full');
       return new Response(null, { status: 101, webSocket: client });
     }
-    const id = crypto.randomUUID().slice(0, 8);
-    server.serializeAttachment({ id, st: null, n: 0, w: Date.now() });
-    const peers = this.members().map((m) => ({ id: m.a.id, st: m.a.st }));
-    const wishes = (await this.ctx.storage.get('wishes')) || [];
+    // 같은 탭(k)이 30초 안에 다시 붙으면 예전 번호와 모습을 그대로 이어 받는다
+    const k = clean(url.searchParams.get('k'), 24);
+    let id = crypto.randomUUID().slice(0, 8), st = null, lw = 0;
+    if (k) {
+      const back = await this.ctx.storage.get(`gone:${k}`);
+      if (back) { ({ id, st, lw } = back); await this.ctx.storage.delete(`gone:${k}`); }
+      // 서버가 아직 못 알아챈 예전 연결이 남아 있으면 조용히 닫는다
+      for (const m of this.ctx.getWebSockets()) {
+        const x = m.deserializeAttachment();
+        if (m === server || x?.k !== k) continue;
+        if (!back) ({ id, st, lw = 0 } = x);
+        m.serializeAttachment({ ...x, quiet: true });
+        try { m.close(4000, 'replaced'); } catch {}
+      }
+    }
+    server.serializeAttachment({ id, k, st, n: 0, w: Date.now(), room: url.searchParams.get('room') || '', lw });
+    const gone = await this.ctx.storage.list({ prefix: 'gone:' });
+    const peers = [...this.members().filter((m) => m.ws !== server && !m.a.quiet), ...[...gone.values()].map((g) => ({ a: g }))].map((m) => ({ id: m.a.id, st: m.a.st }));
+    const stats = this.env.STATS.get(this.env.STATS.idFromName('stats'));
+    // 예전에 방마다 따로 남긴 연등은 글을 빼고 공용 목록으로 옮긴다 (한 번만)
+    const legacy = await this.ctx.storage.get('wishes');
+    if (legacy) {
+      await stats.fetch('https://stats/wish/add', { method: 'POST', body: JSON.stringify(legacy.map(({ t, ...w }) => w)) });
+      await this.ctx.storage.delete('wishes');
+    }
+    const { wishes } = await stats.fetch('https://stats/wish/list').then((r) => r.json());
     server.send(JSON.stringify({ t: 'hello', id, peers, wishes }));
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -246,21 +283,45 @@ export class Room extends DurableObject {
       ws.serializeAttachment(a);
       this.broadcast({ t: 'act', id: a.id, d: { a: clean(m.d.a, 16), on: m.d.on !== false } }, ws);
     } else if (m.t === 'wish' && m.d) {
+      if (now - (a.lw || 0) < WISH_GAP) { ws.serializeAttachment(a); return; }
+      a.lw = now;
       ws.serializeAttachment(a);
-      const w = { id: clean(m.d.id, 40), n: clean(m.d.n, 12), t: clean(m.d.t, 80), c: clean(m.d.c, 9), v: Math.max(0, Math.min(100000, m.d.v | 0)) };
-      if (!w.id || !w.t) return;
-      const list = (await this.ctx.storage.get('wishes')) || [];
-      if (list.some((x) => x.id === w.id)) return;
-      list.push(w);
-      await this.ctx.storage.put('wishes', list.slice(-60));
+      // 소원 글은 비공개라 받지도 저장하지도 않는다 (예전 버전이 보내도 버림)
+      const w = { id: clean(m.d.id, 40), n: clean(m.d.n, 12), c: clean(m.d.c, 9), v: Math.max(0, Math.min(100000, m.d.v | 0)) };
+      if (!w.id) return;
+      const stats = this.env.STATS.get(this.env.STATS.idFromName('stats'));
+      const { added } = await stats.fetch('https://stats/wish/add', { method: 'POST', body: JSON.stringify(w) }).then((r) => r.json());
+      if (!added.length) return;
       this.broadcast({ t: 'wish', id: a.id, d: w }, ws);
+      // 다른 큰법당 서버에도 바로 걸리게
+      const body = JSON.stringify(w);
+      await Promise.all(Array.from({ length: SERVERS }, (_, i) => `hall-${i + 1}`).filter((r) => r !== a.room).map((r) =>
+        this.env.ROOMS.get(this.env.ROOMS.idFromName(r)).fetch('https://room/push', { method: 'POST', body }).catch(() => {})));
     }
   }
 
-  webSocketClose(ws, code) {
+  async webSocketClose(ws, code) {
     const a = ws.deserializeAttachment();
-    if (a?.st) this.broadcast({ t: 'leave', id: a.id }, ws);
     try { ws.close(code === 1005 ? 1000 : code, 'bye'); } catch {}
+    if (!a?.st || a.quiet) return;
+    // 바로 '나섰어요' 하지 않고 30초 기다린다. 그 안에 같은 탭이 다시 붙으면 없던 일
+    if (a.k) {
+      await this.ctx.storage.put(`gone:${a.k}`, { id: a.id, st: a.st, lw: a.lw || 0, at: Date.now() });
+      if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + GRACE);
+      return;
+    }
+    this.broadcast({ t: 'leave', id: a.id }, ws);
+  }
+
+  // 30초 지나도 돌아오지 않은 분만 '나섰어요'
+  async alarm() {
+    const gone = await this.ctx.storage.list({ prefix: 'gone:' });
+    let next = Infinity;
+    for (const [key, g] of gone) {
+      if (Date.now() - g.at >= GRACE) { this.broadcast({ t: 'leave', id: g.id }); await this.ctx.storage.delete(key); }
+      else next = Math.min(next, g.at + GRACE);
+    }
+    if (next !== Infinity) await this.ctx.storage.setAlarm(next);
   }
 
   webSocketError(ws) { this.webSocketClose(ws, 1011); }

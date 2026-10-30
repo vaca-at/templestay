@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>큰법당 템플스테이</title>
 <meta name="description" content="산과 강과 바다가 보이는 3D 법당에서 함께 합장하고, 절하고, 소원을 올려요.">
 <meta property="og:title" content="큰법당 템플스테이">
@@ -109,6 +109,8 @@
     <button data-menu="scroll"><span class="lbl">내 방 족자 문구</span><small class="cap">여러 개 고르면 돌아가며 걸려요</small></button>
     <button data-menu="relic"><span class="lbl">불상·탑 고르기</span><small class="cap">법당 불상 6점, 마당 탑 5기</small></button>
     <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 100명까지</small></button>
+    <button data-menu="photo"><span class="lbl">사진 찍기</span><small class="cap">버튼을 숨기고 지금 화면을 사진으로</small></button>
+    <button data-menu="music"><span class="lbl">법당 음악</span><small class="cap">염불·독경·범종·싱잉볼·풍경 다섯 곡</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
     <button data-menu="credit"><span class="lbl">자료 출처</span><small class="cap">불상 3D 스캔 출처</small></button>
     <button data-menu="report"><span class="lbl">신고하기</span><small class="cap">욕설·불쾌한 법명이나 소원을 알려 주세요</small></button>
@@ -301,7 +303,7 @@
 <div id="wish-modal" class="modal" hidden>
   <form id="wish-form" class="sheet">
     <header class="panel-head"><h2>소원지 쓰기</h2><button type="button" class="icon-btn" data-close="wish-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
-    <p class="sub">쓴 소원은 연등이 되어 법당 천장에 걸려요. 같은 서버에 있는 분들도 볼 수 있어요.</p>
+    <p class="sub">쓴 소원은 연등이 되어 법당 천장에 걸려요. 다른 분들께는 연등만 보이고, 소원 글은 나만 볼 수 있어요.</p>
     <label class="field" for="wish-text">소원
       <textarea id="wish-text" maxlength="80" rows="3" placeholder="가족 모두 건강하게 해주세요" required></textarea>
     </label>
@@ -317,6 +319,24 @@
   <div class="sheet">
     <header class="panel-head"><h2>내가 올린 소원</h2><button class="icon-btn" data-close="mywish-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
     <ul id="mywish-list" class="wish-list"></ul>
+  </div>
+</div>
+
+<!-- 사진 찍기: 버튼을 모두 숨기고 아래 셔터만 -->
+<div id="photo-bar">
+  <button id="photo-close" class="photo-btn" type="button"><span class="lbl">닫기</span></button>
+  <button id="photo-shoot" type="button" aria-label="사진 찍기"><i></i></button>
+  <span class="photo-btn photo-spacer" aria-hidden="true"></span>
+  <p class="photo-hint">화면을 끌어 구도를 잡고 가운데 단추를 눌러요</p>
+</div>
+<div id="photo-flash"></div>
+
+<!-- 법당 음악 -->
+<div id="music-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2>법당 음악</h2><button class="icon-btn" data-close="music-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">녹음 없이 이 사이트에서 직접 만든 소리예요. 반야심경은 경전 앞부분을 목탁 박자에 맞춰 읊는 소리로 들려 드려요.</p>
+    <div id="music-list" class="chips"></div>
   </div>
 </div>
 

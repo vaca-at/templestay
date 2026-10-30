@@ -118,10 +118,12 @@ button .cap { display: block; font-size: 10px; line-height: 1.3; font-weight: 40
 .ctx { display: grid; justify-items: center; pointer-events: auto; border-radius: 18px; padding: 9px 18px 7px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 #btn-wish { background: #fff6e4; border-color: #e8c98a; }
 /* 108배 횟수: 오른쪽 상황 단추와 겹치지 않게 위쪽 가운데 (발우공양 시계와 같은 자리·모양, 둘은 함께 나오지 않음) */
-#bae-counter { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); border-radius: 16px; padding: 8px 16px; display: flex; align-items: baseline; gap: 8px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; font-family: var(--display); font-variant-numeric: tabular-nums; }
+/* 108배 칸: 위 줄(동시접속자·단추) 바로 아래 가운데. 휴대폰에서 위 줄과 겹치지 않게 */
+#bae-counter { position: absolute; top: calc(max(12px, env(safe-area-inset-top)) + 54px); left: 50%; transform: translateX(-50%); border-radius: 16px; padding: 8px 16px; display: flex; align-items: baseline; gap: 8px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; font-family: var(--display); font-variant-numeric: tabular-nums; }
 #bae-counter b { font-size: 22px; }
 #bae-counter small { font-size: 12px; opacity: .8; }
 #bae-counter[hidden] { display: none; }
+#hud:has(#bae-counter:not([hidden])) #toasts { top: calc(max(12px, env(safe-area-inset-top)) + 108px); }
 #guest-bar { position: absolute; bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); border-radius: 999px; padding: 10px 16px; font-size: 14px; white-space: nowrap; }
 #joystick { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 84px); width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); display: none; touch-action: none; }
 #joystick .knob { position: absolute; left: 35px; top: 35px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.75); }
@@ -423,3 +425,18 @@ body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
 #meal-done .small-btn { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px; padding: 7px 12px; font-weight: 700; font-family: var(--display); }
 #meal-done .small-btn:hover { background: rgba(255, 255, 255, .2); }
 #meal-timer[hidden], #meal-done[hidden] { display: none; }
+
+/* 사진 찍기: 단추를 모두 숨기고 아래 가운데 셔터만 */
+#photo-bar, #photo-flash { display: none; }
+body.photo #hud > :not(#toasts) { display: none !important; }
+body.photo #photo-bar { display: flex; position: fixed; z-index: 25; left: 0; right: 0; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 8px); justify-content: center; align-items: center; gap: 28px; pointer-events: none; }
+#photo-bar > button { pointer-events: auto; }
+#photo-shoot { width: 72px; height: 72px; border-radius: 50%; border: 4px solid #fff; background: rgba(255, 255, 255, .25); display: grid; place-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, .3); }
+#photo-shoot i { width: 54px; height: 54px; border-radius: 50%; background: #fff; transition: transform .1s; }
+#photo-shoot:active i { transform: scale(.9); }
+.photo-btn { min-width: 72px; height: 44px; padding: 0 16px; border-radius: 999px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); display: grid; place-items: center; font-size: 15px; }
+.photo-spacer { visibility: hidden; }
+.photo-hint { position: absolute; left: 0; right: 0; bottom: 86px; margin: 0; text-align: center; color: #fff; font-size: 13px; text-shadow: 0 1px 6px rgba(0, 0, 0, .55); }
+body.photo #photo-flash { display: block; position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 26; }
+#photo-flash.on { animation: photo-flash .35s ease-out; }
+@keyframes photo-flash { from { opacity: .8; } to { opacity: 0; } }

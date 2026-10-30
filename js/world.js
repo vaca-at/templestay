@@ -1071,7 +1071,10 @@ export function buildExterior(loc) {
     door,
     spawn: new THREE.Vector3(0, 0, 12),
     spawnRot: Math.PI,
-    camDist: 8,
+    // 마당은 바닥보다 산·강·바다가 보이게: 조금 멀리, 덜 내려다보고, 시선은 지평선 쪽
+    camDist: 9,
+    camRise: 0.3,
+    camLookY: 2.8,
     // 산보 길: 법당 건물을 오른쪽에 두고 시계 방향으로 도는 둥근 길 (건물 가운데 0,-9 / 석등·계단 앞을 지나게 넉넉히)
     // 앞(남쪽)에서 서쪽(-x)으로 출발 → 뒤 → 동쪽 → 다시 앞
     walkPath: Array.from({ length: 28 }, (_, k) => {
@@ -1421,6 +1424,7 @@ export function buildBoriamView(loc) {
   fill.position.set(-40, 60, -80); g.add(fill);
 
   return {
+    timeless: true, // 노을 풍경 그대로 (낮밤을 입히지 않음)
     group: g,
     fog: new THREE.Fog(haze, 320, 2300),
     background: new THREE.Color(haze),

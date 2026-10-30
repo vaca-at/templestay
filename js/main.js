@@ -14,7 +14,8 @@ import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls, openScrolls } from './scrolls.js';
-import { setSound, sound, moktak, bowl, coin } from './audio.js';
+import { setSound, sound, moktak, bowl, coin, bigBell, TRACKS, setMusic, music } from './audio.js';
+import { daylight, applyDaylight } from './daytime.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -35,6 +36,8 @@ const fmtLong = (sec) => {
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 const today = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// 다른 분에게 보내는 연등: 소원 글은 빼고 색·법명·시주만
+const publicWish = ({ id, n, c, v }) => ({ id, n, c, v });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ───────── 렌더러 ─────────
@@ -48,7 +51,8 @@ renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.45;
+const ENV = 0.45; // 환경광. 밤에는 낮밤 배율만큼 줄여요 (js/daytime.js)
+scene.environmentIntensity = ENV;
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 2000);
 const controls = new OrbitControls(camera, canvas);
 controls.enablePan = false;
@@ -125,8 +129,10 @@ const net = new Net({
   onWish: (peer, w, backlog) => addWish(w, { animate: !backlog, announce: !backlog }),
   onLeave: (peer) => removeRemote(peer, true),
   onReset: () => { for (const id of [...S.remotes.keys()]) removeRemote(id, false); },
+  // 다시 붙었을 때: 서버가 알려 준 분들만 남기고 정리 (그대로 있는 분은 다시 '오셨어요' 하지 않게)
+  onKeep: (ids) => { for (const id of [...S.remotes.keys()]) if (!ids.includes(id)) removeRemote(id, false); },
   onFull: (n) => { toast(`서버 ${n}이 가득 차서 다른 서버로 옮겨요`); switchServer(n % SERVER_COUNT + 1); },
-  getWishes: () => S.wishes,
+  getWishes: () => S.wishes.map(publicWish),
   peerCount: () => S.remotes.size,
 });
 
@@ -210,7 +216,21 @@ function setWorld(world) {
   scene.add(world.group);
   scene.fog = world.fog;
   scene.background = world.background;
+  scene.environmentIntensity = ENV * applyDaylight(world, daylight());
 }
+// 낮과 밤: 30초마다 한국의 해 뜨고 지는 시각에 맞춰 다시 칠한다
+setInterval(() => { if (S.active) scene.environmentIntensity = ENV * applyDaylight(S.active, daylight()); }, 30000);
+
+// 정각마다 범종 한 번 (소리를 켠 분만 들려요)
+let bellHour = null;
+setInterval(() => {
+  const k = new Date(Date.now() + 9 * 3600e3);
+  if (k.getUTCMinutes() !== 0 || bellHour === k.getUTCHours()) return;
+  bellHour = k.getUTCHours();
+  if (S.mode !== 'world' || !sound.on) return;
+  bigBell();
+  toast(`${bellHour % 12 || 12}시, 범종이 울려요`);
+}, 5000);
 
 // ───────── 내 캐릭터 ─────────
 function makeMe() {
@@ -270,7 +290,7 @@ function placeCameraBehind(dist) {
   const me = S.me.group;
   const back = new THREE.Vector3(Math.sin(me.rotation.y), 0, Math.cos(me.rotation.y)).multiplyScalar(-dist);
   controls.target.copy(me.position).add(new THREE.Vector3(0, S.active.camLookY ?? 1.1, 0));
-  camera.position.copy(me.position).add(back).add(new THREE.Vector3(0, 1.1 + dist * 0.42, 0));
+  camera.position.copy(me.position).add(back).add(new THREE.Vector3(0, 1.1 + dist * (S.active.camRise ?? 0.42), 0));
   controls.update();
 }
 
@@ -643,6 +663,9 @@ function openRecords() {
   $('#record-modal').hidden = false;
 }
 
+// 화면이 가려지면 그리기(와 함께 내 상태 보내기)가 멈추니, 그동안은 5초마다 '여기 있어요'만 보낸다
+setInterval(() => { if (document.hidden) pushState(true); }, 5000);
+
 // 10초마다 머문 장소와 누적 시간을 기록
 setInterval(() => {
   if (S.mode !== 'world' || !S.loc || document.hidden) return;
@@ -657,9 +680,11 @@ const LANTERN_NAMES = ['분홍', '노랑', '하양', '연두', '하늘', '주황
 const AMOUNTS = [{ v: 0, t: '마음만' }, { v: 1000, t: '1,000원' }, { v: 3000, t: '3,000원' }, { v: 10000, t: '10,000원' }];
 let wishColor = LANTERN_COLORS[0], wishAmount = 0;
 
+// 소원 글은 비공개: 서버와 다른 분에게는 연등(색·법명)만 가고, 글은 이 기기의 '내가 올린 소원'에만 남는다
 function addWish(w, { animate = false, announce = false } = {}) {
   if (!w || !w.id || S.wishes.some((x) => x.id === w.id)) return;
-  S.wishes.push({ id: String(w.id), n: String(w.n).slice(0, 12), t: String(w.t).slice(0, 80), c: LANTERN_COLORS.includes(w.c) ? w.c : LANTERN_COLORS[0], v: w.v | 0 });
+  const mine = store.get('mywishes', []).find((x) => x.id === w.id);
+  S.wishes.push({ id: String(w.id), n: String(w.n).slice(0, 12), t: mine ? String(mine.t).slice(0, 80) : '', c: LANTERN_COLORS.includes(w.c) ? w.c : LANTERN_COLORS[0], v: w.v | 0, mine: !!mine });
   if (S.wishes.length > 60) S.wishes.shift();
   if (announce && S.mode === 'world') toast(`${w.n}님이 복전함에 소원을 올렸어요`);
   const world = S.worlds[S.loc?.id]?.in;
@@ -707,6 +732,10 @@ function submitWish(e) {
   e.preventDefault();
   const text = $('#wish-text').value.trim();
   if (!text) return;
+  // 연등은 1분에 하나 (서버도 같은 규칙으로 막아요)
+  const wait = Math.ceil((store.get('lastWishAt', 0) + 60e3 - Date.now()) / 1000);
+  if (wait > 0) { toast(`연등은 1분에 하나씩 올릴 수 있어요. ${wait}초 뒤에 올려 주세요`); return; }
+  store.set('lastWishAt', Date.now());
   $('#wish-modal').hidden = true;
   $('#wish-text').value = '';
   const w = { id: `${net.selfId || 'local'}-${Date.now().toString(36)}`, n: S.profile.name, t: text, c: wishColor, v: wishAmount };
@@ -717,12 +746,12 @@ function submitWish(e) {
   flyers.push({ obj: paper, from: start, to: new THREE.Vector3(0, 1.25, -8.4), t: 0, dur: 0.9, done: () => {
     paper.removeFromParent();
     coin();
-    addWish(w, { animate: true });
-    net.sendWish(w);
-    addRecord('wishes', 1);
     const mine = store.get('mywishes', []);
     mine.unshift({ ...w, place: S.loc.name, at: Date.now() });
     store.set('mywishes', mine.slice(0, 100));
+    addWish(w, { animate: true });
+    net.sendWish(publicWish(w));
+    addRecord('wishes', 1);
     toast(wishAmount ? `소원과 함께 ${AMOUNTS.find((a) => a.v === wishAmount).t}을 마음으로 시주했어요` : '소원이 연등이 되어 걸렸어요');
   } });
   S.me.play('hapjang');
@@ -1035,7 +1064,7 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let downAt = null;
 canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; });
 canvas.addEventListener('pointerup', (e) => {
-  if (!downAt || S.mode !== 'world') return;
+  if (!downAt || S.mode !== 'world' || S.photo) return;   // 사진 찍는 중에는 구도만 잡고 걷지 않는다
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
   downAt = null;
   if (moved > 8) return;
@@ -1044,7 +1073,7 @@ canvas.addEventListener('pointerup', (e) => {
   const w = S.active;
   for (const h of ray.intersectObjects(w.group.children, true)) {
     const o = h.object;
-    if (o.userData.wish) { const wi = o.userData.wish; toast(`“${wi.t}” · ${wi.n}님의 연등`); return; }
+    if (o.userData.wish) { const wi = o.userData.wish; toast(wi.mine && wi.t ? `“${wi.t}” · 내 연등` : `${wi.n}님의 연등이에요`); return; }
     if (o.userData.seats) {
       const seat = w.seats[o.userData.seats === 'room' ? 0 : h.instanceId];
       if (seat) walkToSeat(seat);
@@ -1231,7 +1260,8 @@ function loop() {
       soundFor(r.av, Math.max(0, 1 - g.position.distanceTo(S.me.group.position) / 16));
     }
     const now = performance.now();
-    for (const [id, r] of S.remotes) if (now - r.seen > 20000) removeRemote(id, false);
+    // 서버가 끊긴 분 자리를 30초 남겨 두니, 그보다 조금 길게 기다린다
+    for (const [id, r] of S.remotes) if (now - r.seen > 40000) removeRemote(id, false);
     pushState();
     updateContext();
     updateTimer(dt);
@@ -1287,6 +1317,7 @@ document.addEventListener('click', (e) => {
   const pick = ['type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
   if (pick && t.closest('#creator')) { draft.look[pick] = t.dataset[pick]; renderCreatorOptions(); preview.avatar.setLook(draft.look, 'out'); return; }
   if (t.dataset.c) { wishColor = t.dataset.c; return renderWishForm(); }
+  if (t.dataset.music != null) return pickMusic(t.dataset.music);
   if (t.dataset.v != null && t.closest('#wish-amounts')) { wishAmount = +t.dataset.v; return renderWishForm(); }
   if (t.dataset.menu) {
     $('#menu').hidden = true;
@@ -1300,6 +1331,8 @@ document.addEventListener('click', (e) => {
     if (m === 'place') showPlaces();
     if (m === 'server') { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; }
     if (m === 'credit') $('#credit-modal').hidden = false;
+    if (m === 'music') { renderMusic(); $('#music-modal').hidden = false; }
+    if (m === 'photo') startPhoto();
     if (m === 'mywish') {
       const list = store.get('mywishes', []);
       $('#mywish-list').innerHTML = list.length ? list.map((w) => `<li>${escapeHtml(w.t)}<small>${escapeHtml(w.place)} · ${new Date(w.at).toLocaleString('ko-KR')}</small></li>`).join('') : '<li>아직 올린 소원이 없어요. 법당 안 복전함 앞에서 올릴 수 있어요.</li>';
@@ -1355,12 +1388,65 @@ $('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 �
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
+// 법당 음악: 끄기 + 다섯 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
+setMusic(store.get('music', 'yeombul'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
+function renderMusic() {
+  const list = [{ id: '', name: '음악 끄기', cap: '바람 소리와 동작 소리만' }, ...TRACKS];
+  $('#music-list').innerHTML = list.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${(music() || '') === t.id}"><span class="lbl">${i ? `${i}. ` : ''}${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');
+}
+function pickMusic(id) {
+  store.set('music', id || null);
+  if (id && !sound.on) { setSound(true); store.set('muted', false); syncSoundBtn(); }
+  setMusic(id || null);
+  renderMusic();
+}
+
+// 사진 찍기: 버튼을 모두 숨기고, 화면을 끌어 구도를 잡은 뒤 셔터. 휴대폰은 공유 창(사진에 저장), 컴퓨터는 파일로 받기
+function startPhoto() {
+  if (S.mode !== 'world') return;
+  stopCalm();
+  S.photo = true;
+  document.body.classList.add('photo');
+}
+function stopPhoto() {
+  S.photo = false;
+  document.body.classList.remove('photo');
+}
+async function takePhoto() {
+  renderer.render(scene, camera); // 바로 그린 직후에 읽어야 빈 화면이 아니다
+  const c = document.createElement('canvas');
+  c.width = canvas.width; c.height = canvas.height;
+  const g = c.getContext('2d');
+  g.drawImage(canvas, 0, 0);
+  const fs = Math.round(Math.max(c.width, c.height) / 48);
+  g.font = `700 ${fs}px "Gowun Batang", serif`;
+  g.textAlign = 'right';
+  g.fillStyle = 'rgba(255, 255, 255, .9)';
+  g.shadowColor = 'rgba(0, 0, 0, .45)'; g.shadowBlur = fs / 2;
+  g.fillText('큰법당 템플스테이 · templestay.site', c.width - fs, c.height - fs);
+  const flash = $('#photo-flash');
+  flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
+  const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+  const name = `templestay-${today()}-${Date.now().toString(36)}.png`;
+  const file = new File([blob], name, { type: 'image/png' });
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('사진을 저장했어요');
+}
+$('#photo-shoot').onclick = takePhoto;
+$('#photo-close').onclick = stopPhoto;
+addEventListener('keydown', (e) => { if (S.photo && e.code === 'Escape') stopPhoto(); });
+
 // 크게 보기 (화면보호기): 버튼을 모두 숨기고 전체 화면에서 카메라가 내 캐릭터 둘레를 천천히 돌아요.
 // 하루 일정은 그대로 따라가요. 화면을 누르거나 아무 키나 누르면 돌아와요. 5분 동안 손대지 않아도 저절로 켜져요.
 const CALM_IDLE = 5 * 60 * 1000;
 let lastInput = Date.now();
 function startCalm() {
-  if (S.calm || S.mode !== 'world') return;
+  if (S.calm || S.mode !== 'world' || S.photo) return;
   S.calm = true;
   document.body.classList.add('calm');
   $('#menu').hidden = true;
