@@ -66,6 +66,8 @@ const SIT = { y: -0.34, hip: 0.04, head: 0.05, aL: [-0.55, -0.4], aR: [-0.55, 0.
 const SIT_BLOCK = { ...SIT, y: -0.38, lL: [-1.5, 0.28], lR: [-1.5, -0.28] };
 const HAPJANG_ARMS = { aL: [-1.25, -0.55], aR: [-1.25, 0.55] };
 const KEYS = ['y', 'hip', 'head'];
+// 앉아 있을 때만 하는 동작: 일어나거나 다른 장소로 가면 소품을 내려놓는다
+const SEATED_ONLY = new Set(['eat', 'read', 'sagyeong', 'wash']);
 const LIMBS = ['aL', 'aR', 'lL', 'lR'];
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -115,6 +117,34 @@ function actionPose(action, t, base, seated) {
       const u = t % 3;
       const lift = bump(u, 0.6, 1.1, 1.5, 2.0);
       return mix(base, { aL: [-1.05, -0.4], aR: [-0.95 - lift * 0.9, 0.35 + lift * 0.2], head: 0.25 - lift * 0.2 }, ease(t / 0.5));
+    }
+    case 'tapdori':
+      // 걸으면서 두 손을 모은다 (걷는 다리는 그대로)
+      return mix(base, { ...HAPJANG_ARMS, head: 0.12 }, ease(t / 0.4));
+    case 'sweep': {
+      // 빗자루를 두 손으로 잡고 좌우로 쓱쓱
+      const s = Math.sin(t * 3.2);
+      return mix(base, { aL: [-0.55 + s * 0.22, -0.35 + s * 0.15], aR: [-0.75 + s * 0.22, 0.2 + s * 0.15], hip: 0.22, head: 0.25 }, ease(t / 0.4));
+    }
+    case 'bell': {
+      // 6초마다: 당목을 뒤로 당겼다가(0~1.6초) 앞으로 쭉 밀어 친다(2.2초)
+      const u = t % 6;
+      const back = bump(u, 0.2, 1.6, 1.9, 2.2), push = bump(u, 1.9, 2.2, 2.8, 4);
+      return mix(base, { aL: [-1.15 + back * 0.55 - push * 0.35, -0.2], aR: [-1.15 + back * 0.55 - push * 0.35, 0.2], hip: -0.05 * back + 0.12 * push, head: 0.05 }, ease(t / 0.4));
+    }
+    case 'tea': {
+      // 왼손은 받침, 오른손 찻잔이 4초마다 입으로
+      const lift = bump(t % 4, 1.0, 1.5, 2.3, 2.8);
+      return mix(base, { aL: [-0.95, -0.32], aR: [-1.0 - lift * 0.85, 0.32 + lift * 0.12], head: 0.15 - lift * 0.18 }, ease(t / 0.5));
+    }
+    case 'sagyeong': {
+      // 앞에 펼친 종이에 붓으로 또박또박. 고개를 숙이고 오른손이 조금씩 움직인다
+      const w = Math.sin(t * 5), v = Math.sin(t * 2.1);
+      return mix(base, { aL: [-0.75, -0.38], aR: [-0.95 + w * 0.06, 0.28 + v * 0.1], hip: 0.1, head: 0.32 }, ease(t / 0.6));
+    }
+    case 'wash': {
+      // 왼손에 발우, 오른손 행주로 동그랗게 닦는다
+      return mix(base, { aL: [-1.05, -0.4], aR: [-1.0 + Math.sin(t * 4) * 0.12, 0.38 + Math.cos(t * 4) * 0.12], head: 0.3 }, ease(t / 0.5));
     }
     case 'read': {
       // 두 손으로 책을 들고 고개를 숙인다. 가끔 책장을 넘긴다
@@ -434,6 +464,42 @@ export class Avatar {
     this.hips.add(book);
     this.bowl = bowl; this.spoon = spoon; this.book = book;
 
+    // 찻잔(오른손), 사경 종이(무릎 앞)와 붓(오른손), 빗자루(오른손), 당목(두 손 앞으로 길게), 행주(오른손)
+    const cup = new THREE.Group();
+    cup.add(mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.08, 14), mat('#a9c9b5', { roughness: 0.3 })));
+    cup.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.005, 14), mat('#b5843a'), 1, 1, 1, 0, 0.036, 0));
+    cup.position.set(0, this.handY - 0.02, 0.07);
+    cup.visible = false;
+    this.armR.add(cup);
+    const paper = new THREE.Group();
+    paper.add(mesh(G.box, mat('#f6efdc'), 0.34, 0.01, 0.46));
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 6; r++) if ((c * 7 + r * 3) % 5) paper.add(mesh(G.box, mat('#2a2420'), 0.035, 0.004, 0.035, 0.11 - c * 0.07, 0.007, -0.17 + r * 0.06));
+    paper.position.set(0, 0.16, 0.42);   // 책 읽기의 책과 같은 높이 (내 방 책상 위)
+    paper.visible = false;
+    this.hips.add(paper);
+    const brush = new THREE.Group();
+    brush.add(mesh(G.cyl, mat('#6b4a2a'), 0.018, 0.22, 0.018, 0, -0.05, 0));
+    brush.add(mesh(G.cyl, mat('#1d1a18'), 0.026, 0.06, 0.026, 0, -0.18, 0));
+    brush.position.set(0, this.handY, 0.07);
+    brush.visible = false;
+    this.armR.add(brush);
+    const broom = new THREE.Group();
+    broom.add(mesh(G.cyl, mat('#c8a46a'), 0.03, 1.05, 0.03, 0, -0.35, 0));
+    broom.add(mesh(G.box, mat('#d9c07a'), 0.26, 0.2, 0.06, 0, -0.92, 0));
+    broom.position.set(0, this.handY, 0.06);
+    broom.rotation.x = -0.35;   // 앞쪽 바닥을 비스듬히 쓸게
+    broom.visible = false;
+    this.armR.add(broom);
+    // 당목: 팔을 앞으로 든 자세(약 -1.15)에서 땅과 나란히 앞으로 뻗게
+    const log = mesh(G.cyl, mat('#7a5232'), 0.09, 0.9, 0.09, 0, this.handY - 0.27, 0.12);
+    log.rotation.x = 2.72;
+    log.visible = false;
+    this.armR.add(log);
+    const cloth = mesh(G.box, mat('#f2efe6'), 0.09, 0.03, 0.09, 0, this.handY - 0.03, 0.06);
+    cloth.visible = false;
+    this.armR.add(cloth);
+    this.cup = cup; this.paper = paper; this.brush = brush; this.broom = broom; this.log = log; this.cloth = cloth;
+
     // 명상할 때 은은한 빛 고리
     const aura = new THREE.Mesh(
       new THREE.RingGeometry(0.55, 0.62, 48),
@@ -469,10 +535,10 @@ export class Avatar {
     }
 
     // 발우공양·독서는 앉아 있을 때만: 일어나거나 다른 장소로 가면 밥그릇·책을 내려놓는다
-    if ((this.action === 'eat' || this.action === 'read') && !this.seated) this.action = null;
+    if (SEATED_ONLY.has(this.action) && !this.seated) this.action = null;
     let target = this.seated ? (this.block ? SIT_BLOCK : SIT) : STAND;
     if (this.action) {
-      if (this.speed > 0.2) this.action = null;
+      if (this.speed > 0.2 && this.action !== 'tapdori') this.action = null;   // 탑돌이는 걸으면서 하는 동작
       else target = actionPose(this.action, this.actionT, target, this.seated);
     }
 
@@ -523,7 +589,13 @@ export class Avatar {
       this.beads.rotation.z = (n + Math.min(1, f / 0.25)) * (Math.PI * 2 / 16);
     }
     this.moktak.visible = this.stick.visible = this.action === 'moktak';
-    this.bowl.visible = this.spoon.visible = this.action === 'eat' && this.seated;
+    this.bowl.visible = (this.action === 'eat' || this.action === 'wash') && this.seated;
+    this.spoon.visible = this.action === 'eat' && this.seated;
+    this.cup.visible = this.action === 'tea';
+    this.paper.visible = this.brush.visible = this.action === 'sagyeong' && this.seated;
+    this.broom.visible = this.action === 'sweep';
+    this.log.visible = this.action === 'bell';
+    this.cloth.visible = this.action === 'wash' && this.seated;
     this.book.visible = this.action === 'read' && this.seated;
     const auraOn = this.action === 'meditate';
     this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);

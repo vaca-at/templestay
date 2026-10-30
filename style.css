@@ -429,3 +429,7 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 
 /* 족자 문구 고르기 목록 */
 .sched-rows { display: grid; gap: 8px; }
+
+/* 동작 이름은 한 줄로 (마당 쓸기 · 차 마시기처럼 긴 이름도) */
+#actions .act { white-space: nowrap; }
+@media (max-width: 420px) { #actions { gap: 4px; } #actions .act { min-width: 0; padding: 0 9px; font-size: 13px; } }

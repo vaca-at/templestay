@@ -222,8 +222,8 @@ export function setMusic(id) {
 export const music = () => musicId;
 
 // 정각 범종: 음악과 따로, 조금 낮은 대종 소리로 한 번
-export function bigBell() {
+export function bigBell(vol = 1) {
   if (!sound.on) return;
   ensure();
-  ring(ctx.currentTime + 0.05, 96, JONG, 0.9, master, 0.01);
+  ring(ctx.currentTime + 0.05, 96, JONG, 0.9 * vol, master, 0.01);
 }

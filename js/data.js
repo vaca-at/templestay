@@ -109,16 +109,30 @@ export const ACTIONS = [
   { id: 'banbae', name: '반배', cap: '합장하고 허리 숙이기', verb: '반배를 올렸어요', dur: 2.6 },
   { id: 'keunjeol', name: '큰절', cap: '엎드려 절 올리기', verb: '부처님께 큰절을 올렸어요', dur: 4.2 },
   { id: 'beads', name: '염주', cap: '염주 돌리기 · 다시 누르면 멈춤', verb: '염주를 돌리기 시작했어요', loop: true },
-  // 목탁은 동작 막대에서 뺐어요. 예전 버전 이용자가 보내도 그려지도록 숨긴 동작으로만 남김
-  { id: 'moktak', name: '목탁', verb: '목탁을 치기 시작했어요', loop: true, auto: true },
-  // 명상 · 손인사는 동작 칸에서 뺐어요 (시간표 명상 · 꾸미기 미리보기 · 다른 분 동작에는 그대로 써요)
-  { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true, auto: true },
-  { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0, auto: true },
+  { id: 'moktak', name: '목탁', cap: '목탁 치기', verb: '목탁을 치기 시작했어요', loop: true },
+  { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true },
+  { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0 },
   { id: 'bae108', name: '108배', cap: '절 108번 · 횟수 세어 줌', verb: '108배를 시작했어요', loop: true },
-  // 시간표가 알아서 하는 동작 (동작 막대에는 안 나옴)
-  { id: 'eat', name: '발우공양', verb: '발우공양을 시작했어요', loop: true, auto: true },
-  { id: 'read', name: '독서', verb: '책을 펼쳤어요', loop: true, auto: true },
+  { id: 'eat', name: '발우공양', cap: '방석에 앉아 발우로 밥 먹기', verb: '발우공양을 시작했어요', loop: true, seat: true },
+  { id: 'read', name: '책 읽기', cap: '책상 앞에서 책 펼치기', verb: '책을 펼쳤어요', loop: true, seat: true },
+  { id: 'sagyeong', name: '사경', cap: '반야심경을 붓으로 한 글자씩', verb: '사경을 시작했어요', loop: true, seat: true },
+  { id: 'tea', name: '차 마시기', cap: '따뜻한 차 한 잔', verb: '차를 마시기 시작했어요', loop: true },
+  { id: 'walk', name: '산보', cap: '세 걸음마다 반배하며 마당 돌기', verb: '산보를 시작했어요' },
+  { id: 'tapdori', name: '탑돌이', cap: '합장하고 탑을 오른쪽에 두고 돌기', verb: '탑돌이를 시작했어요', loop: true },
+  { id: 'sweep', name: '마당 쓸기', cap: '빗자루로 쓱쓱 (울력)', verb: '마당을 쓸기 시작했어요', loop: true },
+  { id: 'bell', name: '범종 치기', cap: '당목을 밀어 범종 울리기', verb: '범종을 치기 시작했어요', loop: true },
+  { id: 'wash', name: '발우 씻기', cap: '공양을 마치고 발우 닦기', verb: '발우를 씻기 시작했어요', loop: true, seat: true },
 ];
+
+// 장소마다 아래 동작 줄에 나오는 다섯 가지 (숫자 키 1~5 순서). seat: 방석에 앉아야 하는 동작이라 자동으로 앉아요
+export const SCENE_ACTIONS = {
+  in: ['hapjang', 'banbae', 'keunjeol', 'beads', 'bae108'],
+  room: ['read', 'bae108', 'sagyeong', 'tea', 'meditate'],
+  out: ['walk', 'tapdori', 'sweep', 'bell', 'hapjang'],
+  meal: ['eat', 'hapjang', 'tea', 'wash', 'moktak'],
+};
+// 장소에 따라 이름만 다르게 보이는 동작
+export const SCENE_ACTION_NAMES = { meal: { hapjang: '공양 합장' } };
 
 // 법명: 세 글자 + 세 글자 (14 × 30 = 420가지). 앞은 수행하는 마음, 뒤는 연꽃 · 물 · 달 · 잉어 · 산사 풍경
 const ADJ = ['고요한', '청정한', '평온한', '온화한', '겸손한', '단아한', '소박한', '담담한', '그윽한', '넉넉한', '합장한', '깨어난', '공손한', '산사의'];

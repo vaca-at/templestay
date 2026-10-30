@@ -81,8 +81,6 @@ $('#scroll-rows').addEventListener('click', (e) => {
   state.list.splice(+b.dataset.sdel, 1);
   render();
 });
-$('#btn-scroll').addEventListener('click', openScrolls);
-if (new URLSearchParams(location.search).has('scrolls')) setTimeout(openScrolls, 500);
 $('#scroll-add').addEventListener('click', () => { state.list.push({ t: '', s: '', on: true }); render(); $('#scroll-rows .scroll-row:last-child input[data-k="t"]').focus(); });
 $('#scroll-reset').addEventListener('click', () => { state = { list: PRESET_SCROLLS.map((p) => ({ ...p, on: true })) }; render(); });
 $('#scroll-save').addEventListener('click', () => {

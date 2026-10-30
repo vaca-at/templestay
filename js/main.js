@@ -7,13 +7,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  SCENES, BUDDHAS, randomName, defaultLook, isOldAutoName,
+  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS } from './world.js';
 import { Net, preloadNet } from './net.js';
-import { hangScroll, stopScrolls, openScrolls } from './scrolls.js';
+import { hangScroll, stopScrolls } from './scrolls.js';
 import { setSound, sound, moktak, bowl, coin, bigBell, TRACKS, setMusic, music } from './audio.js';
 import { daylight, applyDaylight } from './daytime.js';
 
@@ -281,6 +281,7 @@ async function goScene(which, { instant = false } = {}) {
     controls.update();
   }
   S.me.tag.visible = which !== 'room';
+  renderActions();   // 장소마다 동작 줄이 달라요
   // 내 방 족자는 들어올 때마다 문구가 바뀐다
   if (which === 'room') hangScroll(world); else stopScrolls();
   refreshRemoteVisibility();
@@ -463,13 +464,31 @@ const ICONS = {
   bae108: '<text x="12" y="16" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor">108</text>',
 };
 
+// 아래 동작 줄: 장소마다 다른 다섯 가지 (js/data.js 의 SCENE_ACTIONS)
 function renderActions() {
-  $('#actions').innerHTML = ACTIONS.filter((a) => !a.auto).map((a) =>
-    `<button class="act" data-act="${a.id}" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[a.id]}</svg>${a.name}<small class="cap">${a.cap}</small></button>`).join('');
+  const ids = SCENE_ACTIONS[S.scene] || SCENE_ACTIONS.in, names = SCENE_ACTION_NAMES[S.scene] || {};
+  $('#actions').innerHTML = ids.map((id) => ACTIONS.find((a) => a.id === id)).map((a) =>
+    `<button class="act" data-act="${a.id}" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[a.id] || ''}</svg>${names[a.id] || a.name}<small class="cap">${a.cap}</small></button>`).join('');
+  syncActionButtons();
 }
 
 function doAction(id) {
+  // 산보 · 탑돌이: 길을 따라 걷는 동작이라 따로 (다시 누르면 멈춤)
+  if (id === 'walk' || id === 'tapdori') {
+    const on = S.walking && S.walkMode === id;
+    stopWalk();
+    S.target = null;
+    if (!on) id === 'walk' ? startSanbo() : startTapdori();
+    net.sendAct({ a: id, on: !on });
+    syncActionButtons();
+    return;
+  }
   stopWalk();
+  // 방석에 앉아서 하는 동작(발우공양 · 발우 씻기 · 책 읽기 · 사경)은 서 있으면 먼저 빈 방석에 앉는다
+  if (ACTIONS.find((a) => a.id === id)?.seat && S.seat == null && S.active.seats?.length && S.me.action !== id) {
+    const seat = S.scene === 'room' ? S.active.seats[0] : freeSeat(S.active.seats, false);
+    if (!sitOn(seat, { auto: true })) return;
+  }
   S.target = null;
   S.walking = false;
   const on = S.me.play(id);
@@ -490,21 +509,47 @@ function startLoop(id) {
 }
 
 function syncActionButtons() {
-  document.querySelectorAll('.act').forEach((b) => b.setAttribute('aria-pressed', String(S.me?.action === b.dataset.act)));
+  const on = (id) => id === 'walk' ? (S.walking && S.walkMode === 'walk') || walkStarting : id === 'tapdori' ? S.walking && S.walkMode === 'tapdori' : S.me?.action === id;
+  document.querySelectorAll('.act').forEach((b) => b.setAttribute('aria-pressed', String(on(b.dataset.act))));
   if (S.me?.action !== 'bae108') $('#bae-counter').hidden = true;
 }
 
-// 직접 움직이면(장소 옮기기 · 앉기 · 일어서기 · 동작) 하던 산보를 멈춘다
+let walkStarting = false;   // 산보: 합장하고 걷기 시작하기 전 1.8초
+// 직접 움직이면(장소 옮기기 · 앉기 · 일어서기 · 동작) 하던 산보 · 탑돌이를 멈춘다
 function stopWalk() {
+  if (S.walkMode === 'tapdori' && S.me?.action === 'tapdori') S.me.stop();
   S.walking = false;
+  S.walkMode = null;
   walkStarting = false;
 }
 
 // 산보는 삼보일배처럼: 세 걸음 걷고 한 번 합장, 이것을 되풀이하며 마당을 돈다
 const WALK_STEP = 0.75;
 let walkDist = 0, walkBowT = 0;
-function startWalk() {
-  const path = S.active.walkPath;
+// 산보 시작: 먼저 합장하고 1.8초 뒤 걷기 시작 (그 사이 다시 누르면 취소)
+async function startSanbo() {
+  if (S.scene !== 'out') return;
+  standUp(true);
+  S.me.play('hapjang');
+  walkStarting = true;
+  await sleep(1800);
+  if (!walkStarting) return;
+  walkStarting = false;
+  if (S.scene === 'out') startWalk();
+}
+
+// 탑돌이: 합장한 채로 탑을 오른쪽에 두고(시계 방향) 둥글게 돈다
+function startTapdori() {
+  const c = S.active.pagodaSlot?.position;
+  if (!c) return;
+  const path = Array.from({ length: 20 }, (_, k) => { const a = (-2 * Math.PI * k) / 20; return new THREE.Vector3(c.x + 3 * Math.sin(a), 0, c.z + 3 * Math.cos(a)); });
+  startWalk(path, 'tapdori');
+  S.me.action = 'tapdori';
+  S.me.actionT = 0;
+  pushState(true);
+}
+
+function startWalk(path = S.active.walkPath, mode = 'walk') {
   if (!path) return;
   standUp(true);
   walkDist = 0;
@@ -513,6 +558,7 @@ function startWalk() {
   let i = 0, best = Infinity;
   path.forEach((w, k) => { const d = w.distanceTo(p); if (d < best) { best = d; i = k; } });
   S.walking = true;
+  S.walkMode = mode;
   const go = (k) => {
     if (!S.walking) return;
     S.target = { pos: path[k], speed: 1.5, onArrive: () => go((k + 1) % path.length) };
@@ -674,8 +720,6 @@ function updateHud() {
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
   $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
   $('#jump-btn').hidden = !canRun(); // 휴대폰 점프 단추: 점프할 수 있는 곳(마당·내 방)에서만
-  $('#btn-walk').hidden = S.scene !== 'out';
-  $('#btn-scroll').hidden = S.scene !== 'room';
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
 }
 
@@ -683,8 +727,6 @@ function updateContext() {
   if (S.mode !== 'world' || !S.active) return;
   const p = S.me.group.position;
   $('#btn-wish').hidden = !(S.scene === 'in' && p.distanceTo(new THREE.Vector3(0, 0, -8.4)) < 3.4);
-  const walkLbl = S.walking || walkStarting ? '산보 멈추기' : '산보하기';
-  if ($('#btn-walk .lbl').textContent !== walkLbl) $('#btn-walk .lbl').textContent = walkLbl;
 }
 
 let timerTick = 1;
@@ -972,7 +1014,6 @@ canvas.addEventListener('pointerup', (e) => {
     // 불상을 누르면 (휴대폰) ‹ › 버튼이 4초 동안 나온다
     // 불상이나 탑을 누르면 불상·탑 고르기 창
     for (const slot of [w.buddhaSlot, w.pagodaSlot]) if (slot) { let p = o; while (p && p !== slot) p = p.parent; if (p) return openRelics(); }
-    if (o.userData.scroll) return openScrolls();
     if (o === w.floor) {
       if (S.me.action && !ACTIONS.find((a) => a.id === S.me.action)?.loop) return;
       stopWalk();
@@ -1043,7 +1084,7 @@ function moveMe(dt) {
       t.onArrive?.();
     } else { dir = tmpV.normalize(); speed = S.target.run && canRun() ? RUN_SPEED : S.target.speed || SPEED; }
   }
-  if (dir && S.me.action && S.me.action !== 'meditate') { S.me.stop(); syncActionButtons(); }
+  if (dir && S.me.action && S.me.action !== 'meditate' && !(S.walking && S.me.action === 'tapdori')) { S.me.stop(); syncActionButtons(); }
   const before = g.position.clone();
   if (dir) {
     g.position.addScaledVector(dir, speed * dt);
@@ -1055,14 +1096,14 @@ function moveMe(dt) {
   }
   me.speed = dir ? g.position.distanceTo(before) / Math.max(dt, 1e-4) : 0;
   // 산보: 세 걸음(한 걸음 약 0.75칸) 걸을 때마다 한 번 합장
-  if (S.walking && dir) {
+  if (S.walking && S.walkMode === 'walk' && dir) {
     walkDist += g.position.distanceTo(before);
     if (walkDist >= WALK_STEP * 3) {
-      // 세 걸음 걷고 한 번 절 (무릎 꿇고 엎드리는 큰절). 걷던 속도를 0으로 해야 절이 바로 취소되지 않는다
+      // 세 걸음 걷고 한 번 반배 (합장하고 허리 숙이기). 걷던 속도를 0으로 해야 절이 바로 취소되지 않는다
       walkDist = 0;
-      walkBowT = 4.3;
+      walkBowT = 2.7;
       me.speed = 0;
-      S.me.action = 'keunjeol';
+      S.me.action = 'banbae';
       S.me.actionT = 0;
       addRecord('bows', 1);
       pushState(true);
@@ -1182,8 +1223,14 @@ function loop() {
 }
 
 // 목탁 소리: 채가 내려칠 때마다
+// 범종 소리: 당목이 앞으로 닿는 순간(6초마다 2.2초쯤)
 function soundFor(av, vol) {
-  if (av.action !== 'moktak' || vol <= 0) { av._hit = null; return; }
+  if (vol <= 0 || (av.action !== 'moktak' && av.action !== 'bell')) { av._hit = null; return; }
+  if (av.action === 'bell') {
+    const n = Math.floor((av.actionT - 2.2) / 6);
+    if (av._hit !== n) { if (n >= 0) bigBell(vol); av._hit = n; }
+    return;
+  }
   const n = Math.floor(av.actionT * 1.1 + 0.25);
   if (av._hit !== n) { if (av._hit != null) moktak(vol); av._hit = n; }
 }
@@ -1213,10 +1260,8 @@ document.addEventListener('click', (e) => {
     if (m === 'calm') startCalm();
     if (m === 'char') openCreator();
     if (m === 'record') openRecords();
-    if (m === 'scroll') openScrolls();
     if (m === 'relic') openRelics();
     if (m === 'place') showPlaces();
-    if (m === 'server') { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; }
     if (m === 'credit') $('#credit-modal').hidden = false;
     if (m === 'music') { renderMusic(); $('#music-modal').hidden = false; }
     if (m === 'photo') startPhoto();
@@ -1234,17 +1279,6 @@ $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { stopWalk(); standUp(); };
 $('#btn-go').onclick = () => { stopWalk(); goScene(S.scene === 'in' ? 'room' : 'in'); };
 // 산보: 먼저 합장하고, 마당을 오른쪽(시계 방향, 법당을 오른쪽에 두고)으로 계속 돈다. 다시 누르면 멈춘다
-let walkStarting = false;
-$('#btn-walk').onclick = async () => {
-  if (S.walking || walkStarting) { walkStarting = false; stopWalk(); S.target = null; return; }
-  standUp(true);
-  doAction('hapjang');
-  walkStarting = true;
-  await sleep(1800);
-  if (!walkStarting) return;
-  walkStarting = false;
-  if (S.scene === 'out') startWalk();
-};
 $('#btn-wish').onclick = openWish;
 $('#design-chip').onclick = showPlaces;
 // 왼쪽 도형 단추
