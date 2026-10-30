@@ -37,8 +37,10 @@ export const LOCATIONS = [
   },
 ];
 
-// 불상 후보 (모두 국립중앙박물관 3D 데이터, 공공누리 제1유형). zUp: 스캔이 Z축 위로 되어 있어 눕혀 세워야 함
+// 불상 후보 (국립중앙박물관·국가유산청 3D 데이터, 공공누리 제1유형). 첫 번째가 기본 불상.
+// zUp: 스캔이 Z축 위로 되어 있어 눕혀 세워야 함. height: 수미단 위 높이(기본 4.6)
 export const BUDDHAS = {
+  hapjang: { file: 'assets/buddha-hapjang.glb', name: '금동보살좌상 (판불)', from: '통일신라 · 합장', no: '국가유산청', height: 4.4 },
   duk2116: { file: 'assets/buddha.glb', name: '금동불좌상', from: '고려', no: '덕수2116' },
   kwanseum: { file: 'assets/buddha-kwanseum.glb', name: '금동관음보살좌상', from: '조선', no: '덕수3310' },
   iron: { file: 'assets/buddha-iron.glb', name: '철제여래좌상', from: '통일신라', no: '본관5191', zUp: true },

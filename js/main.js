@@ -143,7 +143,7 @@ async function loadBuddha(world, id = buddhaId) {
     if (B.zUp) inner.rotation.x = -Math.PI / 2;
     model.add(inner);
     const box = new THREE.Box3().setFromObject(model);
-    model.scale.setScalar(4.6 / box.getSize(new THREE.Vector3()).y);
+    model.scale.setScalar((B.height || 4.6) / box.getSize(new THREE.Vector3()).y);
     box.setFromObject(model);
     const c = box.getCenter(new THREE.Vector3());
     model.position.set(-c.x, -box.min.y, -c.z);
@@ -481,12 +481,8 @@ function schedTick() {
   if (key !== S.blockKey) {
     const first = S.blockKey === undefined;
     S.blockKey = key;
-    // 처음에는 일단 법당으로 들어오고, 지금 칸이 법당 밖 일정이면 갈지 물어봐요
-    if (first) {
-      const def = b && ACTIVITIES[b.act];
-      if (b && S.schedule.auto && def.scene && def.scene !== 'in') askSched(b);
-    } else {
-      $('#sched-ask').hidden = true; askBlock = null;
+    // 처음 들어올 때는 법당에 두고, 아래 작은 단추(예: '내 방으로')로 일정을 따라가요
+    if (!first) {
       if (b) {
         toast(`${b.start} · ${b.label || ACTIVITIES[b.act].name} 시간이에요`);
         if (S.schedule.auto) applyActivity(b.act);
@@ -896,7 +892,7 @@ function showPlaces() {
     const cur = S.loc?.id === l.id;
     const art = `background:linear-gradient(to top, ${GROUND[l.id] || '#8f8878'} 0 32%, transparent 32%), linear-gradient(${l.sky[0]}, ${l.sky[1]})`;
     return `<button class="place${cur ? ' current' : ''}" data-place="${l.id}" aria-pressed="${cur}"><span class="place-art" style="${art}"></span><b>${l.name}</b><small>${l.place}</small></button>`;
-  }).join('') + '<p class="fine credit">불상 자료 · 국립중앙박물관 3D 데이터 5점(덕수2116·덕수3310·본관5191·M번435·본관14752), 공공누리 제1유형</p>';
+  }).join('') + '<p class="fine credit">불상 자료 · 국가유산청 금동보살좌상(판불), 국립중앙박물관 3D 데이터 5점(덕수2116·덕수3310·본관5191·M번435·본관14752), 공공누리 제1유형</p>';
 }
 
 // ───────── 캐릭터 꾸미기 ─────────
