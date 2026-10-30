@@ -468,6 +468,8 @@ export class Avatar {
       if (n >= 108) this.action = null;
     }
 
+    // 발우공양·독서는 앉아 있을 때만: 일어나거나 다른 장소로 가면 밥그릇·책을 내려놓는다
+    if ((this.action === 'eat' || this.action === 'read') && !this.seated) this.action = null;
     let target = this.seated ? (this.block ? SIT_BLOCK : SIT) : STAND;
     if (this.action) {
       if (this.speed > 0.2) this.action = null;
@@ -521,8 +523,8 @@ export class Avatar {
       this.beads.rotation.z = (n + Math.min(1, f / 0.25)) * (Math.PI * 2 / 16);
     }
     this.moktak.visible = this.stick.visible = this.action === 'moktak';
-    this.bowl.visible = this.spoon.visible = this.action === 'eat';
-    this.book.visible = this.action === 'read';
+    this.bowl.visible = this.spoon.visible = this.action === 'eat' && this.seated;
+    this.book.visible = this.action === 'read' && this.seated;
     const auraOn = this.action === 'meditate';
     this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);
     this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
