@@ -94,6 +94,18 @@ export const SCENES = {
   meal: { name: '공양간', cap: '발우공양 하는 곳' },
 };
 
+// 절기 행사: 한국 날짜로 기간 안이면 그 행사 이름 (확인용: 주소 끝 ?season=halloween 또는 ?season=none)
+// 할로윈은 10월 24일 ~ 10월 31일. 11월 1일 0시가 되면 저절로 사라져요 (이미 고른 친구 · 장신구 모습은 남아요)
+const SEASONS = [{ id: 'halloween', from: '10-24', to: '10-31' }];
+export function season() {
+  const q = new URLSearchParams(location.search).get('season');
+  if (q) return q === 'none' ? null : q;
+  const md = new Date(Date.now() + 9 * 3600e3).toISOString().slice(5, 10);
+  return SEASONS.find((s) => s.from <= md && md <= s.to)?.id || null;
+}
+// 기간 한정 항목(season 이 붙은 것)은 그 행사 때만 고르는 목록에 보여요
+export const inSeason = (item) => !item.season || item.season === season();
+
 export const ACCESSORIES = [
   { id: 'none', name: '없음', cap: '장신구 빼기' },
   { id: 'beads', name: '염주 목걸이', cap: '목에 거는 염주' },
@@ -101,6 +113,7 @@ export const ACCESSORIES = [
   { id: 'satgat', name: '삿갓', cap: '넓은 대나무 삿갓' },
   { id: 'lotuspin', name: '연꽃 핀', cap: '머리에 꽂는 연꽃' },
   { id: 'backpack', name: '배낭', cap: '등에 메는 회색 가방' },
+  { id: 'witchhat', name: '보라 고깔모자', cap: '할로윈 한정 · 10/31까지', season: 'halloween' },
 ];
 
 // 동작. seatedOk: 앉은 채로 할 수 있는지. loop: 다시 누를 때까지 계속

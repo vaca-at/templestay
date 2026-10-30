@@ -277,6 +277,12 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     hat.castShadow = true;
     head.add(hat);
   }
+  if (acc === 'witchhat') {   // 할로윈 보라 고깔모자: 넓은 챙 + 뾰족한 고깔 + 주황 띠
+    box(head, '#4a2f6b', S + 0.32, 0.05, S + 0.32, 0, hy + 0.04, 0);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.5, 4, 1), mat('#5b3a82'));
+    cone.rotation.y = Math.PI / 4; cone.rotation.z = -0.15; cone.position.set(-0.03, hy + 0.3, 0); cone.castShadow = true; head.add(cone);
+    box(head, '#e8873a', S - 0.06, 0.06, S - 0.06, 0, hy + 0.1, 0);
+  }
   if (acc === 'beanie') { box(head, '#b23a3a', S + 0.1, 0.2, S + 0.1, 0, hy + 0.06, 0); box(head, '#f4efe6', 0.12, 0.1, 0.12, 0, hy + 0.22, 0); }
   if (acc === 'lotuspin') { box(head, '#f59bb5', 0.1, 0.1, 0.06, 0.24, hy, 0.18); box(head, '#f3d16a', 0.04, 0.04, 0.07, 0.24, hy, 0.19); }
   if (acc === 'backpack' || (!own && outfit.style === 'hiking')) { box(hips, '#8a8d8a', 0.38, 0.42, 0.18, 0, 0.3, -0.23); box(hips, '#6f726f', 0.3, 0.12, 0.04, 0, 0.18, -0.33); }
@@ -302,7 +308,8 @@ export const PETS = [
   { id: 'fishbowl', name: '어항 물고기', cap: '금붕어가 빙글빙글' },
   { id: 'none', name: '없음', cap: '혼자 다니기' },
   { id: 'plant', name: '화분 친구', hidden: true },
-  { id: 'ghost', name: '꼬마 유령', hover: true, hidden: true },
+  { id: 'ghost', name: '꼬마 유령', cap: '할로윈 한정 · 10/31까지', hover: true, season: 'halloween' },
+  { id: 'pumpkin', name: '호박 등불', cap: '할로윈 한정 · 밤에 얼굴이 빛나요', season: 'halloween' },
   { id: 'rocket', name: '꼬마 로켓', hover: true, hidden: true },
 ];
 
@@ -542,6 +549,21 @@ export function buildPet(id) {
         arms.push([arm, a]);
       }
       anim.push((t) => arms.forEach(([arm, a], i) => { const w = Math.sin(t * 4 + i) * 0.35; arm.rotation.x = Math.sin(a) * w; arm.rotation.z = -Math.cos(a) * w; }));
+      break;
+    }
+    case 'pumpkin': {
+      // 호박 등불: 주황 호박에 세모 눈과 웃는 입이 안에서 빛나요
+      const c = '#e8873a';
+      box(g, c, 0.38, 0.3, 0.34, 0, 0.17, 0);
+      for (const x of [-0.14, 0.14]) box(g, '#d9772e', 0.08, 0.28, 0.35, x, 0.17, 0);
+      box(g, '#4f7a3a', 0.05, 0.08, 0.05, 0, 0.36, 0);
+      const glow = { emissive: '#ffcf5a', emissiveIntensity: 1.2 };
+      for (const x of [-0.08, 0.08]) { const e = box(g, '#ffcf5a', 0.07, 0.06, 0.02, x, 0.22, 0.17, glow); e.rotation.z = 0.785; }
+      box(g, '#ffcf5a', 0.18, 0.04, 0.02, 0, 0.11, 0.17, glow);
+      for (const x of [-0.05, 0.05]) box(g, c, 0.03, 0.025, 0.025, x, 0.12, 0.172);
+      const legs = [];
+      for (const x of [-0.1, 0.1]) legs.push(box(g, '#3f6a32', 0.06, 0.06, 0.06, x, 0.02, 0));
+      g.userData.legs = legs;
       break;
     }
     case 'fishbowl': {

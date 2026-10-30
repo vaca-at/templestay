@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, BUDDHAS, randomName, defaultLook, isOldAutoName,
+  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, season, inSeason, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
@@ -601,8 +601,9 @@ setInterval(() => {
 }, 10000);
 
 // ───────── 소원과 연등 ─────────
-const LANTERN_COLORS = ['#f08aa0', '#f2c45a', '#f6f2e8', '#9ad0a8', '#9cc0f0', '#f2a05a'];
-const LANTERN_NAMES = ['분홍', '노랑', '하양', '연두', '하늘', '주황'];
+// 마지막 호박색은 할로윈 때만 고를 수 있어요 (지난 호박 연등도 그대로 보이게 목록에는 늘 둬요)
+const LANTERN_COLORS = ['#f08aa0', '#f2c45a', '#f6f2e8', '#9ad0a8', '#9cc0f0', '#f2a05a', '#e8873a'];
+const LANTERN_NAMES = ['분홍', '노랑', '하양', '연두', '하늘', '주황', '할로윈 호박'];
 const AMOUNTS = [{ v: 0, t: '마음만' }, { v: 1000, t: '1,000원' }, { v: 3000, t: '3,000원' }, { v: 10000, t: '10,000원' }];
 let wishColor = LANTERN_COLORS[0], wishAmount = 0;
 
@@ -685,7 +686,7 @@ function submitWish(e) {
 }
 
 function renderWishForm() {
-  $('#wish-colors').innerHTML = LANTERN_COLORS.map((c, i) => `<button type="button" class="swatch" style="background:${c}" data-c="${c}" aria-pressed="${c === wishColor}" aria-label="${LANTERN_NAMES[i]} 연등" title="${LANTERN_NAMES[i]} 연등"></button>`).join('');
+  $('#wish-colors').innerHTML = LANTERN_COLORS.map((c, i) => (i === 6 && season() !== 'halloween') ? '' : `<button type="button" class="swatch" style="background:${c}" data-c="${c}" aria-pressed="${c === wishColor}" aria-label="${LANTERN_NAMES[i]} 연등" title="${LANTERN_NAMES[i]} 연등"></button>`).join('');
   $('#wish-amounts').innerHTML = AMOUNTS.map((a) => `<button type="button" class="chip" data-v="${a.v}" aria-pressed="${a.v === wishAmount}"><span class="lbl">${a.t}</span><small class="cap">${a.v ? '가상 금액 · 실제 결제 없음' : '시주 없이 소원만'}</small></button>`).join('');
 }
 
@@ -954,8 +955,8 @@ function renderCreatorOptions() {
   $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${t.name}</span><small class="cap">${t.desc}</small></button>`).join('');
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
-  $('#opt-acc').innerHTML = ACCESSORIES.map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
-  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
+  $('#opt-acc').innerHTML = ACCESSORIES.filter(inSeason).map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
+  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden && inSeason(p)).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
 }
 
 function finishCreator() {
@@ -1421,7 +1422,7 @@ function gallery(kind) {
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
     : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
-    : kind === 'pets' ? PETS.filter((p) => !p.hidden && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
+    : kind === 'pets' ? PETS.filter((p) => !p.hidden && inSeason(p) && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', acc: a.id, pet: 'none' } }));
   const acts = (params.get('acts') || '').split(',');
   const gap = kind === 'pets' ? 1.7 : 1.3;

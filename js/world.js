@@ -2,6 +2,7 @@
 // 좌표: 법당 안에서 불상은 -z 쪽, 입구는 +z 쪽. 밖에서는 법당 건물이 -z 쪽, 경치가 +z 쪽.
 import * as THREE from 'three';
 import { mat } from './avatar.js';
+import { season } from './data.js';
 
 const FONT_TITLE = '"Gowun Batang", "Nanum Myeongjo", serif';
 
@@ -621,8 +622,24 @@ export function buildHallBuilding(loc) {
   // 입구 앞 등
   const l1 = stoneLantern(); l1.position.set(-3.5, 0, D / 2 + 4.6); g.add(l1);
   const l2 = stoneLantern(); l2.position.set(3.5, 0, D / 2 + 4.6); g.add(l2);
+  // 할로윈(10/31까지): 석등 옆과 계단 양쪽에 호박 등불. 얼굴이 스스로 빛나서 밤에 더 잘 보여요
+  if (season() === 'halloween') for (const [x, z, s] of [[-4.3, 4.9, 1], [-3.0, 5.3, 0.8], [4.3, 4.9, 1], [3.0, 5.3, 0.8], [-1.9, 2.9, 0.9], [1.9, 2.9, 0.9]]) {
+    const p = jackOLantern(); p.position.set(x, 0, D / 2 + z); p.scale.setScalar(s); p.rotation.y = (x < 0 ? 0.3 : -0.3); g.add(p);
+  }
   g.userData.door = new THREE.Vector3(0, 0, D / 2 + 3.6);
   g.userData.footprint = { w: W / 2 + 1.6, d: D / 2 + 1.3 };
+  return g;
+}
+
+// 호박 등불 (할로윈 장식)
+function jackOLantern() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), mat('#e8873a', { roughness: 0.6 }));
+  body.scale.set(1.15, 0.85, 1); body.position.y = 0.36; body.castShadow = true; g.add(body);
+  const stem = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.08), mat('#4f7a3a')); stem.position.y = 0.78; g.add(stem);
+  const glow = new THREE.MeshStandardMaterial({ color: '#ffd36a', emissive: '#ffb030', emissiveIntensity: 1.4 });
+  for (const x of [-0.15, 0.15]) { const e = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), glow); e.position.set(x, 0.46, 0.41); e.rotation.z = 0.785; g.add(e); }
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 0.05), glow); mouth.position.set(0, 0.28, 0.4); g.add(mouth);
   return g;
 }
 
