@@ -956,8 +956,22 @@ async function changeDesign(locId) {
   store.set('lastLoc', S.loc.id);
   S.lanterns.clear();
   const act = S.autoAct;
+  // 배경만 바꾸고 나는 그 자리 그대로: 서 있던 곳 · 앉은 방석 · 카메라를 기억했다가 되돌린다 (하던 동작도 그대로)
+  const g = S.me.group, seat = S.seat;
+  const keep = { pos: g.position.clone(), rot: g.rotation.y, cam: camera.position.clone(), at: controls.target.clone() };
   await goScene(S.scene, { instant: true });
-  if (act) applyActivity(act);
+  const sameSeat = seat != null && S.scene !== 'room' && S.active.seats?.find((x) => x.id === seat);
+  if (sameSeat) {
+    S.seat = seat; S.me.seated = true;
+    g.position.set(sameSeat.pos.x, sameSeat.y ?? 0.12, sameSeat.pos.z);
+    g.rotation.y = sameSeat.rot ?? Math.PI;
+  } else if (S.scene !== 'room') {
+    g.position.copy(keep.pos); g.rotation.y = keep.rot;
+  }
+  if (S.scene !== 'room') { camera.position.copy(keep.cam); controls.target.copy(keep.at); controls.update(); }
+  S.me.petFresh = true;   // 친구도 바로 옆으로
+  pushState(true);
+  if (act && !sameSeat) applyActivity(act);   // 방석에 그대로 앉아 있으면 일정 때문에 다른 자리로 옮겨 앉지 않게
   updateHud();
   fade(false);
   toast(`${S.loc.name} 디자인으로 바꿨어요`);

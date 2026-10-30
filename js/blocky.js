@@ -200,6 +200,11 @@ export const PETS = [
   { id: 'ai', name: 'AI 짝꿍', cap: '화면 얼굴 로봇', hover: true },
   { id: 'claude', name: '클로드', cap: '주황 네모, 다리 넷' },
   { id: 'drone', name: '드론', cap: '프로펠러가 쌩쌩', hover: true },
+  { id: 'panda', name: '판다', cap: '푸바오처럼 크고 동글동글', side: 1.5 },
+  { id: 'squirrel', name: '다람쥐', cap: '햄스터만 한 몸, 큰 꼬리' },
+  { id: 'turtle', name: '거북이', cap: '느릿느릿 고개 쏙' },
+  { id: 'squid', name: '오징어', cap: '둥실둥실 다리 열 개', hover: true },
+  { id: 'fishbowl', name: '어항 물고기', cap: '금붕어가 빙글빙글' },
   { id: 'none', name: '없음', cap: '혼자 다니기' },
   { id: 'plant', name: '화분 친구', hidden: true },
   { id: 'ghost', name: '꼬마 유령', hover: true, hidden: true },
@@ -363,6 +368,102 @@ export function buildPet(id) {
       eyes(g, 0.17, 0.112, 0.05, 0.035, '#f7efe0');
       break;
     }
+    case 'panda': {
+      // 푸바오처럼 크게: 다른 친구의 두 배쯤. 하얀 몸에 까만 다리·어깨띠·귀·눈 둘레, 손에 대나무
+      const w = '#f4f1ea', k = '#262322';
+      box(g, w, 0.5, 0.4, 0.56, 0, 0.32, 0);
+      box(g, k, 0.52, 0.14, 0.22, 0, 0.44, 0.12);
+      for (const [x, z] of [[0.15, 0.17], [-0.15, 0.17], [0.15, -0.17], [-0.15, -0.17]]) box(g, k, 0.15, 0.2, 0.15, x, 0.1, z);
+      const head = new THREE.Group(); head.position.set(0, 0.62, 0.26); g.add(head);
+      box(head, w, 0.42, 0.36, 0.36);
+      for (const s of [1, -1]) {
+        box(head, k, 0.12, 0.11, 0.08, 0.16 * s, 0.2, -0.04);
+        box(head, k, 0.1, 0.12, 0.02, 0.09 * s, 0.02, 0.18);
+        box(head, '#f7f2e8', 0.035, 0.035, 0.02, 0.085 * s, 0.035, 0.192);
+        box(head, '#f2b6bd', 0.06, 0.035, 0.02, 0.15 * s, -0.08, 0.181);
+      }
+      box(head, '#ece6da', 0.16, 0.1, 0.06, 0, -0.08, 0.19);
+      box(head, k, 0.07, 0.045, 0.03, 0, -0.05, 0.225);
+      const bamboo = new THREE.Group(); bamboo.position.set(0.2, 0.42, 0.34); g.add(bamboo);
+      box(bamboo, '#7fae4a', 0.05, 0.4, 0.05, 0, 0.08, 0);
+      box(bamboo, '#5f8f36', 0.06, 0.02, 0.06, 0, 0.0, 0);
+      box(bamboo, '#5f8f36', 0.06, 0.02, 0.06, 0, 0.16, 0);
+      box(bamboo, '#8cc45a', 0.12, 0.03, 0.06, 0.05, 0.27, 0).rotation.z = 0.5;
+      anim.push((t) => { head.rotation.z = Math.sin(t * 1.3) * 0.06; bamboo.rotation.x = Math.sin(t * 2.6) * 0.15; });
+      break;
+    }
+    case 'squirrel': {
+      // 햄스터만 한 다람쥐: 등에 줄무늬, 도토리를 안고, 몸보다 큰 꼬리가 말려 올라간다
+      const c = '#b8733a', d = '#7a4a26', cream = '#f2dcb8';
+      box(g, c, 0.2, 0.2, 0.22, 0, 0.11, 0);
+      box(g, d, 0.04, 0.2, 0.2, 0, 0.13, -0.01);
+      box(g, cream, 0.14, 0.13, 0.02, 0, 0.1, 0.111);
+      box(g, c, 0.2, 0.18, 0.18, 0, 0.27, 0.06);
+      box(g, cream, 0.12, 0.07, 0.02, 0, 0.23, 0.151);
+      eyes(g, 0.29, 0.152, 0.055, 0.035);
+      box(g, '#2a2220', 0.03, 0.02, 0.02, 0, 0.25, 0.162);
+      for (const s of [1, -1]) box(g, d, 0.05, 0.07, 0.03, 0.07 * s, 0.39, 0.06);
+      box(g, '#9a6a3a', 0.07, 0.07, 0.07, 0, 0.13, 0.15);
+      box(g, '#5a3a20', 0.08, 0.03, 0.08, 0, 0.175, 0.15);
+      const tail = new THREE.Group(); tail.position.set(0, 0.12, -0.12); g.add(tail);
+      box(tail, c, 0.16, 0.3, 0.14, 0, 0.15, -0.06);
+      box(tail, c, 0.16, 0.14, 0.18, 0, 0.32, 0.0);
+      box(tail, cream, 0.12, 0.06, 0.12, 0, 0.4, 0.05);
+      anim.push((t) => { tail.rotation.x = Math.sin(t * 3) * 0.12; tail.rotation.z = Math.sin(t * 1.7) * 0.08; });
+      break;
+    }
+    case 'turtle': {
+      // 등딱지 무늬, 걸으면 발이 움직이고 가끔 고개를 쏙 넣었다 뺀다
+      box(g, '#3f7a40', 0.4, 0.12, 0.46, 0, 0.14, 0);
+      box(g, '#5c9a50', 0.3, 0.08, 0.36, 0, 0.24, 0);
+      for (const [x, z] of [[0, 0], [0.09, 0.1], [-0.09, 0.1], [0.09, -0.1], [-0.09, -0.1]]) box(g, '#8cc06a', 0.07, 0.02, 0.07, x, 0.285, z);
+      box(g, '#d8c79a', 0.38, 0.03, 0.44, 0, 0.085, 0);
+      const head = new THREE.Group(); head.position.set(0, 0.15, 0.24); g.add(head);
+      box(head, '#a8c77a', 0.14, 0.12, 0.16, 0, 0, 0.06);
+      eyes(head, 0.02, 0.141, 0.04, 0.03);
+      box(head, '#7a9a5a', 0.06, 0.012, 0.01, 0, -0.03, 0.141);
+      const legs = [];
+      for (const [x, z] of [[0.16, 0.15], [-0.16, 0.15], [0.16, -0.15], [-0.16, -0.15]]) legs.push(box(g, '#a8c77a', 0.1, 0.08, 0.12, x, 0.05, z));
+      box(g, '#a8c77a', 0.04, 0.04, 0.08, 0, 0.1, -0.26);
+      g.userData.legs = legs;
+      anim.push((t) => { head.position.z = 0.24 - Math.max(0, Math.sin(t * 0.7)) ** 6 * 0.1; });
+      break;
+    }
+    case 'squid': {
+      // 공중에 둥실 떠서, 세모 지느러미 몸통 아래로 다리 여덟 개 + 긴 다리 두 개가 하늘하늘
+      const c = '#f2c4c8', dot = '#d98a94';
+      box(g, c, 0.2, 0.32, 0.2, 0, 0.32, 0);
+      for (const [x, y] of [[0.05, 0.38], [-0.04, 0.3], [0.03, 0.24]]) box(g, dot, 0.03, 0.03, 0.01, x, y, 0.101);
+      const fin = box(g, c, 0.24, 0.24, 0.05, 0, 0.5, 0); fin.rotation.z = Math.PI / 4;
+      box(g, '#ffffff', 0.08, 0.08, 0.02, 0.055, 0.2, 0.1);
+      box(g, '#ffffff', 0.08, 0.08, 0.02, -0.055, 0.2, 0.1);
+      eyes(g, 0.2, 0.112, 0.055, 0.04);
+      const arms = [];
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2, long = i === 2 || i === 7;
+        const arm = new THREE.Group(); arm.position.set(Math.cos(a) * 0.07, 0.16, Math.sin(a) * 0.07); g.add(arm);
+        box(arm, c, 0.03, long ? 0.3 : 0.18, 0.03, 0, long ? -0.15 : -0.09, 0);
+        if (long) box(arm, dot, 0.05, 0.05, 0.04, 0, -0.29, 0);
+        arms.push([arm, a]);
+      }
+      anim.push((t) => arms.forEach(([arm, a], i) => { const w = Math.sin(t * 4 + i) * 0.35; arm.rotation.x = Math.sin(a) * w; arm.rotation.z = -Math.cos(a) * w; }));
+      break;
+    }
+    case 'fishbowl': {
+      // 동그란 어항(블록이라 네모) 속 금붕어가 빙글빙글, 물풀이 흔들흔들
+      box(g, '#cfeaf5', 0.36, 0.32, 0.36, 0, 0.17, 0, { transparent: true, opacity: 0.3 });
+      box(g, '#4aa6dc', 0.32, 0.22, 0.32, 0, 0.13, 0, { transparent: true, opacity: 0.6 });
+      box(g, '#e8d8b0', 0.32, 0.03, 0.32, 0, 0.035, 0);
+      for (const [x, z] of [[0.17, 0], [-0.17, 0], [0, 0.17], [0, -0.17]]) box(g, '#f4f8fa', x ? 0.03 : 0.38, 0.03, z ? 0.03 : 0.38, x, 0.33, z);
+      const weed = box(g, '#3f9a5a', 0.04, 0.16, 0.04, -0.09, 0.12, -0.08);
+      const fish = new THREE.Group(); fish.position.y = 0.15; g.add(fish);
+      const body = new THREE.Group(); body.position.x = 0.08; body.scale.setScalar(1.5); fish.add(body);
+      box(body, '#f08a3a', 0.05, 0.06, 0.1, 0, 0, 0);
+      const tail = box(body, '#f6b06a', 0.02, 0.06, 0.05, 0, 0, -0.07);
+      box(body, '#1d1a18', 0.055, 0.015, 0.015, 0, 0.01, 0.035);
+      anim.push((t) => { fish.rotation.y = t * 1.2; fish.position.y = 0.14 + Math.sin(t * 1.7) * 0.03; tail.rotation.y = Math.sin(t * 12) * 0.5; weed.rotation.z = Math.sin(t * 1.5) * 0.2; });
+      break;
+    }
     default:
       return null;
   }
@@ -373,6 +474,8 @@ export function buildPet(id) {
   wrap.add(g);
   wrap.userData.anim = anim;
   wrap.userData.legs = g.userData.legs;
-  wrap.userData.hover = !!PETS.find((p) => p.id === id)?.hover;
+  const def = PETS.find((p) => p.id === id);
+  wrap.userData.hover = !!def?.hover;
+  wrap.userData.side = def?.side || 1;   // 큰 친구(판다)는 주인과 겹치지 않게 조금 더 옆에서
   return wrap;
 }

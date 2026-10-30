@@ -10,7 +10,8 @@ const WISH_GAP = 60e3; // 연등은 1분에 하나
 const GRACE = 30e3;    // 끊긴 분 자리를 남겨 두는 시간 (다른 창에 잠깐 다녀오기, 휴대폰 화면 끄기)
 // 'hall' 이 큰법당 서버 1~12. 예전 위치별 방 이름도 받아 둔다
 const ROOM_RE = /^(hall|forest|river|sea)-([1-9]|1[0-9]|20)$/;
-const ORIGINS = ['https://templestay.site', 'https://www.templestay.site', 'https://vaca-at.github.io', 'http://127.0.0.1:8765', 'http://localhost:8765'];
+// moontr.site = 관리자 허브 (방문 수 잔디를 여기서 읽어 가요)
+const ORIGINS = ['https://templestay.site', 'https://www.templestay.site', 'https://vaca-at.github.io', 'https://moontr.site', 'http://127.0.0.1:8765', 'http://localhost:8765'];
 
 function cors(req) {
   const o = req.headers.get('Origin');
