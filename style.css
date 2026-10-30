@@ -329,3 +329,21 @@ body:not(.admin) .place .stay { display: none !important; }
 .relic-info small { font-size: 11px; letter-spacing: .08em; }
 .relic-arrow .lbl { font-size: 26px; line-height: 1; }
 .relic-arrow { border: 1px solid var(--line); }
+
+/* 단추 최소화: 위 왼쪽 칩 하나 · 위 오른쪽 아이콘 둘 · 장소 줄은 왼쪽 장소 단추 옆에서만, 모두 반투명 먹색 */
+#design-chip, #sched-chip { display: none !important; }
+#server-chip, .hud-right .icon-btn, #context-btns .ctx { background: rgba(18, 16, 15, .55); color: #fff; border-color: rgba(255, 255, 255, .14); box-shadow: none; }
+#server-chip .cap, .hud-right .icon-btn .cap, #context-btns .ctx .cap { display: none; }
+#server-chip .lbl { display: flex; gap: 6px; align-items: baseline; }
+#server-chip #hud-server { font-size: 12px; opacity: .75; }
+#server-chip .lbl::after { content: "▾"; font-size: 11px; opacity: .7; }
+.hud-right .icon-btn { width: 44px; height: 44px; padding: 0; place-items: center; align-content: center; border-radius: 14px; }
+#context-btns { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 70px); }
+#context-btns .ctx { padding: 8px 16px; font-size: 13.5px; font-family: var(--display); }
+#scene-bar { display: none; }
+body.show-scenes #scene-bar { display: grid; left: calc(max(12px, env(safe-area-inset-left)) + 62px); top: 50%; bottom: auto; transform: translateY(-50%); gap: 4px; padding: 6px; border-radius: 16px; background: rgba(18, 16, 15, .72); border-color: rgba(255, 255, 255, .14); }
+body.show-scenes #scene-bar button { color: #fff; font-family: var(--display); font-weight: 700; padding: 9px 18px; }
+body.show-scenes #scene-bar button:hover:not([aria-pressed="true"]) { background: rgba(255, 255, 255, .12); }
+body.show-scenes #side-place { outline: 2px solid #fff; outline-offset: -2px; }
+/* 메뉴 맨 위: 시각 · 머문 시간, 새로고침 */
+#menu #hud-timer { display: flex; gap: 8px; align-items: baseline; justify-content: center; padding: 4px 0 6px; background: none; border: 0; box-shadow: none; }

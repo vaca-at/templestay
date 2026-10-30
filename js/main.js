@@ -510,6 +510,7 @@ function askSched(b) {
   $('#sched-ask-t').textContent = `${b.label || def.name} 시간이니 ${place}으로 갈까요?`;
   $('#sched-ask-go .cap').textContent = `${b.start}–${b.end} · ${place}에서 ${def.name}`;
   $('#sched-ask').hidden = false;
+  $('#btn-resume').hidden = true;
 }
 $('#welcome').addEventListener('click', (e) => { if (e.target.closest('button') && askBlock) setTimeout(() => askBlock && askSched(askBlock)); });
 $('#sched-ask-go').onclick = () => { $('#sched-ask').hidden = true; const b = askBlock; askBlock = null; if (b && currentBlock() === b) applyActivity(b.act); };
@@ -521,7 +522,7 @@ function updateSchedChip() {
   $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
   $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
   const off = b && S.schedule.auto && !S.autoAct && ACTIVITIES[b.act].scene;
-  $('#btn-resume').hidden = !off;
+  $('#btn-resume').hidden = !off || !$('#sched-ask').hidden;   // "갈까요?" 창이 떠 있으면 겹치지 않게
   if (off) $('#btn-resume .cap').textContent = `${ACTIVITIES[b.act].name} · ${SCENES[ACTIVITIES[b.act].scene].name}으로 가요`;
 }
 
@@ -721,7 +722,7 @@ function renderSceneBar() {
 
 function updateHud() {
   if (!S.loc || S.mode !== 'world') return;
-  $('#hud-place').textContent = '큰법당';
+  $('#hud-place').textContent = `큰법당 · ${S.loc.name}`;
   $('#design-name').textContent = S.loc.name;
   $('#hud-server').textContent = S.server ? `· 서버 ${S.server}` : '· 서버 찾는 중';
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
@@ -1176,7 +1177,7 @@ document.addEventListener('click', (e) => {
   if (!t) return;
   if (t.dataset.close) { $('#' + t.dataset.close).hidden = true; return; }
   if (t.dataset.act) return doAction(t.dataset.act);
-  if (t.dataset.scene) { pauseAuto(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
+  if (t.dataset.scene) { document.body.classList.remove('show-scenes'); pauseAuto(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
   if (t.dataset.place) { $('#places').hidden = true; return changeDesign(t.dataset.place); }
   if (t.dataset.server) { $('#server-modal').hidden = true; return switchServer(+t.dataset.server); }
   if (t.dataset.del != null) { schedDraft.blocks.splice(+t.dataset.del, 1); return renderSchedEditor(schedDraft); }
@@ -1213,7 +1214,9 @@ $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivit
 $('#sched-chip').onclick = openSched;
 $('#design-chip').onclick = showPlaces;
 // 왼쪽 도형 단추
-$('#side-place').onclick = showPlaces;
+// 장소 단추: 바로 옆에 마당 · 법당 · 공양간 · 내 방이 펼쳐져요 (다른 곳을 누르면 닫혀요)
+$('#side-place').onclick = () => document.body.classList.toggle('show-scenes');
+addEventListener('pointerdown', (e) => { if (!e.target.closest('#scene-bar, #side-place')) document.body.classList.remove('show-scenes'); });
 $('#side-char').onclick = openCreator;
 $('#side-sched').onclick = openSched;
 $('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
@@ -1224,7 +1227,7 @@ addEventListener('keydown', (e) => {
   const btn = n && document.querySelectorAll('#actions .act')[n - 1];
   if (btn) { e.preventDefault(); btn.click(); }
 });
-$('#server-chip').onclick = () => { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; };
+$('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 디자인 고르기 (서버는 메뉴에서)
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
