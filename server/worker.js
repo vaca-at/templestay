@@ -39,6 +39,16 @@ export default {
       const exp = Date.now() + 30 * 24 * 3600 * 1000;
       return json(req, { token: `${exp}.${await sign(String(exp), env.ADMIN_PASSWORD.trim())}`, exp });
     }
+    // 관리자 구글 로그인: Firebase 가 준 구글 로그인 증표(ID 토큰)를 검사해서, 허락된 이메일이면 30일 입장권을 준다
+    if (url.pathname === '/admin/google' && req.method === 'POST') {
+      const body = await req.json().catch(() => ({}));
+      const who = await verifyFirebase(String(body.idToken || ''));
+      const allowed = (env.ADMIN_EMAILS || ADMIN_EMAILS).split(',').map((s) => s.trim().toLowerCase());
+      if (!who || !env.ADMIN_PASSWORD) return json(req, { error: 'unauthorized' }, 401);
+      if (!allowed.includes(who.email)) return json(req, { error: 'not admin', email: who.email }, 403);
+      const exp = Date.now() + 30 * 24 * 3600 * 1000;
+      return json(req, { token: `${exp}.${await sign(String(exp), env.ADMIN_PASSWORD.trim())}`, exp, email: who.email });
+    }
     // 관리자: 입장권(또는 비밀번호)이 맞을 때만 방문 수와 접속 인원을 보여 준다
     if (url.pathname === '/admin/stats') {
       const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
@@ -109,6 +119,36 @@ async function adminOk(auth, secret) {
   const m = /^(\d{13})\.([0-9a-f]{64})$/.exec(auth);
   if (m) return +m[1] > Date.now() && (await same(m[2], await sign(m[1], secret)));
   return same(auth, secret); // 예전처럼 비밀번호를 바로 보내도 된다
+}
+
+// ───────── 구글(Firebase) 로그인 검사 ─────────
+const FIREBASE_PROJECT = 'moon-d528d';
+const ADMIN_EMAILS = 'bellachord@gmail.com'; // 관리자로 들어올 수 있는 구글 계정 (쉼표로 여러 개)
+let googleKeys = { at: 0, keys: [] };
+async function firebaseKeys() {
+  if (Date.now() - googleKeys.at < 3600e3 && googleKeys.keys.length) return googleKeys.keys;
+  const r = await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com');
+  googleKeys = { at: Date.now(), keys: (await r.json()).keys || [] };
+  return googleKeys.keys;
+}
+const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+// 서명(구글 공개 열쇠), 발급처, 대상 프로젝트, 만료, 이메일 확인 여부를 모두 본다. 맞으면 { email }
+async function verifyFirebase(token) {
+  try {
+    const [h, p, sgn] = token.split('.');
+    if (!sgn) return null;
+    const head = JSON.parse(new TextDecoder().decode(b64u(h)));
+    const pay = JSON.parse(new TextDecoder().decode(b64u(p)));
+    if (head.alg !== 'RS256') return null;
+    const jwk = (await firebaseKeys()).find((k) => k.kid === head.kid);
+    if (!jwk) return null;
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(sgn), new TextEncoder().encode(`${h}.${p}`));
+    const now = Date.now() / 1000;
+    if (!ok || pay.aud !== FIREBASE_PROJECT || pay.iss !== `https://securetoken.google.com/${FIREBASE_PROJECT}`) return null;
+    if (!(pay.exp > now) || !(pay.iat <= now + 60) || !pay.sub || !pay.email || pay.email_verified !== true) return null;
+    return { email: String(pay.email).toLowerCase() };
+  } catch { return null; }
 }
 
 // 한국 시간 기준 날짜
