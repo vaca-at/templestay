@@ -895,7 +895,7 @@ function renderCreatorOptions() {
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
   $('#opt-acc').innerHTML = ACCESSORIES.map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
-  $('#opt-pet').innerHTML = PETS.map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
+  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
 }
 
 function finishCreator() {
@@ -1214,7 +1214,7 @@ function gallery(kind) {
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
     : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
-    : kind === 'pets' ? PETS.slice(1).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
+    : kind === 'pets' ? PETS.filter((p) => !p.hidden && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', acc: a.id, pet: 'none' } }));
   const acts = (params.get('acts') || '').split(',');
   const gap = kind === 'pets' ? 1.7 : 1.3;
@@ -1252,7 +1252,7 @@ async function demo(which) {
   const world = S.active;
   const seats = world.seats ? [...world.seats].sort(() => rnd() - 0.5) : [];
   for (let i = 0; i < n; i++) {
-    const look = { type: types[Math.floor(rnd() * types.length)], gender: rnd() < 0.5 ? 'f' : 'm', skin: SKIN_TONES[Math.floor(rnd() * 3)], outfit: rnd() < 0.5 ? 'own' : OUTFITS[1 + Math.floor(rnd() * 6)].id, acc: rnd() < 0.7 ? 'none' : ACCESSORIES[Math.floor(rnd() * ACCESSORIES.length)].id, pet: rnd() < 0.35 ? PETS[1 + Math.floor(rnd() * (PETS.length - 1))].id : 'none' };
+    const look = { type: types[Math.floor(rnd() * types.length)], gender: rnd() < 0.5 ? 'f' : 'm', skin: SKIN_TONES[Math.floor(rnd() * 3)], outfit: rnd() < 0.5 ? 'own' : OUTFITS[1 + Math.floor(rnd() * 6)].id, acc: rnd() < 0.7 ? 'none' : ACCESSORIES[Math.floor(rnd() * ACCESSORIES.length)].id, pet: rnd() < 0.35 ? PETS[Math.floor(rnd() * 10)].id : 'none' };
     const seat = (which === 'in' && rnd() < 0.75) || which === 'meal' ? seats[i] : null;
     const walk = which === 'out' && world.walkPath ? world.walkPath[i % world.walkPath.length] : null;
     const pos = seat ? [seat.pos.x, seat.pos.z] : walk ? [walk.x + (rnd() - 0.5) * 2, walk.z + (rnd() - 0.5) * 2] : [(rnd() - 0.5) * 18, (rnd() - 0.3) * 18];

@@ -1034,7 +1034,7 @@ export function buildRoom(loc) {
   g.add(shelf);
   const quilt = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 0.8), mat('#c97a7a')); quilt.position.set(-HW + 0.8, 0.2, HD - 0.8); quilt.castShadow = true; g.add(quilt);
   const quilt2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.8), mat('#f2ead8')); quilt2.position.set(-HW + 0.8, 0.52, HD - 0.8); g.add(quilt2);
-  const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.5), new THREE.MeshStandardMaterial({ map: scroll('고요히') }));
+  const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.5), new THREE.MeshStandardMaterial({ map: scroll('일체유심조', '모든것은마음이짓는다') }));
   sc.position.set(0, 2.0, -HD + 0.05); g.add(sc);
   const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), mat('#5d5a50')); cushion.position.set(0, 0.05, -0.65); cushion.receiveShadow = true; g.add(cushion);
   cushion.userData.seats = 'room';

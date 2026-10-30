@@ -188,20 +188,22 @@ export function buildBlock(av, body, look, outfit, skinColor) {
 }
 
 // ───────── 내 옆 친구 ─────────
+// 고르는 목록 순서 그대로. hidden 은 목록에서 뺐지만 예전에 고른 사람을 위해 그리는 법만 남긴 친구
 export const PETS = [
-  { id: 'none', name: '없음', cap: '혼자 다니기' },
-  { id: 'ai', name: 'AI 짝꿍', cap: '화면 얼굴 로봇', hover: true },
   { id: 'dog', name: '강아지', cap: '꼬리를 흔들어요' },
+  { id: 'cat', name: '고양이', cap: '꼬리를 살랑살랑' },
   { id: 'hamster', name: '햄스터', cap: '볼 빵빵' },
-  { id: 'plant', name: '화분 친구', cap: '꽃이 살랑살랑' },
-  { id: 'drone', name: '드론', cap: '프로펠러가 쌩쌩', hover: true },
   { id: 'bunny', name: '토끼', cap: '귀가 쫑긋' },
   { id: 'coffee', name: '커피잔', cap: '김이 모락모락' },
-  { id: 'book', name: '책 친구', cap: '책장을 펄럭' },
-  { id: 'ghost', name: '꼬마 유령', cap: '살짝 비쳐요', hover: true },
-  { id: 'rocket', name: '꼬마 로켓', cap: '불꽃이 일렁', hover: true },
-  { id: 'claude', name: '클로드', cap: '주황 네모, 다리 넷' },
   { id: 'icecoffee', name: '아이스커피', cap: '얼음 가득, 초록 빨대' },
+  { id: 'book', name: '책 친구', cap: '책장을 펄럭' },
+  { id: 'ai', name: 'AI 짝꿍', cap: '화면 얼굴 로봇', hover: true },
+  { id: 'claude', name: '클로드', cap: '주황 네모, 다리 넷' },
+  { id: 'drone', name: '드론', cap: '프로펠러가 쌩쌩', hover: true },
+  { id: 'none', name: '없음', cap: '혼자 다니기' },
+  { id: 'plant', name: '화분 친구', hidden: true },
+  { id: 'ghost', name: '꼬마 유령', hover: true, hidden: true },
+  { id: 'rocket', name: '꼬마 로켓', hover: true, hidden: true },
 ];
 
 const eyes = (g, y, z, sep = 0.07, s = 0.05, c = '#1d1a18') => {
@@ -236,6 +238,30 @@ export function buildPet(id) {
       for (const [x, z] of [[0.08, 0.12], [-0.08, 0.12], [0.08, -0.12], [-0.08, -0.12]]) box(g, c, 0.07, 0.12, 0.07, x, 0.06, z);
       const tail = box(g, c, 0.05, 0.05, 0.16, 0, 0.3, -0.24);
       anim.push((t) => { tail.rotation.y = Math.sin(t * 12) * 0.6; });
+      break;
+    }
+    case 'cat': {
+      // 치즈 고양이: 등에 줄무늬, 세모 귀, 위로 말린 꼬리
+      const c = '#e9a25a', stripe = '#c9773a';
+      box(g, c, 0.22, 0.18, 0.36, 0, 0.19, 0);
+      for (const z of [-0.1, 0, 0.1]) box(g, stripe, 0.23, 0.02, 0.04, 0, 0.285, z);
+      box(g, c, 0.24, 0.2, 0.2, 0, 0.36, 0.19);
+      box(g, '#f6e6cf', 0.12, 0.07, 0.04, 0, 0.31, 0.29);
+      box(g, '#f2a0a8', 0.035, 0.025, 0.02, 0, 0.34, 0.305);
+      eyes(g, 0.39, 0.292, 0.06, 0.04, '#2f3a1e');
+      for (const s of [1, -1]) {
+        const ear = box(g, c, 0.07, 0.08, 0.04, 0.08 * s, 0.49, 0.19);
+        ear.rotation.z = -0.5 * s;
+        box(g, '#f2a0a8', 0.035, 0.045, 0.01, 0.08 * s, 0.485, 0.212);
+        for (const dy of [0.01, -0.02]) box(g, '#f7efe0', 0.1, 0.008, 0.008, 0.15 * s, 0.32 + dy, 0.28);
+      }
+      for (const [x, z] of [[0.07, 0.12], [-0.07, 0.12], [0.07, -0.12], [-0.07, -0.12]]) box(g, '#f6e6cf', 0.06, 0.11, 0.06, x, 0.055, z);
+      const tail = new THREE.Group();
+      tail.position.set(0, 0.24, -0.18);
+      box(tail, c, 0.05, 0.05, 0.14, 0, 0, -0.06);
+      box(tail, stripe, 0.05, 0.16, 0.05, 0, 0.08, -0.13);
+      g.add(tail);
+      anim.push((t) => { tail.rotation.z = Math.sin(t * 2.2) * 0.35; });
       break;
     }
     case 'hamster': {
