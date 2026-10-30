@@ -1330,7 +1330,7 @@ $('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 �
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
-// 법당 음악: 끄기 + 실제 녹음 한 곡 + 합성 다섯 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
+// 법당 음악: 끄기 + 실제 녹음 두 곡 + 합성 네 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
 setMusic(store.get('music', 'yeombul'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
 function renderMusic() {
   const list = [{ id: '', name: '음악 끄기', cap: '바람 소리와 동작 소리만' }, ...TRACKS];
