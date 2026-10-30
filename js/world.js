@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import { mat } from './avatar.js';
 import { season } from './data.js';
 
@@ -874,6 +875,106 @@ function treeGeos() {
   return TREE_GEO;
 }
 
+// ───────── 실사풍 풍경 조각 ─────────
+// 누각: 연못 건너편 2층 누각 (붉은 기둥, 난간, 단청, 기와 팔작지붕). 앞면이 -z(마당 쪽)
+function pavilion(scale = 1) {
+  const g = new THREE.Group();
+  const W = 9, D = 5, H1 = 2.6, H2 = 2.4;
+  const red = mat('#9c2f24', { roughness: 0.6 }), stone = mat('#b9b2a4');
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W + 1.2, 0.8, D + 1.2), stone); base.position.y = 0.4; base.castShadow = base.receiveShadow = true; g.add(base);
+  const xs = [-W / 2, -W / 6, W / 6, W / 2];
+  for (const z of [-D / 2, D / 2]) for (const x of xs) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, H1 + H2, 12), red); p.position.set(x, 0.8 + (H1 + H2) / 2, z); p.castShadow = true; g.add(p);
+  }
+  // 2층 마루와 난간
+  const floor2 = new THREE.Mesh(new THREE.BoxGeometry(W + 0.8, 0.25, D + 0.8), mat('#5a3826')); floor2.position.y = 0.8 + H1; g.add(floor2);
+  for (const z of [-D / 2 - 0.4, D / 2 + 0.4]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(W + 0.8, 0.08, 0.08), red); rail.position.set(0, 0.8 + H1 + 0.7, z); g.add(rail);
+    for (let i = 0; i <= 18; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), red); b.position.set(-W / 2 - 0.4 + (i / 18) * (W + 0.8), 0.8 + H1 + 0.4, z); g.add(b); }
+  }
+  // 2층 창살 벽 (안쪽, 밝은 창호지)
+  const lat = lattice('#9c2f24'); lat.wrapS = THREE.RepeatWrapping; lat.repeat.set(3, 1);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(W - 0.6, H2 - 0.5, D - 0.6), new THREE.MeshStandardMaterial({ map: lat, roughness: 0.8 })); win.position.y = 0.8 + H1 + 0.25 + (H2 - 0.5) / 2; g.add(win);
+  // 단청 들보
+  const dc = dancheong('#2f7d6d', '#c8443a'); dc.wrapS = THREE.RepeatWrapping; dc.repeat.set(3, 1);
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.6, D + 0.6), new THREE.MeshStandardMaterial({ map: dc, roughness: 0.7 })); beam.position.y = 0.8 + H1 + H2 + 0.3; g.add(beam);
+  // 지붕
+  const roofGeo = roofGeometry(W / 2 + 2.2, D / 2 + 2.0, 2.6, 0.5);
+  const tiles = roofTiles(); tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping;
+  const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ map: tiles, color: '#8a8f96', roughness: 0.8 })); roof.position.y = 0.8 + H1 + H2 + 0.6; roof.castShadow = true; g.add(roof);
+  const under = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ color: '#2f7d6d', side: THREE.BackSide })); under.position.y = roof.position.y - 0.05; g.add(under);
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry((W / 2 + 2.2) * 2 * 0.5, 0.35, 0.4), mat('#3a3d42')); ridge.position.y = roof.position.y + 2.7; g.add(ridge);
+  g.scale.setScalar(scale);
+  return g;
+}
+
+// 햇빛 받은 화강암 바위산 (백암산·금산 같은): 울퉁불퉁 봉우리, 위쪽은 노을빛, 아래는 숲에 묻혀요
+function granitePeak(seed, height, width, { warm = '#e6bf83', rock = '#a99c88', shade = '#5f5850', forest = '#56602f' } = {}) {
+  // 땅처럼 높이를 깎아 만든 바위 산덩이: 가파른 곳은 바위(해 드는 쪽은 금빛), 완만한 곳은 단풍 숲
+  const seg = 140, geo = new THREE.PlaneGeometry(width * 2, width * 2, seg, seg);
+  geo.rotateX(-Math.PI / 2);
+  const p = geo.attributes.position, r = rng(seed), ox = r() * 300, oz = r() * 300;
+  const ridged = (x, z) => { let v = 0, w = 1, f = 1; for (let k = 0; k < 5; k++) { v += w * (1 - Math.abs(noise((x + ox) * f, (z + oz) * f) / 1.9)) ** 2; w *= 0.5; f *= 2.05; } return v / 1.94; };
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x / width, z / (width * 0.8));
+    const core = Math.max(0, 1 - d) ** 1.3;
+    let y = height * core * (0.55 + 0.65 * ridged(x * 0.9, z * 0.9));
+    y += 2.5 * Math.sin(y * 0.35 + noise(x * 2, z * 2) * 2) * smooth(0.4, 0.9, core);   // 바위 결 (위쪽만)
+    p.setY(i, y - 4);
+  }
+  geo.computeVertexNormals();
+  const nrm = geo.attributes.normal, cols = [];
+  const cW = new THREE.Color(warm), cR = new THREE.Color(rock), cS = new THREE.Color(shade), cF = new THREE.Color(forest), cA = new THREE.Color('#a8552a'), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), steep = 1 - nrm.getY(i);
+    const sun = Math.max(0, nrm.getX(i) * 0.5 + nrm.getY(i) * 0.3 - nrm.getZ(i) * 0.6);
+    // 아래쪽 2/3은 단풍 숲(노랑·주황·초록 얼룩), 위쪽과 아주 가파른 곳만 바위
+    const fall = ['#c98a2e', '#a8552a', '#7d8a3a', '#d9a640', '#8f3a22'];
+    c.copy(cF).lerp(new THREE.Color(fall[Math.floor((noise(x * 4 + 3, z * 4) + 2) * 1.24) % 5]), 0.4).lerp(new THREE.Color('#7a7350'), 0.25);
+    c.lerp(cR, Math.max(smooth(0.36, 0.52, y / height + noise(x * 2, z * 2) * 0.08), smooth(0.8, 0.95, steep)));
+    c.lerp(cW, sun * smooth(0.3, 0.9, y / height) * 0.9).lerp(cS, smooth(0.65, 0.95, steep) * 0.6);
+    cols.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }));
+  return m;
+}
+
+// 단풍나무 한 그루를 크게: 작은 잎 덩어리 수십 개를 겹쳐 붉은·주황·노랑이 섞이게 (화면 가까이 액자처럼 두는 나무)
+function heroMaple(seed, size = 1, palette = ['#b8261c', '#d8432a', '#e8762e', '#f2a83a', '#c9381f', '#9c2a1e']) {
+  const r = rng(seed), g = new THREE.Group();
+  const trunkM = mat('#3e2c22');
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.45, 5, 7), trunkM); trunk.position.y = 2.5; trunk.rotation.z = (r() - 0.5) * 0.3; g.add(trunk);
+  const clumps = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0), new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), 70);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
+  for (let i = 0; i < 70; i++) {
+    const a = r() * Math.PI * 2, rad = Math.sqrt(r()) * 4.2, y = 5 + r() * 3.2 - rad * 0.35;
+    v.set(Math.cos(a) * rad, y, Math.sin(a) * rad * 0.8);
+    e.set(r() * 3, r() * 3, r() * 3); q.setFromEuler(e);
+    const k = 0.7 + r() * 0.9; sc.set(k, k * 0.75, k);
+    M.compose(v, q, sc); clumps.setMatrixAt(i, M);
+    c.set(palette[Math.floor(r() * palette.length)]).offsetHSL(0, 0, (r() - 0.5) * 0.08);
+    clumps.setColorAt(i, c);
+  }
+  clumps.castShadow = true;
+  g.add(clumps);
+  // 가지 몇 개
+  for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 3, 5), trunkM); b.position.set(0, 4.6, 0); b.rotation.set((r() - 0.5) * 1.6, r() * 3, (r() - 0.5) * 1.6); b.translateY(1.2); g.add(b); }
+  g.scale.setScalar(size);
+  return g;
+}
+
+// 비치는 물: 거울(Reflector) 위에 얇은 물빛을 한 겹 덮어 너무 거울 같지 않게
+function mirrorWater(geo, tint = '#5d7464', opacity = 0.35) {
+  const g = new THREE.Group();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const mirror = new Reflector(geo, { textureWidth: Math.round(innerWidth * dpr * 0.6), textureHeight: Math.round(innerHeight * dpr * 0.6), color: '#9aa39a', clipBias: 0.003 });
+  mirror.rotation.x = -Math.PI / 2; g.add(mirror);
+  const film = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: tint, transparent: true, opacity, roughness: 0.2, metalness: 0.1, depthWrite: false }));
+  film.rotation.x = -Math.PI / 2; film.position.y = 0.02; g.add(film);
+  return g;
+}
+
 // ───────── 내부 ─────────
 export function buildInterior(loc) {
   const c = loc.interior;
@@ -1099,6 +1200,9 @@ function heightFn(id) {
       let h = -24 * smooth(R0, R0 + 70, d) + noise(x, z) * 5 * smooth(R0, R0 + 20, d);
       h += 70 * smooth(160, 320, d) * (0.6 + 0.4 * noise(x * 0.5, z * 0.5));
       if (z < -10) h += Math.max(0, -z - 30) * 0.45;
+      // 앞쪽 골짜기: 단풍 연못과 누각이 있는 평평한 터 (백양사 쌍계루처럼)
+      const pe = Math.hypot(x / 34, (z - 66) / 26);
+      if (pe < 1.6) h = h + (-2.6 - h) * smooth(1.6, 1.0, pe);
       return h;
     };
   }
@@ -1250,7 +1354,29 @@ export function buildExterior(loc) {
   const pagodaPos = new THREE.Vector3(-12, 0, 6); // 디자인마다 아래에서 자리를 정한다
   const isSky = (x, z) => Math.hypot(x, z) < R0 + 2;
   if (loc.id === 'forest') {
-    g.add(scatterTrees(h, 1100, 5, { maxD: 330 }));
+    // 연못 둘레와 마당에서 연못까지 가는 길에는 나무를 두지 않아요 (연못·누각이 보이게)
+    const pondGap = (x, z) => Math.hypot(x / 40, (z - 62) / 34) < 1 || (z > 18 && z < 50 && Math.abs(x) < 20);
+    g.add(scatterTrees(h, 1100, 5, { maxD: 330, skip: pondGap }));
+    // 단풍 연못 · 누각 · 바위산 (백양사 쌍계루 풍경처럼)
+    const pondGeo = new THREE.CircleGeometry(1, 64); pondGeo.scale(30, 18, 1);
+    const pond = mirrorWater(pondGeo, '#4e6656', 0.3); pond.position.set(0, -2.25, 64); g.add(pond);
+    // 연못가 돌
+    const rr = rng(13), pondStone = mat('#8f877a');
+    for (let i = 0; i < 70; i++) {
+      const a = (i / 70) * Math.PI * 2, st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + rr() * 0.6, 0), rr() < 0.5 ? pondStone : mat('#a39b8c'));
+      st.position.set(Math.cos(a) * 30.5, -2.4 + rr() * 0.3, 64 + Math.sin(a) * 18.5); st.rotation.set(rr() * 3, rr() * 3, rr() * 3); st.scale.y = 0.5; st.receiveShadow = true; g.add(st);
+    }
+    const pav = pavilion(1.35); pav.position.set(0, -2.6, 86); pav.rotation.y = Math.PI; g.add(pav);
+    // 누각 옆 단풍 (붉은 · 노랑 · 연두가 섞이게)
+    const autumnMix = [['#b8261c', '#d8432a', '#c9381f', '#e8762e'], ['#f2c23a', '#e8a82e', '#d9b44a', '#c7d06a'], ['#d8432a', '#f2a83a', '#9c2a1e', '#e8762e'], ['#8fae4a', '#b8c45a', '#e0b53a', '#6f9a3e']];
+    [[-24, 80, 1.5, 0], [22, 82, 1.4, 1], [-36, 62, 1.3, 2], [36, 60, 1.4, 3], [-14, 92, 1.2, 1], [14, 94, 1.25, 2], [-30, 44, 1.2, 0], [30, 46, 1.1, 1]].forEach(([x, z, k, p], i) => {
+      const t = heroMaple(30 + i, k, autumnMix[p]); t.position.set(x, h(x, z) - 0.3, z); t.rotation.y = i; g.add(t);
+    });
+    // 마당 양쪽 가까이 액자처럼 늘어진 붉은 단풍
+    for (const [x, z, k] of [[-19, 26, 1.25], [19, 27, 1.15]]) { const t = heroMaple(70 + x, k); t.position.set(x, h(x, z), z); g.add(t); }
+    // 뒤쪽 햇빛 받은 바위 봉우리
+    const peak = granitePeak(8, 120, 90); peak.position.set(10, h(10, 280) - 6, 280); peak.rotation.y = Math.PI; g.add(peak);
+    const peak2 = granitePeak(9, 75, 70, { warm: '#d9b98a' }); peak2.position.set(-110, h(-110, 240) - 6, 240); peak2.rotation.y = Math.PI; g.add(peak2);
     // 수목원 온실
     const dome = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
       new THREE.MeshStandardMaterial({ color: '#cfe7ee', transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.2 }));
