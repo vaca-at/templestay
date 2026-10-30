@@ -1237,7 +1237,11 @@ function soundFor(av, vol) {
 
 // ───────── 버튼 ─────────
 const syncSoundBtn = () => {
-  $('#btn-sound .lbl').textContent = sound.on ? '🔊' : '🔈';
+  // 켜짐: 초록 바탕 + 소리 물결 / 꺼짐: 어두운 바탕 + 빨간 X
+  const b = $('#btn-sound');
+  b.setAttribute('aria-pressed', String(sound.on));
+  b.setAttribute('aria-label', sound.on ? '소리 켜짐 · 눌러서 끄기' : '소리 꺼짐 · 눌러서 켜기');
+  b.title = sound.on ? '소리 켜짐 (눌러서 끄기)' : '소리 꺼짐 (눌러서 켜기)';
   $('#btn-sound .cap').textContent = sound.on ? '소리 끄기' : '소리 켜기';
 };
 

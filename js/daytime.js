@@ -6,6 +6,7 @@ const LAT = 36.5, LON = 127.5;
 const RAD = Math.PI / 180;
 const NIGHT = new THREE.Color('#17233f');   // 밤하늘
 const DUSK = new THREE.Color('#f09a64');    // 해 질 녘·해 뜰 녘 노을
+const VIEW_NIGHT = new THREE.Color('#2b3a5e'), WHITE = new THREE.Color('#ffffff');   // 창 밖 그림에 곱하는 밤 색
 
 // 한국 시간: [올해 몇째 날, 0~24 시각]
 function kstNow() {
@@ -42,20 +43,23 @@ export function applyDaylight(world, d) {
   if (!world || world.timeless) return 1;
   const g = world.group;
   if (!g.userData.dayBase) {
-    const lights = [], skies = [];
+    const lights = [], skies = [], views = [];
     g.traverse((o) => {
+      if (o.material?.userData?.view) views.push(o.material);
       if (o.isLight) lights.push([o, o.intensity]);
       else if (o.material?.uniforms?.top) skies.push([o.material.uniforms, o.material.uniforms.top.value.clone(), o.material.uniforms.bottom.value.clone()]);
     });
-    g.userData.dayBase = { lights, skies, bg: world.background?.isColor ? world.background.clone() : null, fog: world.fog?.color.clone() };
+    g.userData.dayBase = { lights, skies, views, bg: world.background?.isColor ? world.background.clone() : null, fog: world.fog?.color.clone() };
   }
   const base = g.userData.dayBase;
-  const low = base.skies.length ? 0.22 : 0.55;   // 하늘이 있는 바깥은 많이, 건물 안은 조금만 어두워진다
+  const low = base.skies.length ? 0.22 : 0.4;   // 하늘이 있는 바깥은 많이, 건물 안은 조금 덜 어두워진다 (등불이 대신 밝아져요)
   const dusk = 4 * d * (1 - d) * 0.28;   // 낮과 밤 사이에만 노을빛
   const tint = (c, out) => out.copy(NIGHT).lerp(c, 0.06 + 0.94 * d).lerp(DUSK, dusk);
   const k = low + (1 - low) * d;
   for (const [o, i] of base.lights) o.intensity = o.isPointLight || o.isSpotLight ? i * (1 + (1 - d) * 0.6) : i * k;
   for (const [u, top, bottom] of base.skies) { tint(top, u.top.value); tint(bottom, u.bottom.value); }
+  // 창 밖 풍경: 낮엔 그대로, 해 질 녘엔 노을빛, 밤엔 어두운 남색으로 (그림에 색을 곱해요)
+  for (const m of base.views) m.color.copy(VIEW_NIGHT).lerp(WHITE, d).lerp(DUSK, Math.min(0.75, dusk * 2.4));
   if (base.bg) tint(base.bg, world.background);
   if (base.fog) tint(base.fog, world.fog.color);
   return k;

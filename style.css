@@ -435,3 +435,10 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 /* 동작 이름은 한 줄로 (마당 쓸기 · 차 마시기처럼 긴 이름도) */
 #actions .act { white-space: nowrap; }
 @media (max-width: 420px) { #actions { gap: 4px; } #actions .act { min-width: 0; padding: 0 9px; font-size: 13px; } }
+
+/* 소리 단추: 켜짐이면 초록 바탕에 소리 물결, 꺼짐이면 어두운 바탕에 빨간 X */
+#btn-sound .off { display: none; }
+#btn-sound[aria-pressed="true"] { background: var(--jade) !important; border-color: rgba(255, 255, 255, .35) !important; }
+#btn-sound[aria-pressed="false"] .on { display: none; }
+#btn-sound[aria-pressed="false"] .off { display: inline; stroke: #ff8a7a; }
+#btn-sound[aria-pressed="false"] .spk { opacity: .7; }

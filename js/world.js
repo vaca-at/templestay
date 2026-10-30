@@ -274,6 +274,13 @@ function panoramaTex(loc) {
   });
 }
 
+// 창 밖 풍경 그림: 빛을 받지 않는 그림이라 낮밤(js/daytime.js)이 이 표시를 보고 저녁 · 밤 색을 입혀요
+function viewMat(map) {
+  const m = new THREE.MeshBasicMaterial({ map });
+  m.userData.view = true;
+  return m;
+}
+
 // 성긴 창살: 테두리 + 세로 살 둘 + 위 칸 잔살만 (바깥이 넓게 보이게)
 function openLattice(frame) {
   return canvasTex(512, 384, (g, w, h) => {
@@ -668,7 +675,7 @@ export function buildInterior(loc) {
     // 안에서 보면 왼쪽 벽은 -z 쪽으로, 오른쪽 벽은 +z 쪽으로 그림이 이어져요. 왼쪽 벽은 그림 앞 절반, 오른쪽 벽은 뒤 절반
     const u = s < 0 ? (HF - (z + w / 2)) / L : (z - w / 2 + HD) / L;
     t.repeat.set(w / L / 2, 1); t.offset.set((s < 0 ? 0 : 0.5) + u / 2, 0); t.needsUpdate = true;
-    const v = wall(w, WH, s * (HW - 0.03), WY, z, -s * Math.PI / 2, new THREE.MeshBasicMaterial({ map: t }));
+    const v = wall(w, WH, s * (HW - 0.03), WY, z, -s * Math.PI / 2, viewMat(t));
     const f = wall(w, WH, s * (HW - 0.06), WY, z, -s * Math.PI / 2, frameMat);
     v.receiveShadow = f.receiveShadow = false;
   }
@@ -1122,7 +1129,7 @@ function roomShell(g, loc, { HW, HD, CEIL, floorMap, windows = [], doorW = 3 }) 
     const t = pano.clone();
     t.repeat.set(Math.min(1, (w / h) / 8 * 1.5), 1);
     t.offset.set((0.07 + i * 0.29) % (1 - t.repeat.x), 0); t.needsUpdate = true;
-    wall(w, h, x, CEIL * 0.55, z, ry, new THREE.MeshBasicMaterial({ map: t }));
+    wall(w, h, x, CEIL * 0.55, z, ry, viewMat(t));
     wall(w, h, x + Math.sin(ry) * 0.03, CEIL * 0.55, z + Math.cos(ry) * 0.03, ry, frameMat);
   });
   const door = wall(doorW, Math.min(CEIL - 0.4, 2.8), 0, Math.min(CEIL - 0.4, 2.8) / 2, HD - 0.04, Math.PI, new THREE.MeshStandardMaterial({ map: lattice(c.pillar), emissive: '#ffe9c0', emissiveIntensity: 0.12 }));
