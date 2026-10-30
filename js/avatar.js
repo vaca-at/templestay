@@ -537,7 +537,9 @@ export class Avatar {
     const tx = g.position.x + lx * Math.cos(ry) + lz * Math.sin(ry);
     const tz = g.position.z - lx * Math.sin(ry) + lz * Math.cos(ry);
     const before = pet.position.clone();
-    const kk = this.petFresh ? 1 : Math.min(1, dt * 4);
+    // 주인이 장소를 옮겨 멀리 떨어지면(문을 지나거나 앉으러 순간 이동) 따라 걷지 않고 바로 옆으로 온다
+    const far = Math.hypot(tx - pet.position.x, tz - pet.position.z) > 5;
+    const kk = this.petFresh || far ? 1 : Math.min(1, dt * 4);
     this.petFresh = false;
     pet.position.x += (tx - pet.position.x) * kk;
     pet.position.z += (tz - pet.position.z) * kk;

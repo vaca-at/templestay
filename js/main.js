@@ -488,10 +488,15 @@ async function applyActivity(act) {
   updateSchedChip();
 }
 
+// 산보는 삼보일배처럼: 세 걸음 걷고 한 번 합장, 이것을 되풀이하며 마당을 돈다
+const WALK_STEP = 0.75;
+let walkDist = 0, walkBowT = 0;
 function startWalk() {
   const path = S.active.walkPath;
   if (!path) return;
   standUp(true);
+  walkDist = 0;
+  walkBowT = 0;
   const p = S.me.group.position;
   let i = 0, best = Infinity;
   path.forEach((w, k) => { const d = w.distanceTo(p); if (d < best) { best = d; i = k; } });
@@ -1089,6 +1094,9 @@ function moveMe(dt) {
     if (dir.length() > 1) dir.normalize();
     // Shift 를 누르거나 조이스틱을 끝까지 밀면 뛴다
     if (canRun() && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(joy.x, joy.y) > 0.92)) speed = RUN_SPEED;
+  } else if (S.walking && walkBowT > 0) {
+    // 산보: 세 걸음마다 멈춰 서서 합장하는 동안은 걷지 않는다
+    walkBowT -= dt;
   } else if (S.target) {
     tmpV.copy(S.target.pos).sub(g.position).setY(0);
     if (tmpV.length() < 0.18) {
@@ -1108,6 +1116,17 @@ function moveMe(dt) {
     if (S.target && !S.walking && g.position.distanceTo(before) < speed * dt * 0.2) S.target = null;
   }
   me.speed = dir ? g.position.distanceTo(before) / Math.max(dt, 1e-4) : 0;
+  // 산보: 세 걸음(한 걸음 약 0.75칸) 걸을 때마다 한 번 합장
+  if (S.walking && dir) {
+    walkDist += g.position.distanceTo(before);
+    if (walkDist >= WALK_STEP * 3) {
+      walkDist = 0;
+      walkBowT = 2.4;
+      S.me.action = 'hapjang';
+      S.me.actionT = 0;
+      pushState(true);
+    }
+  }
   const delta = g.position.clone().sub(before).setY(0);
   camera.position.add(delta);
   controls.target.add(delta);
@@ -1182,7 +1201,8 @@ function loop() {
         else g.position.y = jy;
       }
       r.av.airborne = r.jumpT != null;
-      if (!g.visible) continue;
+      // 다른 장소에 있는 분은 친구도 함께 숨긴다 (친구만 덩그러니 남지 않게)
+      if (!g.visible) { if (r.av.pet) r.av.pet.visible = false; continue; }
       r.av.update(dt, ACTIONS);
       r.av.tag.visible = g.position.distanceTo(camera.position) < 13;
       soundFor(r.av, Math.max(0, 1 - g.position.distanceTo(S.me.group.position) / 16));

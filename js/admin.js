@@ -103,8 +103,13 @@ $('#admin-form').addEventListener('submit', async (e) => {
   }
 });
 
-// 새로고침: 화면을 처음부터 다시 불러온다
-$('#btn-reload')?.addEventListener('click', () => location.reload());
+// 새로고침: 브라우저가 기억해 둔 예전 파일(사이트가 10분 동안 기억하게 함)까지 새로 받아 와서 다시 연다
+const FILES = ['index.html', 'style.css', 'js/main.js', 'js/data.js', 'js/avatar.js', 'js/blocky.js', 'js/world.js', 'js/net.js',
+  'js/audio.js', 'js/scrolls.js', 'js/tip.js', 'js/admin.js', 'js/share.js'];
+$('#btn-reload')?.addEventListener('click', async () => {
+  await Promise.all(FILES.map((f) => fetch(f, { cache: 'reload' }).catch(() => {})));
+  location.reload();
+});
 
 // 이 기기에 입장권이 있으면 열 때부터 관리자로 (30일 동안, "나가기"를 누르기 전까지)
 if (getPw()) setAdmin(true);
