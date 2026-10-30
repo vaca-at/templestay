@@ -54,21 +54,33 @@ export const SKIN_TONES = ['#f4c9a6', '#e8b48c', '#d79b72', '#b97a55', '#8d5a3b'
 
 // 캐릭터 유형: head 모양과 장식(머리카락, 귀, 꼬리)이 다르다
 // block: true 는 네모난 블록 사람(우리 캐릭터). 'own' 옷을 고르면 캐릭터 고유 차림을 입는다
+// 머리 스타일 (예전 '캐릭터'). id 는 저장된 값과 맞추려고 그대로 두고, 여자 · 남자 머리 이름을 따로 보여 줘요.
+// name · desc 는 예전 차림 이름 (이제 옷 목록의 '…' 옷으로 옮겨 갔어요)
 export const CHAR_TYPES = [
-  { id: 'moral', name: '남색 카디건', desc: '흰 깃이 보이는 단정한 차림', block: true },
-  { id: 'appteacher', name: '안경과 초록 셔츠', desc: '동그란 안경, 까만 머리', block: true },
-  { id: 'tycoon', name: '검은 정장', desc: '빨간 넥타이를 맨 정장', block: true },
-  { id: 'trainee', name: '파란 모자', desc: '흰 셔츠에 목걸이 명찰', block: true },
-  { id: 'planner', name: '베레모와 분홍 니트', desc: '빨간 베레모, 연분홍 니트', block: true },
-  { id: 'knitdev', name: '초록 줄무늬 니트', desc: '포근한 줄무늬 스웨터', block: true },
-  { id: 'hoodie', name: '초록 후드티', desc: '모자 달린 후드와 끈', block: true },
-  { id: 'beige', name: '베이지 재킷', desc: '검은 상의와 바지', block: true },
+  { id: 'moral', hairF: '단발', hairM: '옆 가르마', color: '까만 머리', name: '남색 카디건', desc: '흰 깃이 보이는 단정한 차림', block: true },
+  { id: 'appteacher', hairF: '낮은 묶음', hairM: '스포츠', color: '까만 머리', name: '안경과 초록 셔츠', desc: '동그란 안경, 초록 셔츠', block: true },
+  { id: 'tycoon', hairF: '올림머리', hairM: '올백', color: '까만 머리', name: '검은 정장', desc: '빨간 넥타이를 맨 정장', block: true },
+  { id: 'trainee', hairF: '땋은 머리', hairM: '바가지', color: '밤색 머리', name: '파란 모자', desc: '흰 셔츠에 목걸이 명찰', block: true },
+  { id: 'planner', hairF: '웨이브', hairM: '가운데 가르마', color: '갈색 머리', name: '베레모와 분홍 니트', desc: '빨간 베레모, 연분홍 니트', block: true },
+  { id: 'knitdev', hairF: '양갈래', hairM: '곱슬', color: '까만 머리', name: '초록 줄무늬 니트', desc: '포근한 줄무늬 스웨터', block: true },
+  { id: 'hoodie', hairF: '숏컷', hairM: '투블럭', color: '짙은 갈색', name: '초록 후드티', desc: '모자 달린 후드와 끈', block: true },
+  { id: 'beige', hairF: '긴 생머리', hairM: '묶은 머리', color: '갈색 머리', name: '베이지 재킷', desc: '검은 상의와 바지', block: true },
 ];
+export const hairName = (t, gender) => (gender === 'm' ? t.hairM : t.hairF);
 // 예전에 저장된 둥근 캐릭터(동자, 보살 등)도 계속 그려지도록 avatar.js 에 남겨 둔다
 
 // 옷: top 상의, bottom 하의, sash 가사·띠, style 별 세부 장식
 export const OUTFITS = [
-  { id: 'own', name: '캐릭터 기본 옷', cap: '블록 캐릭터 고유 차림', top: '#2f8a8c', bottom: '#2c3450', sash: '#3d8fc4', style: 'own' },
+  // 'own' 은 예전 값: 머리 스타일(type)에 딸린 차림. 지금은 아래 '…' 옷들로 따로 골라요
+  { id: 'own', name: '캐릭터 기본 옷', cap: '블록 캐릭터 고유 차림', top: '#2f8a8c', bottom: '#2c3450', sash: '#3d8fc4', style: 'own', hidden: true },
+  { id: 'wear_beige', name: '베이지 재킷', cap: '검은 상의와 바지', style: 'own', preset: 'beige' },
+  { id: 'wear_moral', name: '남색 카디건', cap: '흰 깃이 보이는 단정한 차림', style: 'own', preset: 'moral' },
+  { id: 'wear_tycoon', name: '검은 정장', cap: '빨간 넥타이', style: 'own', preset: 'tycoon' },
+  { id: 'wear_appteacher', name: '초록 셔츠와 안경', cap: '동그란 안경', style: 'own', preset: 'appteacher' },
+  { id: 'wear_trainee', name: '파란 모자와 명찰', cap: '흰 셔츠에 목걸이 명찰', style: 'own', preset: 'trainee' },
+  { id: 'wear_planner', name: '베레모와 분홍 니트', cap: '빨간 베레모', style: 'own', preset: 'planner' },
+  { id: 'wear_knitdev', name: '초록 줄무늬 니트', cap: '포근한 스웨터', style: 'own', preset: 'knitdev' },
+  { id: 'wear_hoodie', name: '초록 후드티', cap: '모자 달린 후드와 끈', style: 'own', preset: 'hoodie' },
   { id: 'seungbok', name: '승복', cap: '회색 승복에 노란 띠', top: '#c9ccc8', bottom: '#b9bcb8', sash: '#e9d27a', style: 'robe' },
   { id: 'gasa', name: '가사장삼', cap: '갈색 장삼에 붉은 가사', top: '#8a6a4f', bottom: '#7a5c44', sash: '#c4532f', style: 'kasaya', hidden: true }, // 고르는 목록에서는 뺌 (예전에 고른 사람은 그대로 보임)
   { id: 'hanbok', name: '생활한복', cap: '쪽빛 저고리와 고름', top: '#4f5f8f', bottom: '#d9d2c0', sash: '#e8a3a3', style: 'hanbok' },
@@ -174,13 +186,13 @@ export function isOldAutoName(name) {
   return adjOk && nounOk && !(ADJ.includes(a) && NOUN.includes(b));
 }
 
-export const GENDERS = [{ id: 'f', name: '여자', cap: '긴 웨이브 머리' }, { id: 'm', name: '남자', cap: '짧은 머리' }];
+export const GENDERS = [{ id: 'f', name: '여자', cap: '여자 머리 스타일 8가지' }, { id: 'm', name: '남자', cap: '남자 머리 스타일 8가지' }];
 
 // 체형: 얼굴은 같고 키·등신·체격만 달라요. k 전체 크기 · leg 다리 길이 · th 몸통 높이 · tw 어깨 너비 · head 머리 크기 · limb 팔다리 굵기
 export const BODIES = [
   { id: 'base', label: '보통', k: 1, leg: 1, th: 1, tw: 1, head: 1, limb: 1 },
-  { id: 'petite', label: '아담한 키', k: 0.95, leg: 0.76, th: 0.92, tw: 1, head: 1, limb: 1 },
   { id: 'sturdy', label: '듬직한 체격', k: 1, leg: 1, th: 1, tw: 1.28, head: 1, limb: 1.25 },
+  { id: 'petite', label: '아담한 키', k: 0.95, leg: 0.76, th: 0.92, tw: 1, head: 1, limb: 1 },
   { id: 'teen', label: '조금 작은 키', k: 0.9, leg: 0.9, th: 0.9, tw: 0.92, head: 1.03, limb: 0.92 },
   { id: 'child', label: '작은 키', k: 0.82, leg: 0.62, th: 0.72, tw: 0.86, head: 1.12, limb: 0.86 },
   { id: 'tiny', label: '아주 작은 키', k: 0.72, leg: 0.48, th: 0.58, tw: 0.82, head: 1.16, limb: 0.82 },
@@ -193,6 +205,6 @@ export const defaultLook = () => ({
   gender: 'f',
   pet: 'claude',
   skin: SKIN_TONES[0],
-  outfit: 'own',
+  outfit: 'wear_beige',
   acc: 'none',
 });

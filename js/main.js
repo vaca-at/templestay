@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, BODIES, season, inSeason, BUDDHAS, randomName, defaultLook, isOldAutoName,
+  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, BODIES, hairName, season, inSeason, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
@@ -78,6 +78,8 @@ if (!profile) { profile = { name: randomName(), look: defaultLook() }; store.set
 if (isOldAutoName(profile.name)) { profile.name = randomName(); store.set('profile', profile); }
 profile.look = { ...defaultLook(), ...profile.look };
 if (!CHAR_TYPES.some((t) => t.id === profile.look.type)) profile.look.type = defaultLook().type;
+// 예전 '캐릭터 기본 옷'은 그 캐릭터 차림을 옷 목록의 같은 옷으로 옮겨요 (모습은 그대로)
+if (profile.look.outfit === 'own') { profile.look.outfit = `wear_${profile.look.type}`; store.set('profile', profile); }
 
 const S = {
   profile,
@@ -981,7 +983,7 @@ function renderCreatorOptions() {
   const L = draft.look;
   $('#opt-body').innerHTML = BODIES.map((b) => `<button class="body-pick" data-body="${b.id}" aria-pressed="${(L.body || 'base') === b.id}" aria-label="${b.label}" title="${b.label}">${bodySvg(b)}</button>`).join('');
   $('#opt-gender').innerHTML = GENDERS.map((g) => `<button class="chip" data-gender="${g.id}" aria-pressed="${L.gender === g.id}"><span class="lbl">${g.name}</span><small class="cap">${g.cap}</small></button>`).join('');
-  $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${t.name}</span><small class="cap">${t.desc}</small></button>`).join('');
+  $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${hairName(t, L.gender)}</span><small class="cap">${t.color}</small></button>`).join('');
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
   $('#opt-acc').innerHTML = ACCESSORIES.filter(inSeason).map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
@@ -1485,7 +1487,7 @@ function gallery(kind) {
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
     : kind === 'bodies' ? BODIES.flatMap((b) => ['f', 'm'].map((g) => ({ look: { ...defaultLook(), body: b.id, type: 'moral', gender: g, pet: 'none' } })))
-    : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
+    : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
     : kind.startsWith('newpets') ? PETS.filter((p) => p.preview === ({ newpets: true, newpets2: 2, newpets3: 3 }[kind])).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : kind === 'pets' ? PETS.filter((p) => !p.hidden && !p.preview && inSeason(p) && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
@@ -1494,7 +1496,7 @@ function gallery(kind) {
   const isPets = kind === 'pets' || kind.startsWith('newpets');
   const gap = isPets ? 1.7 : 1.3;
   items.forEach((it, i) => {
-    const av = new Avatar(it.look, CHAR_TYPES[i % 8].name);
+    const av = new Avatar(it.look, it.label || hairName(CHAR_TYPES.find((t) => t.id === it.look.type) || CHAR_TYPES[0], it.look.gender));
     if (it.scene) av.dress(it.scene);
     av.group.position.set((i - (items.length - 1) / 2) * gap - (isPets ? 0.35 : 0), 0, 0);
     if (acts[i]) av.play(acts[i]);

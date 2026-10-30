@@ -175,7 +175,9 @@ export function applyBody(av, B) {
 }
 
 export function buildBlock(av, body, look, outfit, skinColor) {
-  const P = PRESETS[look.type] || PRESETS.beige;
+  // 머리 색은 머리 스타일(type)에서, 차림(own 옷)은 고른 옷의 preset 에서 (예전 'own' 은 type 의 차림)
+  const H = PRESETS[look.type] || PRESETS.beige;
+  const P = PRESETS[outfit.preset || look.type] || H;
   const own = outfit.style === 'own';
   const top = own ? P.top : outfit.top;
   const inner = own ? P.inner : outfit.top;
@@ -265,7 +267,7 @@ export function buildBlock(av, body, look, outfit, skinColor) {
 
   // 머리카락: 캐릭터 · 남녀마다 다른 모양 (HAIR 표)
   const hy = S + 0.02;
-  buildHair(head, HAIR[look.type]?.[female ? 0 : 1] || (female ? 'wave' : 'short'), P.hair, S, hy, fz);
+  buildHair(head, HAIR[look.type]?.[female ? 0 : 1] || (female ? 'wave' : 'short'), H.hair, S, hy, fz);
   if (own && P.extra === 'glasses') {
     const gm = '#1d1a18';
     box(head, gm, 0.16, 0.13, 0.015, 0.11, eyeY, fz + 0.02, { transparent: true, opacity: 0.9 });
@@ -276,6 +278,7 @@ export function buildBlock(av, body, look, outfit, skinColor) {
   if (own && P.cap && look.acc === 'none') {
     // 야구모자: 머리 위를 푹 덮고 앞으로 챙
     box(head, P.cap, S + 0.12, 0.17, S + 0.12, 0, hy + 0.03, -0.01);
+    box(head, H.hair, S + 0.08, 0.12, S + 0.08, 0, hy - 0.1, -0.03);   // 모자 아래로 머리카락이 이어지게
     box(head, P.cap, S - 0.02, 0.04, 0.22, 0, hy - 0.04, fz + 0.1);
     box(head, '#ffffff', 0.08, 0.03, 0.08, 0, hy + 0.13, 0);
   }
@@ -310,7 +313,11 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     box(head, '#e8873a', S - 0.06, 0.06, S - 0.06, 0, hy + 0.1, 0);
   }
   if (acc === 'beanie') { box(head, '#b23a3a', S + 0.1, 0.2, S + 0.1, 0, hy + 0.06, 0); box(head, '#f4efe6', 0.12, 0.1, 0.12, 0, hy + 0.22, 0); }
-  if (acc === 'lotuspin') { box(head, '#f59bb5', 0.1, 0.1, 0.06, 0.24, hy, 0.18); box(head, '#f3d16a', 0.04, 0.04, 0.07, 0.24, hy, 0.19); }
+  if (acc === 'lotuspin') {   // 연꽃 핀: 귀 위 옆머리에 크게, 분홍 꽃잎 여섯 장 + 노란 꽃술
+    const pin = new THREE.Group(); pin.position.set(0.27, hy - 0.02, 0.2); pin.rotation.set(0, 0.7, 0); pin.scale.setScalar(1.5); head.add(pin);
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const pt = box(pin, i % 2 ? '#f48fb0' : '#f9bcd0', 0.07, 0.11, 0.03, Math.sin(a) * 0.06, Math.cos(a) * 0.06, 0); pt.rotation.z = -a; }
+    box(pin, '#f3d16a', 0.06, 0.06, 0.05, 0, 0, 0.02); box(pin, '#6aa05a', 0.1, 0.04, 0.02, 0.05, -0.09, -0.01).rotation.z = 0.5;
+  }
   if (acc === 'backpack' || (!own && outfit.style === 'hiking')) { box(hips, '#8a8d8a', 0.38, 0.42, 0.18, 0, 0.3, -0.23); box(hips, '#6f726f', 0.3, 0.12, 0.04, 0, 0.18, -0.33); }
 }
 
