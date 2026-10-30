@@ -277,14 +277,15 @@
   <div class="sheet wide-sheet">
     <header class="panel-head"><h2>개인 설정</h2><button class="icon-btn" data-close="settings-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
     <div class="set-tabs" role="tablist">
-      <button type="button" role="tab" data-tab="rec" aria-selected="true">내 기록</button>
-      <button type="button" role="tab" data-tab="photo" aria-selected="false">내 사진</button>
-      <button type="button" role="tab" data-tab="account" aria-selected="false">계정</button>
+      <button type="button" role="tab" data-tab="account" aria-selected="true">계정</button>
       <button type="button" role="tab" data-tab="env" aria-selected="false">환경</button>
+      <button type="button" role="tab" data-tab="photo" aria-selected="false">내 사진</button>
+      <button type="button" role="tab" data-tab="rec" aria-selected="false">내 기록</button>
     </div>
-    <section data-panel="rec">
+    <section data-panel="rec" hidden>
       <p class="sub">로그인 없이 이 기기에만 남아요. 다른 기기나 다른 브라우저에서는 따로 쌓여요.</p>
       <div id="record-today" class="stats"></div>
+      <div id="record-grass" class="grass"></div>
       <div class="table-wrap"><table id="record-table"></table></div>
       <h3 class="set-h">내가 올린 소원</h3>
       <ul id="mywish-list" class="wish-list"></ul>
@@ -293,7 +294,7 @@
       <p class="sub">왼쪽 카메라 단추로 찍은 사진이 이 기기 브라우저 안에만 모여요 (최근 60장). 서버에는 올라가지 않아요.</p>
       <div id="album" class="album"></div>
     </section>
-    <section data-panel="account" hidden>
+    <section data-panel="account">
       <label class="field" for="set-name">법명(닉네임)
         <span class="row"><input id="set-name" maxlength="10" autocomplete="off"><button id="set-name-save" class="ghost small" type="button"><span class="lbl">저장</span></button></span>
       </label>
