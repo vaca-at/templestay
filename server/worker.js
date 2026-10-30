@@ -12,7 +12,7 @@ function cors(req) {
   const o = req.headers.get('Origin');
   return { 'Access-Control-Allow-Origin': ORIGINS.includes(o) ? o : ORIGINS[0], 'Vary': 'Origin' };
 }
-const json = (req, body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors(req) } });
+const json = (req, body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors(req) } });
 
 export default {
   async fetch(req, env) {
@@ -48,6 +48,33 @@ export default {
       await Promise.all(['hall'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
         env.ROOMS.get(env.ROOMS.idFromName(`${loc}-${i + 1}`)).fetch('https://room/count').then((r) => r.json()).then((j) => { if (j.n) rooms[`${loc}-${i + 1}`] = j.n; }).catch(() => {}))));
       return json(req, { ...stats, rooms, online: Object.values(rooms).reduce((a, b) => a + b, 0) });
+    }
+    // 신고 보내기: 누구나. 글 1000자, 사진 1장(약 1.3MB까지)
+    if (url.pathname === '/report' && req.method === 'POST') {
+      const origin = req.headers.get('Origin');
+      if (origin && !ORIGINS.includes(origin)) return json(req, { error: 'forbidden' }, 403);
+      const body = await req.json().catch(() => null);
+      if (!body) return json(req, { error: 'bad' }, 400);
+      const text = clean(body.text, 1000).trim();
+      const img = typeof body.img === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(body.img) && body.img.length < 1_400_000 ? body.img : null;
+      if (!text && !img) return json(req, { error: 'empty' }, 400);
+      const c = body.ctx || {};
+      const ctx = { server: clean(c.server, 8), scene: clean(c.scene, 12), design: clean(c.design, 20), reporter: clean(c.reporter, 12), people: Array.isArray(c.people) ? c.people.slice(0, 30).map((n) => clean(n, 12)) : [], ua: clean(req.headers.get('User-Agent'), 160) };
+      const ip = req.headers.get('CF-Connecting-IP') || '';
+      const who = (await sign(ip, env.ADMIN_PASSWORD || 'salt')).slice(0, 16);
+      const r = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/report/add', { method: 'POST', body: JSON.stringify({ text, img, ctx, who }) });
+      if (r.status === 429) return json(req, { error: 'too many' }, 429);
+      return json(req, { ok: true });
+    }
+    // 관리자: 신고 목록 보기·지우기
+    if (url.pathname === '/admin/reports' || url.pathname === '/admin/report-delete') {
+      const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
+      if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
+      const stub = env.STATS.get(env.STATS.idFromName('stats'));
+      if (url.pathname === '/admin/reports') return json(req, await stub.fetch('https://stats/report/list').then((r) => r.json()));
+      const { id } = await req.json().catch(() => ({}));
+      await stub.fetch('https://stats/report/delete', { method: 'POST', body: JSON.stringify({ id: String(id || '') }) });
+      return json(req, { ok: true });
     }
     if (url.pathname === '/counts') {
       const loc = url.searchParams.get('loc') || '';
@@ -91,6 +118,30 @@ const kstDay = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(
 export class Stats extends DurableObject {
   async fetch(req) {
     const url = new URL(req.url);
+    // 신고: 한 건씩 'r:<시각>' 열쇠로 저장, 최근 200건만
+    if (url.pathname === '/report/add') {
+      const r = await req.json();
+      // 같은 사람(접속 주소를 알아볼 수 없게 바꾼 값)은 한 시간에 5건까지
+      const rl = (await this.ctx.storage.get(`rl:${r.who}`)) || [];
+      const recent = rl.filter((t) => Date.now() - t < 3600e3);
+      if (recent.length >= 5) return Response.json({ error: 'too many' }, { status: 429 });
+      await this.ctx.storage.put(`rl:${r.who}`, [...recent, Date.now()]);
+      const id = `r:${String(Date.now()).padStart(15, '0')}`;
+      await this.ctx.storage.put(id, { ...r, id, at: Date.now() });
+      const all = await this.ctx.storage.list({ prefix: 'r:', reverse: true });
+      const old = [...all.keys()].slice(200);
+      if (old.length) await this.ctx.storage.delete(old);
+      return Response.json({ ok: true });
+    }
+    if (url.pathname === '/report/list') {
+      const all = await this.ctx.storage.list({ prefix: 'r:', reverse: true, limit: 100 });
+      return Response.json({ reports: [...all.values()].map(({ who, ...x }) => x) });
+    }
+    if (url.pathname === '/report/delete') {
+      const { id } = await req.json();
+      if (/^r:\d{15}$/.test(id)) await this.ctx.storage.delete(id);
+      return Response.json({ ok: true });
+    }
     const s = (await this.ctx.storage.get('s')) || { total: 0, days: {} };
     if (url.pathname === '/visit') {
       const d = kstDay();

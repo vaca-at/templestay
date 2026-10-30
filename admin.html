@@ -40,6 +40,12 @@
   .muted { color: var(--muted); font-size: 13px; }
   .err { color: var(--red); min-height: 1.4em; margin: 0; font-size: 14px; }
   [hidden] { display: none !important; }
+  .report { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; }
+  .report + .report { margin-top: 10px; }
+  .report p { margin: 0; white-space: pre-wrap; }
+  .report img { max-width: 100%; max-height: 260px; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; justify-self: start; }
+  .report .meta { color: var(--muted); font-size: 12.5px; }
+  .report button { justify-self: start; padding: 6px 14px; font-size: 13px; }
   @media (max-width: 520px) { .tiles { grid-template-columns: 1fr 1fr; } .tile.live { grid-column: 1 / -1; } }
 </style>
 </head>
@@ -74,6 +80,10 @@
     <div class="card" style="margin-top:12px">
       <h2>지금 사람이 있는 서버</h2>
       <div id="rooms"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>신고 <span id="r-count"></span></h2>
+      <div id="reports"></div>
     </div>
     <div class="row" style="margin-top:12px">
       <button id="refresh" class="ghost" type="button">새로 불러오기</button>
@@ -110,7 +120,33 @@
     const rooms = Object.entries(s.rooms || {}).sort((a, b) => b[1] - a[1]);
     $('#rooms').innerHTML = rooms.length ? `<ul>${rooms.map(([k, n]) => `<li><span>큰법당 서버 ${k.split('-')[1]}</span><b>${n}명</b></li>`).join('')}</ul>` : '<p class="muted">지금은 접속한 분이 없어요</p>';
     $('#stamp').textContent = `${new Date().toLocaleTimeString('ko-KR')} 기준`;
+    loadReports();
   }
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  async function loadReports() {
+    const r = await fetch(`${RELAY_URL}/admin/reports`, { headers: { Authorization: `Bearer ${getTok()}` } }).catch(() => null);
+    if (!r || !r.ok) return;
+    const { reports } = await r.json();
+    $('#r-count').textContent = reports.length ? `${reports.length}건` : '';
+    $('#reports').innerHTML = reports.length ? reports.map((x) => `
+      <div class="report">
+        <div class="meta">${new Date(x.at).toLocaleString('ko-KR')} · 큰법당 서버 ${esc(x.ctx?.server || '-')} · ${esc(x.ctx?.scene)} · 보낸 분 법명 ${esc(x.ctx?.reporter || '-')}</div>
+        ${x.text ? `<p>${esc(x.text)}</p>` : ''}
+        ${x.img ? `<img src="${esc(x.img)}" alt="신고에 담긴 사진">` : ''}
+        ${x.ctx?.people?.length ? `<div class="meta">근처에 보인 분: ${x.ctx.people.map(esc).join(', ')}</div>` : ''}
+        <button class="ghost" type="button" data-del="${esc(x.id)}">확인했어요 (지우기)</button>
+      </div>`).join('') : '<p class="muted">들어온 신고가 없어요</p>';
+  }
+  $('#reports').addEventListener('click', async (e) => {
+    const im = e.target.closest('.report img');
+    if (im) { const w = window.open(); if (w) w.document.write(`<img src="${im.src}" style="max-width:100%">`); return; }
+    const b = e.target.closest('[data-del]');
+    if (!b) return;
+    b.disabled = true;
+    await fetch(`${RELAY_URL}/admin/report-delete`, { method: 'POST', headers: { Authorization: `Bearer ${getTok()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.del }) }).catch(() => {});
+    loadReports();
+  });
 
   $('#login-form').addEventListener('submit', async (e) => {
     e.preventDefault();

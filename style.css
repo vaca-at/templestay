@@ -309,6 +309,11 @@ body:not(.admin) .place .stay { display: none !important; }
 @media (max-width: 760px) { .hud-right { gap: 6px; } .hud-right .icon-btn { width: 40px; height: 40px; } }
 @media (max-width: 760px) { #online-pill { height: 36px; padding: 0 9px; gap: 5px; font-size: 12.5px; } #online-pill b { font-size: 13.5px; } .hud-right { flex-wrap: nowrap; } }
 #install-ios[hidden], #install-other[hidden] { display: none; }
+/* 신고하기 */
+.report-file { cursor: pointer; }
+.report-preview { margin: 0; display: grid; gap: 4px; justify-items: start; }
+.report-preview img { max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid var(--line); }
+.report-preview[hidden] { display: none; }
 /* 불상·탑 고르기 창 */
 .relic-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
 .relic-info { display: grid; gap: 2px; text-align: center; min-width: 0; }

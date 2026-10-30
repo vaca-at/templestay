@@ -97,6 +97,22 @@ const S = {
 };
 
 if (params.has('debug')) window.__S = S; // 확인용: ?debug 일 때만 상태를 들여다볼 수 있게
+
+// 신고하기(js/report.js)에서 쓰는 두 가지: 지금 3D 화면 한 장, 지금 상황(서버·장소·근처에 보이는 분 법명)
+window.temple = {
+  capture(maxW = 1280) {
+    renderer.render(scene, camera); // 바로 그린 직후에 읽어야 빈 화면이 아니다
+    const k = Math.min(1, maxW / canvas.width);
+    const c = document.createElement('canvas');
+    c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
+    c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.72);
+  },
+  context() {
+    const people = [...S.remotes.values()].filter((r) => r.st.s === S.scene && r.av.group.visible).map((r) => r.st.n);
+    return { server: String(S.server || ''), scene: SCENES[S.scene]?.name || '', design: S.loc?.name || '', reporter: S.profile.name, people };
+  },
+};
 const net = new Net({
   onCounts: () => { renderServerGrid(); updateHud(); },
   onState: handleRemoteState,
