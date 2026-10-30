@@ -219,6 +219,15 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     box(hips, outfit.sash, 0.05, 0.2, 0.02, -0.07, 0.22, 0.15);
   }
   if (!own && outfit.style === 'hiking') box(hips, '#f2f2f2', 0.02, 0.5, 0.02, 0, 0.28, 0.15);
+  // 시안 옷 무늬: deco 로 상의 겉에 덧그려요
+  const dc = outfit.decoC;
+  if (!own && outfit.deco === 'stripes') for (let i = 0; i < 5; i++) box(hips, dc, 0.505, 0.035, 0.285, 0, 0.06 + i * 0.1, 0);
+  if (!own && outfit.deco === 'check') { for (let i = 0; i < 5; i++) box(hips, dc, 0.505, 0.02, 0.285, 0, 0.06 + i * 0.1, 0); for (let i = 0; i < 5; i++) box(hips, dc, 0.02, 0.56, 0.29, -0.2 + i * 0.1, 0.28, 0); }
+  if (!own && outfit.deco === 'puffer') for (let i = 0; i < 4; i++) box(hips, dc, 0.53, 0.025, 0.31, 0, 0.1 + i * 0.13, 0);
+  if (!own && outfit.deco === 'track') { for (const s of [1, -1]) box(hips, dc, 0.02, 0.56, 0.02, s * 0.1, 0.28, 0.145); box(hips, dc, 0.02, 0.4, 0.02, 0, 0.32, 0.146); }
+  if (!own && outfit.deco === 'overalls') { box(hips, dc, 0.42, 0.24, 0.29, 0, 0.12, 0); for (const s of [1, -1]) box(hips, dc, 0.06, 0.34, 0.29, s * 0.14, 0.38, 0); box(hips, '#f2c94c', 0.04, 0.04, 0.02, 0.14, 0.5, 0.15); box(hips, '#f2c94c', 0.04, 0.04, 0.02, -0.14, 0.5, 0.15); }
+  if (!own && outfit.deco === 'buttons') for (let i = 0; i < 4; i++) box(hips, dc, 0.04, 0.04, 0.02, 0, 0.1 + i * 0.13, 0.15);
+  if (!own && outfit.deco === 'flowers') for (let i = 0; i < 12; i++) { const fx = ((i * 37) % 9) / 9 - 0.45, fy = ((i * 53) % 11) / 11; box(hips, i % 3 ? dc : '#f48fb0', 0.04, 0.04, 0.02, fx * 0.9, -0.2 + fy * 0.75, 0.165); }
   if (!own && outfit.style === 'wizard') {   // 마법사 옷: 금빛 옷깃과 별, 등 뒤 망토
     for (const s of [1, -1]) box(hips, outfit.sash, 0.04, 0.26, 0.02, 0.06 * s, 0.44, 0.15).rotation.z = 0.45 * s;   // V 옷깃
     for (const [x, y] of [[0.14, 0.38], [-0.13, 0.16], [0.16, -0.08], [-0.15, -0.2]]) {
@@ -313,6 +322,23 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     box(head, '#e8873a', S - 0.06, 0.06, S - 0.06, 0, hy + 0.1, 0);
   }
   if (acc === 'beanie') { box(head, '#b23a3a', S + 0.1, 0.2, S + 0.1, 0, hy + 0.06, 0); box(head, '#f4efe6', 0.12, 0.1, 0.12, 0, hy + 0.22, 0); }
+  // 시안 장신구
+  if (acc === 'roundglasses' || acc === 'sunglasses') {
+    const dark = acc === 'sunglasses';
+    for (const sx of [1, -1]) {
+      if (dark) box(head, '#151414', 0.17, 0.12, 0.02, 0.11 * sx, eyeY, fz + 0.025);
+      else { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 6, 20), mat('#c9a24a')); ring.position.set(0.11 * sx, eyeY, fz + 0.025); head.add(ring); }
+    }
+    box(head, dark ? '#151414' : '#c9a24a', 0.06, 0.015, 0.015, 0, eyeY + 0.02, fz + 0.025);
+  }
+  if (acc === 'scarf') { box(hips, '#c84a3a', 0.54, 0.13, 0.36, 0, 0.6, 0); box(hips, '#c84a3a', 0.13, 0.36, 0.05, 0.12, 0.4, 0.17); for (let i = 0; i < 3; i++) box(hips, '#f2e6c8', 0.545, 0.02, 0.365, 0, 0.56 + i * 0.04, 0); for (let i = 0; i < 3; i++) box(hips, '#f2e6c8', 0.135, 0.02, 0.055, 0.12, 0.3 + i * 0.08, 0.17); }
+  if (acc === 'knithat') { box(head, '#3f7ca8', S + 0.1, 0.22, S + 0.1, 0, hy + 0.04, 0); box(head, '#f4efe6', S + 0.12, 0.06, S + 0.12, 0, hy - 0.06, 0); const pom = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), mat('#f4efe6')); pom.position.set(0, hy + 0.22, 0); head.add(pom); }
+  if (acc === 'earmuffs') { box(head, '#d9d2c4', 0.04, 0.05, 0.4, 0, hy + 0.06, 0).rotation.x = 0; box(head, '#d9d2c4', S + 0.26, 0.04, 0.05, 0, hy + 0.08, 0); for (const sx of [1, -1]) box(head, '#d9d2c4', 0.04, 0.2, 0.05, sx * (S / 2 + 0.12), hy - 0.03, 0); for (const sx of [1, -1]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), mat('#f6f2ea')); m.position.set(sx * (S / 2 + 0.12), eyeY - 0.02, 0); m.scale.x = 0.7; head.add(m); } }
+  if (acc === 'flowercrown') for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; const fl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), mat(['#f48fb0', '#f9e27a', '#ffffff', '#b8a0e0'][i % 4])); fl.position.set(Math.sin(a) * (S / 2 + 0.04), hy + 0.06, Math.cos(a) * (S / 2 + 0.04)); head.add(fl); const lf = box(head, '#6aa05a', 0.05, 0.02, 0.08, Math.sin(a + 0.26) * (S / 2 + 0.05), hy + 0.05, Math.cos(a + 0.26) * (S / 2 + 0.05)); lf.rotation.y = a; }
+  if (acc === 'ribbon') { const r = new THREE.Group(); r.position.set(0.16, hy + 0.06, 0.1); head.add(r); for (const sx of [1, -1]) { const w = box(r, '#d8323a', 0.16, 0.12, 0.05, sx * 0.09, 0, 0); w.rotation.z = sx * 0.3; } box(r, '#a8242a', 0.06, 0.07, 0.06, 0, 0, 0.01); }
+  if (acc === 'headphones') { const band = new THREE.Mesh(new THREE.TorusGeometry(S / 2 + 0.13, 0.03, 6, 24, Math.PI), mat('#2a2a2c')); band.position.set(0, eyeY - 0.02, 0); head.add(band); for (const sx of [1, -1]) box(head, '#2a2a2c', 0.09, 0.2, 0.18, sx * (S / 2 + 0.12), eyeY - 0.02, 0); for (const sx of [1, -1]) box(head, '#e8607a', 0.092, 0.13, 0.12, sx * (S / 2 + 0.135), eyeY - 0.02, 0); }
+  if (acc === 'strawhat') { const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.03, 24), mat('#e3c77e')); brim.position.y = hy + 0.05; head.add(brim); const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.2, 20), mat('#e8cf8a')); crown.position.y = hy + 0.16; head.add(crown); const band = new THREE.Mesh(new THREE.CylinderGeometry(0.305, 0.305, 0.05, 20), mat('#c84a3a')); band.position.y = hy + 0.09; head.add(band); }
+  if (acc === 'bowtie') { for (const sx of [1, -1]) { const w = box(hips, '#c23b3b', 0.1, 0.08, 0.03, sx * 0.055, 0.53, 0.16); w.rotation.z = sx * 0.25; } box(hips, '#8f2a2a', 0.04, 0.05, 0.035, 0, 0.53, 0.165); }
   if (acc === 'lotuspin') {   // 연꽃 핀: 귀 위 옆머리에 크게, 분홍 꽃잎 여섯 장 + 노란 꽃술
     const pin = new THREE.Group(); pin.position.set(0.27, hy - 0.02, 0.2); pin.rotation.set(0, 0.7, 0); pin.scale.setScalar(1.5); head.add(pin);
     for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; const pt = box(pin, i % 2 ? '#f48fb0' : '#f9bcd0', 0.07, 0.11, 0.03, Math.sin(a) * 0.06, Math.cos(a) * 0.06, 0); pt.rotation.z = -a; }

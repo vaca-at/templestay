@@ -87,6 +87,17 @@ export const OUTFITS = [
   { id: 'lotus', name: '연꽃 법회복', cap: '하얀 옷에 연분홍 띠', top: '#f6f2ea', bottom: '#efe7d8', sash: '#e58fa6', style: 'robe' },
   { id: 'hiking', name: '등산복', cap: '산길 오르는 차림과 배낭', top: '#e2603d', bottom: '#3c4552', sash: '#2b7a6a', style: 'hiking' },
   { id: 'durumagi', name: '단풍 두루마기', cap: '가을빛 긴 두루마기', top: '#b5502e', bottom: '#d8c7a6', sash: '#f0c05a', style: 'coat' },
+  // 시안 (?gallery=newoutfits 에서만 보여요)
+  { id: 'saehanbok', name: '연두 개량한복', cap: '연두 저고리에 흰 바지', top: '#a8c97a', bottom: '#f2ede2', sash: '#d96a6a', style: 'hanbok', preview: true },
+  { id: 'suhaeng', name: '갈색 수행복', cap: '편안한 갈색 수행복', top: '#8a6a4a', bottom: '#7a5c3e', sash: '#c9a24a', style: 'robe', preview: true },
+  { id: 'marine', name: '줄무늬 티셔츠', cap: '파란 가로줄 티셔츠', top: '#f4f4f2', bottom: '#3a4f7a', deco: 'stripes', decoC: '#2f5fa8', style: 'plain', preview: true },
+  { id: 'raincoat', name: '노란 우비', cap: '비 오는 날 노란 우비', top: '#f2c94c', bottom: '#f2c94c', sash: '#f2c94c', style: 'coat', deco: 'buttons', decoC: '#2a2420', preview: true },
+  { id: 'overalls', name: '청 멜빵바지', cap: '흰 티에 청 멜빵', top: '#f4f4f2', bottom: '#4a6fa5', deco: 'overalls', decoC: '#4a6fa5', style: 'plain', preview: true },
+  { id: 'check', name: '체크 셔츠', cap: '빨간 체크 남방', top: '#b8433a', bottom: '#3a3f47', deco: 'check', decoC: '#2a2420', style: 'plain', preview: true },
+  { id: 'puffer', name: '패딩 점퍼', cap: '겨울 산사 패딩', top: '#2f3e66', bottom: '#2a2a2c', deco: 'puffer', decoC: '#26345a', style: 'plain', preview: true },
+  { id: 'track', name: '트레이닝복', cap: '흰 줄 세 개 운동복', top: '#2f6f62', bottom: '#2f6f62', deco: 'track', decoC: '#f4f4f2', style: 'plain', preview: true },
+  { id: 'flowerdress', name: '꽃무늬 원피스', cap: '하늘색 바탕 작은 꽃', top: '#9cc4e4', bottom: '#9cc4e4', sash: '#9cc4e4', style: 'coat', deco: 'flowers', decoC: '#f4f4f2', preview: true },
+  { id: 'dado', name: '다도복', cap: '차 마실 때 입는 베이지 옷', top: '#e6d9bf', bottom: '#cdbb98', sash: '#8a6a4a', style: 'robe', preview: true },
   { id: 'wizard', name: '보라 마법사 옷', cap: '별무늬 긴 옷과 망토 · 남녀 공용', top: '#5b3f94', bottom: '#4a3279', sash: '#f2c94c', style: 'wizard' },
   // 법당 안에서는 누구나 이 옷으로 갈아입는다 (고르는 목록에는 안 나옴)
   { id: 'monkgray', name: '스님 회색 옷', cap: '법당 안 차림', top: '#9b9e9b', bottom: '#8e918e', sash: '#7f827f', style: 'robe', hidden: true },
@@ -127,6 +138,17 @@ export const ACCESSORIES = [
   { id: 'lotuspin', name: '연꽃 핀', cap: '머리에 꽂는 연꽃' },
   { id: 'backpack', name: '배낭', cap: '등에 메는 회색 가방' },
   { id: 'witchhat', name: '보라 고깔모자', cap: '할로윈 한정 · 10/31까지', season: 'halloween' },
+  // 시안 (?gallery=newacc 에서만 보여요, 고르는 목록에는 아직 안 나와요)
+  { id: 'roundglasses', name: '동그란 안경', cap: '얇은 금테 안경', preview: true },
+  { id: 'sunglasses', name: '선글라스', cap: '까만 네모 선글라스', preview: true },
+  { id: 'scarf', name: '목도리', cap: '포근한 체크 목도리', preview: true },
+  { id: 'knithat', name: '털모자', cap: '방울 달린 니트 모자', preview: true },
+  { id: 'earmuffs', name: '귀마개', cap: '복슬복슬 하얀 귀마개', preview: true },
+  { id: 'flowercrown', name: '꽃 화관', cap: '들꽃으로 엮은 화관', preview: true },
+  { id: 'ribbon', name: '리본 핀', cap: '커다란 빨간 리본', preview: true },
+  { id: 'headphones', name: '헤드폰', cap: '음악 듣는 헤드폰', preview: true },
+  { id: 'strawhat', name: '밀짚모자', cap: '여름 산책 밀짚모자', preview: true },
+  { id: 'bowtie', name: '나비넥타이', cap: '빨간 나비넥타이', preview: true },
 ];
 
 // 동작. seatedOk: 앉은 채로 할 수 있는지. loop: 다시 누를 때까지 계속
