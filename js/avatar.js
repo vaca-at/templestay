@@ -611,7 +611,7 @@ export class Avatar {
     if (pet.parent !== parent) parent.add(pet);
     pet.visible = this.group.visible;
     const g = this.group, ry = g.rotation.y;
-    const lx = (this.seated ? 0.85 : 0.72) * (pet.userData.side || 1), lz = this.seated ? 0.15 : -0.45;
+    const lx = (this.seated ? 0.85 : 0.72) * (pet.userData.side || 1), lz = this.seated ? 0.15 : -0.45 * (pet.userData.back || 1);
     const tx = g.position.x + lx * Math.cos(ry) + lz * Math.sin(ry);
     const tz = g.position.z - lx * Math.sin(ry) + lz * Math.cos(ry);
     const before = pet.position.clone();

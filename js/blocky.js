@@ -53,6 +53,112 @@ export const PRESETS = {
   beige: { hair: '#6b4128', top: '#d9c3a0', inner: '#1d1d1f', bottom: '#2a2a2c', extra: 'jacket' },
 };
 
+// 캐릭터마다 [여자, 남자] 머리 모양
+const HAIR = {
+  moral: ['bob', 'part'],
+  appteacher: ['lowpony', 'crew'],
+  tycoon: ['bun', 'slick'],
+  trainee: ['braids', 'bowl'],
+  planner: ['wave', 'curtain'],
+  knitdev: ['pigtails', 'curly'],
+  hoodie: ['pixie', 'twoblock'],
+  beige: ['longstraight', 'manbun'],
+};
+
+// 머리 모양 만들기. 얼굴은 한 변 S 인 네모, hy = 정수리 높이, fz = 얼굴 앞면
+function buildHair(head, style, H, S, hy, fz) {
+  const W = S + 0.06, side = S / 2 + 0.03, back = -S / 2 - 0.03;
+  const top = (h = 0.12) => box(head, H, W, h, W, 0, hy + (h - 0.12) / 2, 0);
+  const backHair = (len, d = 0.1) => box(head, H, W, len, d, 0, hy + 0.04 - len / 2, back);
+  const sides = (len, w = 0.08) => { for (const s of [1, -1]) box(head, H, w, len, W, (side + (w - 0.08) / 2) * s, hy + 0.04 - len / 2, -0.02); };
+  const bangs = (h = 0.1, w = W) => box(head, H, w, h, 0.08, 0, hy - 0.03 - h / 2 + 0.02, fz + 0.02);
+  const tie = '#d24a3a';
+  switch (style) {
+    case 'bob': // 턱 길이 단발, 일자 앞머리
+      top(); backHair(0.46); sides(0.46, 0.1); bangs(0.15);
+      for (const s of [1, -1]) box(head, H, 0.12, 0.08, 0.2, (side + 0.02) * s, hy - 0.42, 0.1);
+      break;
+    case 'part': // 2:8 가르마: 한쪽으로 넘긴 앞머리
+      top(); backHair(0.32); sides(0.2);
+      box(head, H, W * 0.7, 0.1, 0.08, -0.08, hy - 0.04, fz + 0.02);
+      box(head, H, 0.22, 0.06, 0.3, -0.12, hy + 0.08, 0.05);
+      break;
+    case 'lowpony': // 낮게 묶은 포니테일
+      top(); backHair(0.3); sides(0.24);
+      box(head, H, W * 0.6, 0.09, 0.08, 0.09, hy - 0.04, fz + 0.02);
+      box(head, tie, 0.1, 0.08, 0.08, 0, hy - 0.3, back - 0.07);
+      box(head, H, 0.14, 0.4, 0.12, 0, hy - 0.54, back - 0.08);
+      break;
+    case 'crew': // 짧은 스포츠머리
+      top(0.08); backHair(0.18, 0.06); sides(0.12, 0.05);
+      box(head, H, W, 0.04, 0.05, 0, hy - 0.02, fz + 0.01);
+      break;
+    case 'bun': // 올림머리: 정수리 위 동그란 번
+      top(); backHair(0.32); sides(0.26);
+      for (const s of [1, -1]) box(head, H, W / 2 - 0.04, 0.1, 0.08, 0.15 * s, hy - 0.04, fz + 0.02);
+      box(head, H, 0.26, 0.13, 0.22, 0, hy + 0.11, -0.12);
+      box(head, H, 0.2, 0.06, 0.16, 0, hy + 0.19, -0.12);
+      break;
+    case 'slick': // 올백: 앞을 높이 세우고 뒤로 넘김
+      top(0.16); backHair(0.3); sides(0.16);
+      box(head, H, W, 0.1, 0.16, 0, hy + 0.08, fz - 0.06);
+      break;
+    case 'braids': // 양갈래 땋은 머리
+      top(); backHair(0.32); sides(0.32); bangs(0.11);
+      for (const s of [1, -1]) {
+        for (let k = 0; k < 4; k++) box(head, H, 0.12 - (k % 2) * 0.02, 0.12, 0.12, (side + 0.04) * s, hy - 0.38 - k * 0.11, -0.06);
+        box(head, tie, 0.1, 0.05, 0.1, (side + 0.04) * s, hy - 0.83, -0.06);
+      }
+      break;
+    case 'bowl': // 바가지 머리: 눈썹까지 덮은 두툼한 앞머리
+      top(0.14); backHair(0.36); sides(0.3, 0.09); bangs(0.18);
+      break;
+    case 'curtain': // 가운데 가르마, 양쪽으로 갈라진 앞머리
+      top(); backHair(0.36); sides(0.3);
+      for (const s of [1, -1]) { const b = box(head, H, 0.22, 0.16, 0.08, 0.14 * s, hy - 0.08, fz + 0.02); b.rotation.z = 0.25 * s; }
+      break;
+    case 'pigtails': // 양쪽 높이 묶은 머리
+      top(); backHair(0.3); sides(0.22); bangs(0.11);
+      for (const s of [1, -1]) {
+        box(head, tie, 0.08, 0.08, 0.08, (side + 0.04) * s, hy - 0.04, -0.08);
+        box(head, H, 0.13, 0.34, 0.13, (side + 0.12) * s, hy - 0.22, -0.1);
+      }
+      break;
+    case 'curly': // 곱슬 파마: 울퉁불퉁한 덩어리
+      top(0.1); backHair(0.32, 0.12); sides(0.24, 0.1);
+      for (const [x, z, h] of [[-0.18, 0.16, 0.14], [0, 0.18, 0.18], [0.18, 0.16, 0.14], [-0.2, -0.05, 0.18], [0.02, -0.02, 0.22], [0.2, -0.05, 0.16], [-0.16, -0.22, 0.14], [0.06, -0.22, 0.17], [0.2, -0.2, 0.13]])
+        box(head, H, 0.2, h, 0.2, x, hy + h / 2 - 0.02, z);
+      box(head, H, W, 0.1, 0.08, 0, hy - 0.06, fz + 0.03);
+      break;
+    case 'pixie': { // 숏컷: 옆으로 비스듬히 내린 앞머리
+      top(); backHair(0.24); sides(0.18);
+      const b = box(head, H, W * 0.75, 0.13, 0.08, 0.06, hy - 0.07, fz + 0.02); b.rotation.z = -0.18;
+      break;
+    }
+    case 'twoblock': // 투블럭: 옆·뒤는 짧게, 윗머리만 두툼
+      top(0.17); box(head, H, W + 0.04, 0.08, W + 0.04, 0, hy - 0.04, 0);
+      backHair(0.14, 0.05); sides(0.08, 0.05); bangs(0.08, W * 0.9);
+      break;
+    case 'longstraight': // 긴 생머리, 가운데 가르마, 얼굴 옆으로 내린 머리
+      for (const s of [1, -1]) box(head, H, W / 2 - 0.01, 0.12, W, (W / 4 + 0.005) * s, hy, 0);
+      backHair(0.86); sides(0.78);
+      for (const s of [1, -1]) box(head, H, 0.1, 0.44, 0.06, 0.2 * s, hy - 0.2, fz + 0.02);
+      break;
+    case 'manbun': // 꽁지머리: 뒤통수 위쪽에 작은 번
+      top(); backHair(0.28); sides(0.2); bangs(0.07, W * 0.8);
+      box(head, H, 0.16, 0.14, 0.14, 0, hy - 0.02, back - 0.1);
+      break;
+    case 'short':
+      top(); backHair(0.36); sides(0.2); bangs();
+      break;
+    default: // wave: 긴 웨이브 (처음 모양)
+      top(); backHair(0.7); sides(0.6); bangs();
+      box(head, H, 0.12, 0.14, 0.14, S / 2 + 0.06, hy - 0.58, 0.04);
+      box(head, H, 0.12, 0.14, 0.14, -S / 2 - 0.06, hy - 0.58, 0.04);
+      box(head, H, 0.14, 0.12, 0.12, 0.17, hy + 0.02, fz + 0.03);
+  }
+}
+
 export function buildBlock(av, body, look, outfit, skinColor) {
   const P = PRESETS[look.type] || PRESETS.beige;
   const own = outfit.style === 'own';
@@ -133,20 +239,9 @@ export function buildBlock(av, body, look, outfit, skinColor) {
   box(head, '#f0a090', 0.06, 0.03, 0.015, 0.19, eyeY - 0.08, fz, { transparent: true, opacity: 0.6 });
   box(head, '#f0a090', 0.06, 0.03, 0.015, -0.19, eyeY - 0.08, fz, { transparent: true, opacity: 0.6 });
 
-  // 머리카락: 여자는 긴 머리, 남자는 짧은 머리
-  const H = P.hair;
+  // 머리카락: 캐릭터 · 남녀마다 다른 모양 (HAIR 표)
   const hy = S + 0.02;
-  box(head, H, S + 0.06, 0.12, S + 0.06, 0, hy, 0);
-  box(head, H, S + 0.06, female ? 0.7 : 0.36, 0.1, 0, female ? hy - 0.32 : hy - 0.16, -S / 2 - 0.03);
-  box(head, H, 0.08, female ? 0.6 : 0.2, S + 0.06, S / 2 + 0.03, female ? hy - 0.28 : hy - 0.1, -0.02);
-  box(head, H, 0.08, female ? 0.6 : 0.2, S + 0.06, -S / 2 - 0.03, female ? hy - 0.28 : hy - 0.1, -0.02);
-  box(head, H, S + 0.06, 0.1, 0.08, 0, hy - 0.08, fz + 0.02);
-  if (female) {
-    // 웨이브 느낌으로 옆머리 끝을 조금씩 엇갈리게
-    box(head, H, 0.12, 0.14, 0.14, S / 2 + 0.06, hy - 0.58, 0.04);
-    box(head, H, 0.12, 0.14, 0.14, -S / 2 - 0.06, hy - 0.58, 0.04);
-    box(head, H, 0.14, 0.12, 0.12, 0.17, hy + 0.02, fz + 0.03);
-  }
+  buildHair(head, HAIR[look.type]?.[female ? 0 : 1] || (female ? 'wave' : 'short'), P.hair, S, hy, fz);
   if (own && P.extra === 'glasses') {
     const gm = '#1d1a18';
     box(head, gm, 0.16, 0.13, 0.015, 0.11, eyeY, fz + 0.02, { transparent: true, opacity: 0.9 });
@@ -200,7 +295,7 @@ export const PETS = [
   { id: 'ai', name: 'AI 짝꿍', cap: '화면 얼굴 로봇', hover: true },
   { id: 'claude', name: '클로드', cap: '주황 네모, 다리 넷' },
   { id: 'drone', name: '드론', cap: '프로펠러가 쌩쌩', hover: true },
-  { id: 'panda', name: '판다', cap: '푸바오처럼 크고 동글동글', side: 1.5 },
+  { id: 'panda', name: '판다', cap: '푸바오처럼 크고 동글동글', side: 1.15, back: 1.5 },
   { id: 'squirrel', name: '다람쥐', cap: '햄스터만 한 몸, 큰 꼬리' },
   { id: 'turtle', name: '거북이', cap: '느릿느릿 고개 쏙' },
   { id: 'squid', name: '오징어', cap: '둥실둥실 다리 열 개', hover: true },
@@ -476,6 +571,8 @@ export function buildPet(id) {
   wrap.userData.legs = g.userData.legs;
   const def = PETS.find((p) => p.id === id);
   wrap.userData.hover = !!def?.hover;
-  wrap.userData.side = def?.side || 1;   // 큰 친구(판다)는 주인과 겹치지 않게 조금 더 옆에서
+  // 큰 친구(판다)는 주인 바로 옆에 붙되 조금 더 뒤에서 따라와 겹치지 않게 (너무 멀면 남의 친구처럼 보여요)
+  wrap.userData.side = def?.side || 1;
+  wrap.userData.back = def?.back || 1;
   return wrap;
 }
