@@ -71,6 +71,7 @@ const SEATED_ONLY = new Set(['eat', 'read', 'sagyeong', 'wash']);
 const LIMBS = ['aL', 'aR', 'lL', 'lR'];
 
 const lerp = (a, b, t) => a + (b - a) * t;
+let HALO_TEX = null;   // 명상 두광 그림 (모두 같이 씀)
 const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 // 구간 [a,b] 안에서 0→1로 올라갔다가 [c,d]에서 1→0으로 내려오는 곡선
 const bump = (t, a, b, c, d) => ease((t - a) / (b - a)) * (1 - ease((t - c) / (d - c)));
@@ -121,6 +122,17 @@ function actionPose(action, t, base, seated) {
     case 'tapdori':
       // 걸으면서 두 손을 모은다 (걷는 다리는 그대로)
       return mix(base, { ...HAPJANG_ARMS, head: 0.12 }, ease(t / 0.4));
+    case 'jukbi': {
+      // 왼손바닥을 펴 두고, 오른손 죽비를 들었다가 1.5초마다 '탁' 내리친다
+      const u = t % 1.5, raise = bump(u, 0.1, 0.6, 0.9, 1.05);
+      return mix(base, { aL: [-1.05, -0.38], aR: [-0.98 - raise * 0.75, 0.3], head: 0.12 }, ease(t / 0.4));
+    }
+    case 'stones': {
+      // 무릎 꿇고 앉아, 2.4초마다 오른손으로 돌을 집어 앞의 돌탑 위에 살며시 올린다
+      const u = t % 2.4, reach = bump(u, 0.2, 0.8, 1.3, 1.9);
+      let p = mix(base, { y: -0.36, lL: [1.5, 0.12], lR: [1.5, -0.12], hip: 0.35, head: 0.35, aL: [-0.55, -0.15], aR: [-0.5, 0.2] }, ease(t / 0.6));
+      return mix(p, { aR: [-1.05, 0.05], hip: 0.5, head: 0.45 }, reach * ease(t / 0.6));
+    }
     case 'sweep': {
       // 빗자루를 두 손으로 잡고 좌우로 쓱쓱
       const s = Math.sin(t * 3.2);
@@ -441,6 +453,15 @@ export class Avatar {
     stick.visible = false;
     this.armR.add(stick);
     this.moktak = moktak; this.stick = stick;
+    // 죽비: 대나무를 반쯤 갈라 만든 채 (오른손)
+    const jukbi = new THREE.Group();
+    jukbi.add(mesh(G.box, mat('#d9b874'), 0.05, 0.035, 0.4, 0, 0, 0.18));
+    jukbi.add(mesh(G.box, mat('#8a6a3a'), 0.052, 0.006, 0.22, 0, 0, 0.27));
+    jukbi.add(mesh(G.box, mat('#b8934f'), 0.056, 0.04, 0.03, 0, 0, 0.02));
+    jukbi.position.set(0, this.handY - 0.02, 0.02);
+    jukbi.visible = false;
+    this.armR.add(jukbi);
+    this.jukbi = jukbi;
 
     // 발우(가슴 앞)와 숟가락(오른손), 책(가슴 앞)
     const bowl = new THREE.Group();
@@ -473,7 +494,8 @@ export class Avatar {
     const cup = new THREE.Group();
     cup.add(mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.08, 14), mat('#a9c9b5', { roughness: 0.3 })));
     cup.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.005, 14), mat('#b5843a'), 1, 1, 1, 0, 0.036, 0));
-    cup.position.set(0, this.handY - 0.02, 0.07);
+    cup.position.set(0, this.handY - 0.02, 0.09);
+    cup.scale.setScalar(1.8);   // 손에 비해 너무 작아 보이지 않게
     cup.visible = false;
     this.armR.add(cup);
     const paper = new THREE.Group();
@@ -503,6 +525,24 @@ export class Avatar {
     const cloth = mesh(G.box, mat('#f2efe6'), 0.09, 0.03, 0.09, 0, this.handY - 0.03, 0.06);
     cloth.visible = false;
     this.armR.add(cloth);
+    // 돌탑: 캐릭터 앞 바닥에 납작한 돌이 하나씩 쌓인다 (손에는 올릴 돌 하나)
+    const cairn = new THREE.Group();
+    const stoneGeo = new THREE.DodecahedronGeometry(0.1, 0);
+    [['#9a958c', 1.25], ['#b3ada2', 1.05], ['#8c877e', 0.9], ['#c2bcb0', 0.74], ['#a49e93', 0.58]].forEach(([c, k], i) => {
+      const st = new THREE.Mesh(stoneGeo, mat(c));
+      st.scale.set(k, k * 0.45, k * 0.9);
+      st.position.set((i % 2 ? 0.012 : -0.01), 0.04 + [0, 0.085, 0.16, 0.225, 0.28][i], 0);
+      st.rotation.y = i * 0.9;
+      st.castShadow = true;
+      cairn.add(st);
+    });
+    cairn.position.set(0.05, 0, 0.62);
+    cairn.visible = false;
+    this.group.add(cairn);
+    const handStone = mesh(G.box, mat('#b3ada2'), 0.1, 0.05, 0.08, 0, this.handY - 0.05, 0.05);
+    handStone.visible = false;
+    this.armR.add(handStone);
+    this.cairn = cairn; this.handStone = handStone;
     this.cup = cup; this.paper = paper; this.brush = brush; this.broom = broom; this.log = log; this.cloth = cloth;
 
     // 명상할 때 은은한 빛 고리
@@ -514,6 +554,44 @@ export class Avatar {
     aura.position.y = 0.03;
     body.add(aura);
     this.aura = aura;
+    // 명상: 머리 뒤 두광, 몸 둘레로 천천히 떠오르는 빛 알갱이, 바닥에 핀 연꽃잎
+    const glow = (c, o = 0) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    // 두광: 어느 쪽에서 봐도 둥글게 보이도록 늘 카메라를 보는 그림(스프라이트)
+    if (!HALO_TEX) {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const g2 = c.getContext('2d');
+      const rg = g2.createRadialGradient(128, 128, 10, 128, 128, 126);
+      rg.addColorStop(0, 'rgba(255, 236, 170, 0.95)'); rg.addColorStop(0.55, 'rgba(255, 207, 106, 0.45)'); rg.addColorStop(1, 'rgba(255, 190, 80, 0)');
+      g2.fillStyle = rg; g2.fillRect(0, 0, 256, 256);
+      g2.strokeStyle = 'rgba(255, 244, 200, 0.9)'; g2.lineWidth = 5; g2.beginPath(); g2.arc(128, 128, 96, 0, Math.PI * 2); g2.stroke();
+      HALO_TEX = new THREE.CanvasTexture(c); HALO_TEX.colorSpace = THREE.SRGBColorSpace;
+    }
+    const halo = new THREE.Group();
+    const haloSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: HALO_TEX, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    haloSprite.scale.set(1.45, 1.45, 1);
+    halo.add(haloSprite, haloSprite.clone());
+    halo.children[1].material = haloSprite.material.clone();
+    halo.position.set(0, 0.32, -0.12);
+    this.head.add(halo);
+    const motes = new THREE.Group();
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.025 + (i % 3) * 0.008, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffc94a', transparent: true, opacity: 0, depthWrite: false }));
+      m.userData = { a: (i / 14) * Math.PI * 2, r: 0.45 + (i % 4) * 0.08, ph: (i * 0.37) % 1 };
+      motes.add(m);
+    }
+    body.add(motes);
+    const petals = new THREE.Group();
+    const petalGeo = new THREE.SphereGeometry(0.16, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    petalGeo.scale(0.55, 0.35, 1.25);
+    for (let i = 0; i < 10; i++) {
+      const pm = new THREE.Mesh(petalGeo, new THREE.MeshStandardMaterial({ color: i % 2 ? '#f4b3c2' : '#fbd7df', transparent: true, opacity: 0, roughness: 0.6 }));
+      const a = (i / 10) * Math.PI * 2;
+      pm.position.set(Math.sin(a) * 0.62, 0.04, Math.cos(a) * 0.62);
+      pm.rotation.set(0.35, a, 0);
+      petals.add(pm);
+    }
+    body.add(petals);
+    this.medFx = { halo, motes, petals, k: 0 };
 
     body.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   }
@@ -594,17 +672,42 @@ export class Avatar {
       this.beads.rotation.z = (n + Math.min(1, f / 0.25)) * (Math.PI * 2 / 16);
     }
     this.moktak.visible = this.stick.visible = this.action === 'moktak';
+    this.jukbi.visible = this.action === 'jukbi';
     this.bowl.visible = (this.action === 'eat' || this.action === 'wash') && this.seated;
     this.spoon.visible = this.action === 'eat' && this.seated;
     this.cup.visible = this.action === 'tea';
     this.paper.visible = this.brush.visible = this.action === 'sagyeong' && this.seated;
     this.broom.visible = this.action === 'sweep';
+    // 돌탑: 한 번 올릴 때마다 한 층씩 (다섯 층 다 쌓으면 다시 처음부터)
+    this.cairn.visible = this.action === 'stones';
+    if (this.cairn.visible) {
+      const n = Math.floor(this.actionT / 2.4), u = this.actionT % 2.4;
+      const shown = (n % 6) + (u > 1.3 ? 1 : 0);
+      this.cairn.children.forEach((st, i) => { st.visible = i < shown; });
+      this.handStone.visible = u > 0.1 && u < 1.3 && (n % 6) < 5;
+    } else this.handStone.visible = false;
     this.log.visible = this.action === 'bell';
     this.cloth.visible = this.action === 'wash' && this.seated;
     this.book.visible = this.action === 'read' && this.seated;
     const auraOn = this.action === 'meditate';
     this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);
     this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
+    const fx = this.medFx, now = performance.now() / 1000;
+    fx.k = lerp(fx.k, auraOn ? 1 : 0, Math.min(1, dt * 2));
+    const on = fx.k > 0.01;
+    fx.halo.visible = fx.motes.visible = fx.petals.visible = on;
+    if (on) {
+      const breath = 0.5 + 0.5 * Math.sin(now * 1.2);   // 숨 쉬듯 밝아졌다 흐려졌다
+      fx.halo.children[0].material.opacity = fx.k * (0.75 + 0.25 * breath);
+      fx.halo.children[1].material.opacity = 0;
+      fx.halo.scale.setScalar(0.95 + 0.08 * breath);
+      for (const m of fx.motes.children) {
+        const u = (now * 0.18 + m.userData.ph) % 1, a = m.userData.a + now * 0.25;
+        m.position.set(Math.sin(a) * m.userData.r * (1 - u * 0.4), 0.1 + u * 1.7, Math.cos(a) * m.userData.r * (1 - u * 0.4));
+        m.material.opacity = fx.k * Math.sin(u * Math.PI) * 0.85;
+      }
+      fx.petals.children.forEach((pm, i) => { pm.material.opacity = fx.k; pm.scale.setScalar(Math.min(1, fx.k * 1.3) * (0.92 + 0.08 * Math.sin(now * 1.2 + i))); });
+    }
   }
 
   // 친구는 주인의 왼쪽 뒤를 졸졸 따라오고, 주인이 앉으면 방석 옆에 앉는다

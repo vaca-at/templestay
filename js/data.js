@@ -135,6 +135,8 @@ export const ACTIONS = [
   { id: 'tapdori', name: '탑돌이', cap: '합장하고 탑을 오른쪽에 두고 돌기', verb: '탑돌이를 시작했어요', loop: true },
   { id: 'sweep', name: '마당 쓸기', cap: '빗자루로 쓱쓱 (울력)', verb: '마당을 쓸기 시작했어요', loop: true },
   { id: 'bell', name: '범종 치기', cap: '당목을 밀어 범종 울리기', verb: '범종을 치기 시작했어요', loop: true },
+  { id: 'jukbi', name: '죽비', cap: '죽비를 손바닥에 쳐서 공양 시작 알리기', verb: '죽비를 치기 시작했어요', loop: true },
+  { id: 'stones', name: '돌탑 쌓기', cap: '소원 담아 돌을 하나씩 올리기', verb: '돌탑을 쌓기 시작했어요', loop: true },
   { id: 'wash', name: '발우 씻기', cap: '공양을 마치고 발우 닦기', verb: '발우를 씻기 시작했어요', loop: true, seat: true },
 ];
 
@@ -142,8 +144,8 @@ export const ACTIONS = [
 export const SCENE_ACTIONS = {
   in: ['hapjang', 'banbae', 'keunjeol', 'beads', 'bae108'],
   room: ['read', 'bae108', 'sagyeong', 'tea', 'meditate'],
-  out: ['walk', 'tapdori', 'sweep', 'bell', 'hapjang'],
-  meal: ['eat', 'hapjang', 'tea', 'wash', 'moktak'],
+  out: ['tapdori', 'stones', 'sweep', 'bell', 'hapjang'],
+  meal: ['eat', 'hapjang', 'tea', 'wash', 'jukbi'],
 };
 // 장소에 따라 이름만 다르게 보이는 동작
 export const SCENE_ACTION_NAMES = { meal: { hapjang: '공양 합장' } };

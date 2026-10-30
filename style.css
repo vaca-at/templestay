@@ -483,3 +483,4 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
   html body #context-btns .ctx { padding: 12px 22px; font-size: 16px; }
   html body #context-btns .ctx { width: 128px; }
 }
+#btn-sanbo[aria-pressed="true"] { outline: 2px solid #fff; outline-offset: -2px; background: rgba(18, 16, 15, .78); }

@@ -275,9 +275,11 @@ async function goScene(which, { instant = false } = {}) {
   placeCameraBehind(world.camDist || 5);
   if (which === 'room') {
     sitOn(world.seats[0], { auto: true });
-    // 책 읽는 얼굴이 보이도록 앞쪽 비스듬히
-    camera.position.set(2.5, 2.2, -2.7);
-    controls.target.set(0, 0.8, -0.7);
+    // 책상 건너편 위에서 내려다보게: 책상이 캐릭터를 가리지 않고 손(책·사경·찻잔)과 얼굴이 함께 보여요.
+    // 세로로 긴 휴대폰은 옆이 좁아서 그만큼 뒤로 물러나 가운데에 오게
+    const back = Math.min(1.7, Math.max(1, 0.85 / (innerWidth / innerHeight)));
+    controls.target.set(0, 0.72, -0.75);
+    camera.position.set(1.1 * back, 0.72 + 1.3 * back, -0.75 - 1.95 * back);   // 책상 건너편 위에서 얼굴 쪽으로
     controls.update();
   }
   S.me.tag.visible = which !== 'room';
@@ -462,6 +464,8 @@ const ICONS = {
   banbae: '<circle cx="12" cy="5" r="2.2"/><path d="M12 8c-3 1-5 4-5 7h3l2-3 2 3h3c0-3-2-6-5-7z"/>',
   keunjeol: '<circle cx="6" cy="15" r="2.2"/><path d="M8 16h9c2 0 3 1 3 3H6z"/>',
   beads: '<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="1.5 2.2"/><circle cx="12" cy="19.5" r="1.6"/>',
+  jukbi: '<path d="M5 19L17 5l2 2L7 21z"/>',
+  stones: '<ellipse cx="12" cy="19" rx="7" ry="2.5"/><ellipse cx="12" cy="14.5" rx="5" ry="2"/><ellipse cx="12" cy="10.5" rx="3.5" ry="1.7"/><ellipse cx="12" cy="7" rx="2.2" ry="1.3"/>',
   moktak: '<ellipse cx="11" cy="14" rx="7" ry="5"/><path d="M14 4l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   meditate: '<path d="M12 6c2 2 3 5 0 9-3-4-2-7 0-9zM4 12c3 0 6 2 8 5-4 1-7-1-8-5zM20 12c-3 0-6 2-8 5 4 1 7-1 8-5z"/>',
   wave: '<path d="M8 21v-7l-2-3 1-1 3 3V5a1 1 0 012 0v6h1V4a1 1 0 012 0v7h1V6a1 1 0 012 0v9c0 3-2 6-5 6z"/>',
@@ -515,6 +519,9 @@ function startLoop(id) {
 function syncActionButtons() {
   const on = (id) => id === 'walk' ? (S.walking && S.walkMode === 'walk') || walkStarting : id === 'tapdori' ? S.walking && S.walkMode === 'tapdori' : S.me?.action === id;
   document.querySelectorAll('.act').forEach((b) => b.setAttribute('aria-pressed', String(on(b.dataset.act))));
+  const sanbo = on('walk');
+  $('#btn-sanbo').setAttribute('aria-pressed', String(sanbo));
+  $('#btn-sanbo .lbl').textContent = sanbo ? '산보 멈추기' : '산보하기';
   if (S.me?.action !== 'bae108') $('#bae-counter').hidden = true;
 }
 
@@ -739,6 +746,7 @@ function updateHud() {
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
   $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
+  $('#btn-sanbo').hidden = S.scene !== 'out';
   $('#jump-btn').hidden = !canRun(); // 휴대폰 점프 단추: 점프할 수 있는 곳(마당·내 방)에서만
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
 }
@@ -1255,7 +1263,12 @@ function loop() {
 // 목탁 소리: 채가 내려칠 때마다
 // 범종 소리: 당목이 앞으로 닿는 순간(6초마다 2.2초쯤)
 function soundFor(av, vol) {
-  if (vol <= 0 || (av.action !== 'moktak' && av.action !== 'bell')) { av._hit = null; return; }
+  if (vol <= 0 || !['moktak', 'bell', 'jukbi'].includes(av.action)) { av._hit = null; return; }
+  if (av.action === 'jukbi') {   // 죽비가 손바닥에 닿는 순간 딱
+    const n = Math.floor((av.actionT - 1.05) / 1.5);
+    if (av._hit !== n) { if (n >= 0) moktak(vol * 0.8); av._hit = n; }
+    return;
+  }
   if (av.action === 'bell') {
     const n = Math.floor((av.actionT - 2.2) / 6);
     if (av._hit !== n) { if (n >= 0) bigBell(vol); av._hit = n; }
@@ -1313,6 +1326,7 @@ $('#nick-dice').onclick = () => { $('#nick').value = randomName(); };
 $('#creator-done').onclick = finishCreator;
 $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { stopWalk(); standUp(); };
+$('#btn-sanbo').onclick = () => doAction('walk');   // 마당 자동 산보: 다시 누르면 멈춤
 $('#btn-go').onclick = () => { stopWalk(); goScene(S.scene === 'in' ? 'room' : 'in'); };
 // 산보: 먼저 합장하고, 마당을 오른쪽(시계 방향, 법당을 오른쪽에 두고)으로 계속 돈다. 다시 누르면 멈춘다
 $('#btn-wish').onclick = openWish;
