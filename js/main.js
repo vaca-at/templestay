@@ -14,6 +14,7 @@ import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS, setPanorama } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls } from './scrolls.js';
+import { addPhoto, listPhotos, removePhoto } from './album.js';
 import { openTyping, onTypingOpen } from './typing.js';
 import { setSound, sound, moktak, bowl, coin, bigBell, TRACKS, setMusic, music } from './audio.js';
 import { daylight, applyDaylight } from './daytime.js';
@@ -729,7 +730,6 @@ function openRecords() {
   $('#record-table').innerHTML = `<thead><tr><th>날짜</th><th>산보</th><th>법당</th><th>공양</th><th>독서</th><th>절</th><th>소원</th></tr></thead><tbody>` +
     (days.length ? days.map((d) => { const r = store.get(`rec:${d}`, {}); return `<tr><td>${d.slice(5)}</td><td>${mm(r.out)}분</td><td>${mm(r.in)}분</td><td>${mm(r.meal)}분</td><td>${mm(r.room)}분</td><td>${r.bows || 0}</td><td>${r.wishes || 0}</td></tr>`; }).join('')
       : '<tr><td colspan="7">아직 기록이 없어요. 머무는 동안 10초마다 쌓여요.</td></tr>') + '</tbody>';
-  $('#record-modal').hidden = false;
 }
 
 // 화면이 가려지면 그리기(와 함께 내 상태 보내기)가 멈추니, 그동안은 5초마다 '여기 있어요'만 보낸다
@@ -1443,18 +1443,19 @@ document.addEventListener('click', (e) => {
   if (t.dataset.menu) {
     $('#menu').hidden = true;
     const m = t.dataset.menu;
-    if (m === 'calm') startCalm();
+    if (m === 'guide') window.open('guide.html', '_blank', 'noopener');
     if (m === 'char') openCreator();
-    if (m === 'record') openRecords();
+    if (m === 'record') openSettings('rec');
     if (m === 'relic') openRelics();
     if (m === 'place') showPlaces();
     if (m === 'credit') $('#credit-modal').hidden = false;
     if (m === 'music') { renderMusic(); $('#music-modal').hidden = false; }
     if (m === 'photo') startPhoto();
+    if (m === 'settings') openSettings('rec');
     if (m === 'mywish') {
       const list = store.get('mywishes', []);
       $('#mywish-list').innerHTML = list.length ? list.map((w) => `<li>${escapeHtml(w.t)}<small>${escapeHtml(w.place)} · ${new Date(w.at).toLocaleString('ko-KR')}</small></li>`).join('') : '<li>아직 올린 소원이 없어요. 법당 안 복전함 앞에서 올릴 수 있어요.</li>';
-      $('#mywish-modal').hidden = false;
+      openSettings('rec');
     }
   }
 });
@@ -1492,6 +1493,7 @@ $('#pick-pop').addEventListener('click', (e) => { if (e.target.closest('button')
 $('#side-char').onclick = openCreator;
 $('#side-music').onclick = () => { renderMusic(); $('#music-modal').hidden = false; };
 $('#side-photo').onclick = () => startPhoto();
+$('#btn-calm').onclick = startCalm;
 // 반야심경 타자 사경: 내 방이면 캐릭터도 책상 앞에서 사경을 해요
 $('#side-typing').onclick = () => openTyping();
 onTypingOpen(() => { if (S.scene === 'room' && S.me.action !== 'sagyeong') doAction('sagyeong'); });
@@ -1552,6 +1554,56 @@ function pickMusic(id) {
   renderMusic();
 }
 
+// ───────── 개인 설정: 내 기록 · 내 사진 · 계정 · 환경 ─────────
+function openSettings(tab) {
+  openRecords();
+  const list = store.get('mywishes', []);
+  $('#mywish-list').innerHTML = list.length ? list.map((w) => `<li>${escapeHtml(w.t)}<small>${escapeHtml(w.place)} · ${new Date(w.at).toLocaleString('ko-KR')}</small></li>`).join('') : '<li>아직 올린 소원이 없어요. 법당 안 복전함 앞에서 올릴 수 있어요.</li>';
+  $('#set-name').value = S.profile.name;
+  syncSettings();
+  showTab(tab);
+  $('#settings-modal').hidden = false;
+}
+function syncSettings() {
+  $('#set-sound').textContent = sound.on ? '켜짐 · 끄기' : '꺼짐 · 켜기';
+  $('#set-bae').textContent = S.me?.baeLoop ? '계속 (108번마다 한 바퀴)' : '한 번 (108번에서 멈춤)';
+}
+function showTab(tab) {
+  document.querySelectorAll('#settings-modal [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+  document.querySelectorAll('#settings-modal [data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== tab; });
+  if (tab === 'photo') renderAlbum();
+}
+const albumUrls = [];
+async function renderAlbum() {
+  albumUrls.splice(0).forEach((u) => URL.revokeObjectURL(u));
+  const photos = await listPhotos();
+  $('#album').innerHTML = photos.length ? photos.map((p) => { const u = URL.createObjectURL(p.blob); albumUrls.push(u);
+    return `<figure><img src="${u}" alt="${escapeHtml(p.place)}에서 찍은 사진"><figcaption>${new Date(p.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}<span><button type="button" data-psave="${p.id}">저장</button><button type="button" data-pdel="${p.id}">지우기</button></span></figcaption></figure>`; }).join('')
+    : '<p class="muted">아직 찍은 사진이 없어요. 왼쪽 카메라 단추로 찍어 보세요.</p>';
+}
+$('#settings-modal').addEventListener('click', async (e) => {
+  const tab = e.target.closest('[data-tab]'); if (tab) return showTab(tab.dataset.tab);
+  const del = e.target.closest('[data-pdel]'); if (del) { await removePhoto(del.dataset.pdel); return renderAlbum(); }
+  const sv = e.target.closest('[data-psave]');
+  if (sv) {
+    const p = (await listPhotos()).find((x) => x.id === sv.dataset.psave); if (!p) return;
+    const file = new File([p.blob], `templestay-${p.id}.jpg`, { type: 'image/jpeg' });
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (err) { if (err.name === 'AbortError') return; } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(p.blob); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+});
+$('#set-name-save').onclick = () => {
+  const name = $('#set-name').value.trim().slice(0, 10) || randomName();
+  $('#set-name').value = name; S.profile.name = name; store.set('profile', S.profile);
+  S.me?.setName(name); pushState(true); toast(`법명을 '${name}'(으)로 저장했어요`);
+};
+$('#set-char').onclick = () => { $('#settings-modal').hidden = true; openCreator(); };
+$('#set-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); syncSettings(); };
+$('#set-music').onclick = () => { renderMusic(); $('#music-modal').hidden = false; };
+$('#set-bae').onclick = () => { S.me.baeLoop = !S.me.baeLoop; store.set('baeLoop', S.me.baeLoop); syncSettings(); };
+$('#set-relic').onclick = () => { $('#settings-modal').hidden = true; openRelics(); };
+$('#set-calm').onclick = () => { $('#settings-modal').hidden = true; startCalm(); };
+
 // 사진 찍기: 버튼을 모두 숨기고, 화면을 끌어 구도를 잡은 뒤 셔터. 휴대폰은 공유 창(사진에 저장), 컴퓨터는 파일로 받기
 function startPhoto() {
   if (S.mode !== 'world') return;
@@ -1578,6 +1630,7 @@ async function takePhoto() {
   const flash = $('#photo-flash');
   flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
   const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+  addPhoto(await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85)), `${S.loc?.name || ''} · ${SCENES[S.scene]?.name || ''}`);   // 개인 설정 > 내 사진에 모아 둬요
   const name = `templestay-${today()}-${Date.now().toString(36)}.png`;
   const file = new File([blob], name, { type: 'image/png' });
   if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {

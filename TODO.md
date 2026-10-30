@@ -31,8 +31,8 @@
 ## 확인하고 정리할 것
 - **소원 비공개 배포**: 연등에는 색·법명만, 소원 글은 올린 기기에만. 서버가 글 없는 연등을 받아야 하니 **`server` 먼저 `npx wrangler deploy`, 그다음 사이트 push**
 - **법당 음악 귀로 듣고 다듬기**: 다섯 곡 모두 Web Audio 합성(`js/audio.js` 의 `STEPS`). 1·2번 목소리는 합성이라 웅얼거리는 소리에 가까움
-- **관리자 구글 로그인**: admin.html 에서 bellachord@gmail.com 으로 들어가지는지 확인 → 되면 비밀번호 로그인 칸 빼기
-- **관리자 비밀번호 바꾸기**: 대화에 노출됐음. `server` 폴더에서 `npx wrangler secret put ADMIN_PASSWORD` (구글 로그인만 쓰면 입장권 서명용으로만 남음 — 바꾸면 기존 로그인은 풀림)
+- **관리자 로그인은 구글로만**: 비밀번호 로그인 칸과 `/admin/login` 을 뺐음. **`server` 먼저 `npx wrangler deploy`, 그다음 사이트 push**
+- **`ADMIN_PASSWORD` 바꾸기**: 대화에 노출됐음. 이제 입장권 서명용으로만 쓰니 길고 무작위한 값으로. `server` 폴더에서 `npx wrangler secret put ADMIN_PASSWORD` (바꾸면 기존 로그인은 풀림 → 구글로 다시 로그인)
 - 신고 테스트 한 건이 관리자 현황판에 남아 있음 → "확인했어요(지우기)"
 - 발우공양 10분 시계와 "공양을 마쳤어요" 창: 모양(`index.html`, `style.css`)만 있고 동작 코드 없음
 

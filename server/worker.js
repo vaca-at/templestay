@@ -37,13 +37,6 @@ export default {
       await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/visit', { method: 'POST' });
       return json(req, { ok: true });
     }
-    // 관리자 로그인: 비밀번호가 맞으면 30일짜리 입장권을 준다 (기기에는 비밀번호 대신 입장권만 남는다)
-    if (url.pathname === '/admin/login' && req.method === 'POST') {
-      const body = await req.json().catch(() => ({}));
-      if (!env.ADMIN_PASSWORD || !(await same(String(body.password || '').trim(), env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
-      const exp = Date.now() + 30 * 24 * 3600 * 1000;
-      return json(req, { token: `${exp}.${await sign(String(exp), env.ADMIN_PASSWORD.trim())}`, exp });
-    }
     // 관리자 구글 로그인: Firebase 가 준 구글 로그인 증표(ID 토큰)를 검사해서, 허락된 이메일이면 30일 입장권을 준다
     if (url.pathname === '/admin/google' && req.method === 'POST') {
       const body = await req.json().catch(() => ({}));
@@ -54,7 +47,7 @@ export default {
       const exp = Date.now() + 30 * 24 * 3600 * 1000;
       return json(req, { token: `${exp}.${await sign(String(exp), env.ADMIN_PASSWORD.trim())}`, exp, email: who.email });
     }
-    // 관리자: 입장권(또는 비밀번호)이 맞을 때만 방문 수와 접속 인원을 보여 준다
+    // 관리자: 입장권이 맞을 때만 방문 수와 접속 인원을 보여 준다
     if (url.pathname === '/admin/stats') {
       const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
       if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
@@ -119,7 +112,7 @@ export default {
 
 const clean = (s, n) => String(s ?? '').slice(0, n);
 
-// 비밀번호 비교: 해시끼리 비교해서 글자 수나 앞부분으로 알아낼 수 없게
+// 서명 비교: 해시끼리 비교해서 글자 수나 앞부분으로 알아낼 수 없게
 async function same(a, b) {
   const h = async (s) => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
   const [x, y] = await Promise.all([h(a), h(b)]);
@@ -128,7 +121,7 @@ async function same(a, b) {
   return d === 0;
 }
 
-// 입장권 서명: 비밀번호를 열쇠로 한 HMAC. 비밀번호를 바꾸면 예전 입장권은 모두 무효가 된다
+// 입장권 서명: ADMIN_PASSWORD 를 열쇠로 한 HMAC (로그인은 구글로만, 이 값은 서명용). 바꾸면 예전 입장권은 모두 무효가 된다
 async function sign(msg, secret) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)));
@@ -136,8 +129,7 @@ async function sign(msg, secret) {
 }
 async function adminOk(auth, secret) {
   const m = /^(\d{13})\.([0-9a-f]{64})$/.exec(auth);
-  if (m) return +m[1] > Date.now() && (await same(m[2], await sign(m[1], secret)));
-  return same(auth, secret); // 예전처럼 비밀번호를 바로 보내도 된다
+  return !!m && +m[1] > Date.now() && (await same(m[2], await sign(m[1], secret)));
 }
 
 // ───────── 구글(Firebase) 로그인 검사 ─────────

@@ -297,6 +297,7 @@ body:not(.admin) .place .stay { display: none !important; }
 /* 새로고침·링크 복사 단추 그림 (소리·메뉴 단추와 같은 모양) */
 .hud-ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 @media (max-width: 760px) { .hud-right { gap: 6px; } .hud-right .icon-btn { width: 40px; height: 40px; } }
+@media (max-width: 420px) { html body .hud-right { gap: 4px; } html body .hud-right .icon-btn { width: 38px; height: 38px; } }
 @media (max-width: 760px) { #online-pill { height: 36px; padding: 0 9px; gap: 5px; font-size: 12.5px; } #online-pill b { font-size: 13.5px; } .hud-right { flex-wrap: nowrap; } }
 #install-ios[hidden], #install-other[hidden] { display: none; }
 /* 신고하기 */
@@ -304,6 +305,10 @@ body:not(.admin) .place .stay { display: none !important; }
 .report-preview { margin: 0; display: grid; gap: 4px; justify-items: start; }
 .report-preview img { max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid var(--line); }
 .report-preview[hidden] { display: none; }
+.myreports summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 4px 0; }
+.myreports .wish-list { margin-top: 8px; }
+.myreports .wish-list p { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.myreports .wish-list img { display: block; max-width: 100%; max-height: 120px; margin-top: 6px; border-radius: 8px; border: 1px solid var(--line); }
 /* 불상·탑 고르기 창 */
 .relic-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
 .relic-info { display: grid; gap: 2px; text-align: center; min-width: 0; }
@@ -536,3 +541,19 @@ html body .typing-sheet { width: min(720px, calc(100vw - 32px)); max-width: none
 #bae-mode { margin-left: 4px; font: 12px var(--display); color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); border-radius: 999px; padding: 3px 10px; cursor: pointer; pointer-events: auto; }
 #bae-mode[aria-pressed="true"] { background: var(--jade); border-color: var(--jade); }
 #bae-counter { align-items: center; }
+
+/* 개인 설정 */
+.set-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: #efe8da; margin-bottom: 12px; flex-wrap: wrap; }
+.set-tabs button { flex: 1; min-width: 70px; border: 0; background: none; padding: 7px 10px; border-radius: 999px; font: 14px var(--display); color: var(--ink-soft); cursor: pointer; }
+.set-tabs button[aria-selected="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+#settings-modal section { display: grid; gap: 10px; }
+.set-h { margin: 10px 0 0; font-size: 15px; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.album { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 520px) { .album { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.album figure { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+.album img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.album figcaption { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 6px 8px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.album figcaption button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 2px 8px; font-size: 12px; cursor: pointer; margin-left: 4px; }
+
+.menu-links .menu-link { display: inline; width: auto; padding: 0; background: none; border: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }

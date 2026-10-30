@@ -1,10 +1,30 @@
 // 신고하기: 글 + 사진 한 장(지금 3D 화면을 찍거나, 휴대폰 캡처를 골라서) + 지금 상황(서버·장소·근처에 보이는 분 법명).
 // 서버(방 중계 Worker)의 /report 로 보내고, 관리자는 admin.html 에서 보고 지운다.
+// 보낸 신고는 이 기기에도 남겨서 신고한 분이 "내가 보낸 신고"에서 다시 볼 수 있다 (서버에서 다시 받아 오지 않음).
 import { RELAY_URL } from './data.js';
 
 const $ = (s) => document.querySelector(s);
 let img = null;   // 담을 사진 (data URL)
 let ctx = {};     // 신고를 연 순간의 상황
+const MINE = 'maeum:myreports';
+const MINE_MAX = 20;
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mine = () => { try { return JSON.parse(localStorage.getItem(MINE)) || []; } catch { return []; } };
+
+// 내가 보낸 신고: 최근 20건. 사진은 이 기기 저장 공간을 아끼려고 작게 줄여서
+function renderMine() {
+  const list = mine();
+  $('#myreport-box').hidden = !list.length;
+  $('#myreport-list').innerHTML = list.map((x) => `<li>${x.text ? `<p>${esc(x.text)}</p>` : ''}${x.thumb ? `<img src="${esc(x.thumb)}" alt="신고에 담은 사진">` : ''}<small>${new Date(x.at).toLocaleString('ko-KR')} · 서버 ${esc(x.server || '-')} · ${esc(x.scene)}</small></li>`).join('');
+}
+async function saveMine(text, img) {
+  const thumb = img ? await shrinkUrl(img, 320, 0.6).catch(() => null) : null;
+  const list = [{ at: Date.now(), text, thumb, server: ctx.server, scene: ctx.scene }, ...mine()].slice(0, MINE_MAX);
+  // 저장 공간이 모자라면 사진 없이라도 남긴다
+  try { localStorage.setItem(MINE, JSON.stringify(list)); } catch {
+    try { localStorage.setItem(MINE, JSON.stringify(list.map((x) => ({ ...x, thumb: null })))); } catch {}
+  }
+}
 
 function note(text) {
   const box = $('#toasts');
@@ -29,26 +49,30 @@ function open() {
   $('#report-ctx').textContent = `함께 보내는 정보: 큰법당 서버 ${ctx.server || '-'} · ${ctx.scene || ''} · ${new Date().toLocaleString('ko-KR')}${who}`;
   $('#report-err').textContent = '';
   setImg(null);
+  renderMine();
   $('#report-modal').hidden = false;
   setTimeout(() => $('#report-text').focus(), 50);
 }
 
-// 사진 줄이기: 긴 쪽 1280px, JPEG
+// 사진 줄이기: 긴 쪽 max px, JPEG
+function shrinkUrl(url, max, q) {
+  return new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, max / Math.max(im.width, im.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', q));
+    };
+    im.onerror = reject;
+    im.src = url;
+  });
+}
 function shrink(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
-    r.onload = () => {
-      const im = new Image();
-      im.onload = () => {
-        const k = Math.min(1, 1280 / Math.max(im.width, im.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
-        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.75));
-      };
-      im.onerror = reject;
-      im.src = r.result;
-    };
+    r.onload = () => shrinkUrl(r.result, 1280, 0.75).then(resolve, reject);
     r.onerror = reject;
     r.readAsDataURL(file);
   });
@@ -81,10 +105,11 @@ $('#report-form').addEventListener('submit', async (e) => {
     const r = await fetch(`${RELAY_URL}/report`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, img, ctx }) });
     if (r.status === 429) throw new Error('잠시 뒤에 다시 보내 주세요 (한 시간에 5번까지)');
     if (!r.ok) throw new Error('보내지 못했어요. 잠시 뒤 다시 해 주세요');
+    await saveMine(text, img);
     $('#report-modal').hidden = true;
     $('#report-text').value = '';
     setImg(null);
-    note('신고를 보냈어요. 관리자가 확인할게요');
+    note('신고를 보냈어요. 관리자만 보고 확인할게요');
   } catch (err) {
     $('#report-err').textContent = err.message;
   } finally {
