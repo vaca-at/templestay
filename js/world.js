@@ -1736,7 +1736,7 @@ export function buildRoom(loc) {
   const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 3.2, 1.9]], doorW: 1.8 });
   // 경상(낮은 책상), 책, 등, 찻잔
   const desk = new THREE.Group();
-  desk.position.set(0, 0, -1.55);
+  desk.position.set(0, -0.1, -1.3);   // 앉은 자리 바로 앞, 낮게: 책·사경 종이·찻잔이 책상 위에 놓여 보이게
   const woodM = mat('#7a4a2c', { roughness: 0.5 });
   const topM = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.7), woodM); topM.position.y = 0.42; desk.add(topM);
   for (const [x, z] of [[-0.65, -0.28], [0.65, -0.28], [-0.65, 0.28], [0.65, 0.28]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), woodM); l.position.set(x, 0.2, z); desk.add(l); }
@@ -1747,7 +1747,7 @@ export function buildRoom(loc) {
   lamp.position.set(0.55, 0.6, -0.2); desk.add(lamp);
   desk.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   g.add(desk);
-  const lampLight = new THREE.PointLight('#ffcf8a', 2.5, 6, 1.5); lampLight.position.set(0.55, 0.9, -1.75); g.add(lampLight);
+  const lampLight = new THREE.PointLight('#ffcf8a', 2.5, 6, 1.5); lampLight.position.set(0.55, 0.75, -1.5); g.add(lampLight);
   // 책장, 개어 둔 이불, 족자
   const shelf = new THREE.Group();
   shelf.position.set(HW - 0.3, 0, -0.6);
@@ -1778,7 +1778,7 @@ export function buildRoom(loc) {
     spawn: seat.pos.clone(), spawnRot: Math.PI,
     exitZ: HD - 0.5, camDist: 2.8, minDist: 1.4, maxDist: 4.6,
     bounds: { minX: -HW + 0.4, maxX: HW - 0.4, minZ: -HD + 0.4, maxZ: HD - 0.4 },
-    blockers: [{ minX: -0.8, maxX: 0.8, minZ: -1.95, maxZ: -1.15 }], fog: null, background: new THREE.Color('#1c1410'),
+    blockers: [{ minX: -0.8, maxX: 0.8, minZ: -1.7, maxZ: -0.92 }], fog: null, background: new THREE.Color('#1c1410'),
   };
 }
 

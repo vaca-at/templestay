@@ -237,7 +237,7 @@ export class Avatar {
       this.petFresh = true;
     }
 
-    this.torsoY = 1; this.sitK = 1;
+    this.torsoY = 1; this.sitK = 1; this.eyes = null;
     // 이름표는 키에 맞춰 머리 위로
     const B = bodyOf(look);
     this.tagY = isBlock ? B.k * (0.46 * B.leg + 0.56 * B.th + 0.58 * B.head) + 0.45 : 2.05;
@@ -689,10 +689,14 @@ export class Avatar {
     this.log.visible = this.action === 'bell';
     this.cloth.visible = this.action === 'wash' && this.seated;
     this.book.visible = this.action === 'read' && this.seated;
+    // 내 방은 책상 위에 올려놓도록 조금 높게 (main.js 가 propLift 를 정해요)
+    this.paper.position.y = 0.16 + (this.propLift || 0); this.book.position.y = 0.2 + (this.propLift || 0);
     const auraOn = this.action === 'meditate';
     this.aura.material.opacity = lerp(this.aura.material.opacity, auraOn ? 0.45 + Math.sin(performance.now() / 500) * 0.15 : 0, k);
     this.aura.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.06);
     const fx = this.medFx, now = performance.now() / 1000;
+    // 명상하면 눈을 감아요 (가는 선)
+    if (this.eyes) { const sy = auraOn ? 0.18 : 1; for (const e of this.eyes) { e.scale.y = lerp(e.scale.y, 0.09 * sy, Math.min(1, dt * 4)); e.position.y = e.userData.y0 ??= e.position.y; if (auraOn) e.position.y = e.userData.y0 - 0.02; } }
     fx.k = lerp(fx.k, auraOn ? 1 : 0, Math.min(1, dt * 2));
     const on = fx.k > 0.01;
     fx.halo.visible = fx.motes.visible = fx.petals.visible = on;

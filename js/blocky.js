@@ -8,7 +8,7 @@ import { mat } from './avatar.js';
 const BAKED = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
 export function bakeBlock(av) {
   for (const node of [av.legL, av.legR, av.hips, av.armL, av.armR, av.head]) {
-    const parts = node.children.filter((o) => o.isMesh && !o.material.transparent && o.material.color && o !== av.skirt);
+    const parts = node.children.filter((o) => o.isMesh && !o.material.transparent && o.material.color && o !== av.skirt && !o.userData.keep);
     if (parts.length < 2) continue;
     const geos = parts.map((m) => {
       m.updateMatrix();
@@ -256,8 +256,9 @@ export function buildBlock(av, body, look, outfit, skinColor) {
   box(head, skinColor, S, S, S, 0, S / 2 + 0.02, 0);
   const fz = S / 2 + 0.005;
   const eyeY = S / 2 + 0.03;
-  box(head, '#1d1a18', 0.07, 0.09, 0.02, 0.11, eyeY, fz);
-  box(head, '#1d1a18', 0.07, 0.09, 0.02, -0.11, eyeY, fz);
+  // 눈은 따로 둬요 (명상할 때 스르르 감도록)
+  av.eyes = [box(head, '#1d1a18', 0.07, 0.09, 0.02, 0.11, eyeY, fz), box(head, '#1d1a18', 0.07, 0.09, 0.02, -0.11, eyeY, fz)];
+  for (const e of av.eyes) e.userData.keep = true;
   box(head, '#b5584c', 0.1, 0.025, 0.02, 0, eyeY - 0.13, fz);
   box(head, '#f0a090', 0.06, 0.03, 0.015, 0.19, eyeY - 0.08, fz, { transparent: true, opacity: 0.6 });
   box(head, '#f0a090', 0.06, 0.03, 0.015, -0.19, eyeY - 0.08, fz, { transparent: true, opacity: 0.6 });

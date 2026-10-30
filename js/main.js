@@ -283,6 +283,7 @@ async function goScene(which, { instant = false } = {}) {
     controls.update();
   }
   S.me.tag.visible = which !== 'room';
+  S.me.propLift = which === 'room' ? 0.07 : 0;   // 내 방: 책·사경 종이가 책상 위에
   renderActions();   // 장소마다 동작 줄이 달라요
   // 내 방 족자는 들어올 때마다 문구가 바뀐다
   if (which === 'room') hangScroll(world); else stopScrolls();
