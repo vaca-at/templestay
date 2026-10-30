@@ -57,7 +57,7 @@ export function applyDaylight(world, d) {
   const tint = (c, out) => out.copy(NIGHT).lerp(c, 0.06 + 0.94 * d).lerp(DUSK, dusk);
   const k = low + (1 - low) * d;
   for (const [o, i] of base.lights) o.intensity = o.isPointLight || o.isSpotLight ? i * (1 + (1 - d) * 0.6) : i * k;
-  for (const [u, top, bottom] of base.skies) { tint(top, u.top.value); tint(bottom, u.bottom.value); }
+  for (const [u, top, bottom] of base.skies) { tint(top, u.top.value); tint(bottom, u.bottom.value); if (u.day) u.day.value = d; }
   // 창 밖 풍경: 낮엔 그대로, 해 질 녘엔 노을빛, 밤엔 어두운 남색으로 (그림에 색을 곱해요)
   for (const m of base.views) m.color.copy(VIEW_NIGHT).lerp(WHITE, d).lerp(DUSK, Math.min(0.75, dusk * 2.4));
   if (base.bg) tint(base.bg, world.background);

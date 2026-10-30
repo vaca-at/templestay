@@ -1,6 +1,7 @@
 // 법당 내부와 외부 풍경. 텍스처는 모두 캔버스로 그려서 외부 이미지 없이 동작한다.
 // 좌표: 법당 안에서 불상은 -z 쪽, 입구는 +z 쪽. 밖에서는 법당 건물이 -z 쪽, 경치가 +z 쪽.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mat } from './avatar.js';
 import { season } from './data.js';
 
@@ -654,6 +655,144 @@ function skyDome(top, bottom) {
   return new THREE.Mesh(geo, m);
 }
 
+// 바깥 하늘: 위·아래 색 사이에 지평선 빛, 흘러가는 구름, 해(낮) · 달과 별(밤).
+// top/bottom 은 daytime.js 가 낮밤에 맞춰 바꾸고, day(0 밤~1 낮)·time 도 넣어 줘요
+const SUN_DIR = new THREE.Vector3(0.42, 0.36, 0.83).normalize();
+function skyDomeHQ(top, bottom, { clouds = 0.55, cloudTint = '#ffffff' } = {}) {
+  const geo = new THREE.SphereGeometry(900, 48, 24);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color(top) }, bottom: { value: new THREE.Color(bottom) }, day: { value: 1 }, time: { value: 0 },
+      sunDir: { value: SUN_DIR.clone() }, cover: { value: clouds }, cloudTint: { value: new THREE.Color(cloudTint) } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `
+      uniform vec3 top; uniform vec3 bottom; uniform float day; uniform float time; uniform vec3 sunDir; uniform float cover; uniform vec3 cloudTint;
+      varying vec3 vP;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1,0)), f.x), mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y); }
+      float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; } return v; }
+      void main(){
+        vec3 d = normalize(vP); float h = d.y;
+        // 하늘 바탕: 지평선 쪽은 밝고 부드럽게
+        vec3 col = mix(bottom, top, smoothstep(-0.02, 0.62, h));
+        col = mix(col, bottom * 1.06, exp(-max(h, 0.0) * 14.0) * 0.55);
+        // 해: 둥근 해 + 넓은 빛무리 (낮에만)
+        float sd = max(dot(d, sunDir), 0.0);
+        col += vec3(1.0, 0.86, 0.62) * (pow(sd, 24.0) * 0.16 + pow(sd, 400.0) * 0.5) * day;
+        col = mix(col, vec3(1.0, 0.98, 0.9), smoothstep(0.9994, 0.9997, sd) * day);
+        // 밤: 별과 달
+        float night = 1.0 - smoothstep(0.15, 0.55, day);
+        if (night > 0.0 && h > 0.02) {
+          vec2 g = vec2(atan(d.z, d.x) * 120.0, h * 240.0);
+          vec2 cell = floor(g); vec2 f = fract(g) - 0.5;
+          float r = hash(cell);
+          float star = step(0.985, r) * smoothstep(0.18, 0.0, length(f)) * (0.6 + 0.4 * sin(time * 2.0 + r * 60.0));
+          col += vec3(0.95, 0.96, 1.0) * star * night * smoothstep(0.02, 0.2, h);
+          vec3 moonDir = normalize(vec3(-sunDir.x, sunDir.y + 0.08, sunDir.z));
+          float md = dot(d, moonDir);
+          col = mix(col, vec3(0.96, 0.94, 0.86), smoothstep(0.99955, 0.9998, md) * night);
+          col += vec3(0.5, 0.6, 0.8) * pow(max(md, 0.0), 90.0) * 0.18 * night;
+        }
+        // 구름: 하늘을 평면에 펼쳐 겹겹이 흘러가게
+        if (h > 0.0) {
+          vec2 uv = d.xz / (h + 0.12) * 1.6 + vec2(time * 0.012, time * 0.004);
+          float n = fbm(uv) * 0.75 + fbm(uv * 2.6 + 4.0) * 0.25;
+          float c = smoothstep(1.0 - cover * 0.82, 1.08 - cover * 0.55, n) * smoothstep(0.0, 0.16, h);
+          float shade = fbm(uv + sunDir.xz * 0.35);
+          vec3 lit = mix(cloudTint, top, 0.18) * (0.55 + 0.45 * day) + vec3(1.0, 0.8, 0.6) * pow(sd, 6.0) * 0.25 * day;
+          vec3 cc = mix(lit, mix(bottom, top, 0.4) * 0.82, smoothstep(0.35, 0.8, shade) * 0.55);
+          col = mix(col, cc, c * 0.92);
+        }
+        gl_FragColor = vec4(col, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const mesh = new THREE.Mesh(geo, m);
+  mesh.renderOrder = -10;
+  return mesh;
+}
+
+// 먼 산줄기: 산수화처럼 겹겹이. 가까운 줄은 진하고, 멀수록 하늘빛에 묻히고, 아랫자락엔 운해(구름 바다)
+// top = 산색, bottom = 안개색 (daytime.js 가 밤에 함께 어둡게 해요)
+function ridgeRing(radius, base, amp, color, haze, seed, { from = 0, to = Math.PI * 2, sharp = 1.6, seg = 360 } = {}) {
+  const r = rng(seed), ph = Array.from({ length: 6 }, () => r() * Math.PI * 2);
+  const pos = [], idx = [], vy = [];
+  for (let i = 0; i <= seg; i++) {
+    const a = from + (to - from) * (i / seg);
+    // 뾰족한 봉우리: 여러 겹 사인을 접어서(ridged)
+    let n = 0, w = 1, f = 3;
+    for (let k = 0; k < 5; k++) { n += w * (1 - Math.abs(Math.sin(a * f + ph[k]))) ** sharp; w *= 0.5; f *= 2.1; }
+    const y = base + amp * n * (0.75 + 0.25 * Math.sin(a * 2 + ph[5]));
+    const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+    pos.push(x, -120, z, x, y, z);
+    vy.push(0, 1);
+    if (i < seg) { const j = i * 2; idx.push(j, j + 1, j + 2, j + 1, j + 3, j + 2); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('ty', new THREE.Float32BufferAttribute(vy, 1));
+  geo.setIndex(idx);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide, fog: false, depthWrite: true,
+    uniforms: { top: { value: new THREE.Color(color) }, bottom: { value: new THREE.Color(haze) } },
+    vertexShader: 'attribute float ty; varying float vT; varying float vY; void main(){ vT = ty; vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform vec3 top; uniform vec3 bottom; varying float vT; varying float vY;
+      void main(){ float mist = 1.0 - smoothstep(-40.0, ${(base + amp * 0.35).toFixed(1)}, vY);
+        vec3 c = mix(top, bottom, clamp(mist * 0.95, 0.0, 1.0));
+        c = mix(c, bottom, (1.0 - vT) * 0.15);
+        gl_FragColor = vec4(c, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const mesh = new THREE.Mesh(geo, m);
+  mesh.renderOrder = -5;
+  return mesh;
+}
+function mountainLayers(loc) {
+  const g = new THREE.Group();
+  const sky = new THREE.Color(loc.sky[1]), hazeC = new THREE.Color(loc.fog);
+  // 장소마다 산색: 숲(가을 단풍 · 짙은 녹청), 강(쪽빛), 바다(뒤쪽만 산, 앞은 수평선과 먼 섬)
+  const near = loc.id === 'forest' ? '#5f6e55' : loc.id === 'river' ? '#5a6d70' : '#66767c';
+  // 가까운 줄은 낮게, 먼 줄일수록 높게 솟아 겹겹이 보이도록 [반지름, 바닥, 높이, 하늘빛에 묻히는 정도]
+  const layers = [[470, 18, 55, 0.12], [560, 28, 85, 0.32], [650, 40, 115, 0.5], [740, 52, 140, 0.66], [830, 60, 165, 0.8]];
+  layers.forEach(([rad, base, amp, fade], i) => {
+    const col = new THREE.Color(near).lerp(sky, fade).getStyle();
+    const haze = hazeC.clone().lerp(sky, 0.3 + fade * 0.4).getStyle();
+    if (loc.id === 'sea') {
+      // 바다 쪽(앞, +z)은 비우고 뒤와 옆만
+      g.add(ridgeRing(rad, base, amp * 0.9, col, haze, 31 + i, { from: Math.PI * 1.02, to: Math.PI * 1.98, seg: 200 }));
+      if (i >= 2) g.add(ridgeRing(rad + 40, -46, 22 + i * 4, col, haze, 51 + i, { from: Math.PI * 0.12, to: Math.PI * 0.88, seg: 220, sharp: 0.8 }));
+    } else g.add(ridgeRing(rad, base, amp, col, haze, 11 + i * 7));
+  });
+  return g;
+}
+
+// 나무 모양 두 가지 (여러 덩어리를 하나로 붙여서 그림자·빛이 풍성하게)
+let TREE_GEO = null;
+function treeGeos() {
+  if (TREE_GEO) return TREE_GEO;
+  const paint = (geo, c) => { const n = geo.attributes.position.count, a = new Float32Array(n * 3); const col = new THREE.Color(c); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); return geo; };
+  const T = (geo, x, y, z, sx = 1, sy = 1, sz = 1) => geo.scale(sx, sy, sz).translate(x, y, z);
+  // 소나무: 세 층 원뿔(위로 갈수록 밝게) + 줄기
+  const pine = mergeGeometries([
+    paint(T(new THREE.CylinderGeometry(0.22, 0.32, 2.6, 6), 0, 1.3, 0), '#4a3424'),
+    paint(T(new THREE.ConeGeometry(2.0, 3.2, 8), 0, 3.2, 0), '#c9d6c4'),
+    paint(T(new THREE.ConeGeometry(1.6, 2.8, 8), 0, 4.6, 0), '#dfe8da'),
+    paint(T(new THREE.ConeGeometry(1.05, 2.3, 8), 0, 5.9, 0), '#f2f6ee'),
+  ].map((x) => x.toNonIndexed()));
+  // 활엽수: 줄기 + 동글동글 잎 덩어리 넷
+  const leaf = mergeGeometries([
+    paint(T(new THREE.CylinderGeometry(0.22, 0.34, 2.8, 6), 0, 1.4, 0), '#5a3d2a'),
+    paint(T(new THREE.IcosahedronGeometry(1.9, 1), 0, 3.7, 0), '#ffffff'),
+    paint(T(new THREE.IcosahedronGeometry(1.4, 1), 1.2, 3.2, 0.4), '#e6e6e6'),
+    paint(T(new THREE.IcosahedronGeometry(1.35, 1), -1.1, 3.4, -0.5), '#ececec'),
+    paint(T(new THREE.IcosahedronGeometry(1.2, 1), 0.2, 4.9, -0.3), '#ffffff'),
+  ].map((x) => x.toNonIndexed()));
+  TREE_GEO = { pine, leaf };
+  return TREE_GEO;
+}
+
 // ───────── 내부 ─────────
 export function buildInterior(loc) {
   const c = loc.interior;
@@ -958,49 +1097,60 @@ function terrain(id) {
     if (d < R0 - 1) tmp.set('#b3a88f');
     colors.push(tmp.r, tmp.g, tmp.b);
   }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
+  // 비탈이 가파른 곳은 바위색, 골짜기는 조금 짙게, 군데군데 얼룩
+  const nrm = geo.attributes.normal, shadeC = new THREE.Color('#3e4a32');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x, z);
+    if (d < R0 - 1) continue;
+    tmp.setRGB(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]);
+    const steep = 1 - nrm.getY(i);
+    if (!(id !== 'forest' && p.getY(i) < -55)) tmp.lerp(rock, smooth(0.18, 0.5, steep) * 0.75);
+    tmp.lerp(shadeC, 0.12 + 0.12 * noise(x * 1.9 + 7, z * 1.9 - 3));
+    colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
   m.receiveShadow = true;
   return { mesh: m, h };
 }
 
 function scatterTrees(h, count, seed, { minD = R0 + 3, maxD = 260, autumn = true, skip } = {}) {
-  const r = rng(seed);
-  const pine = new THREE.InstancedMesh(new THREE.ConeGeometry(1.6, 6, 7), mat('#2f4f3a'), count);
-  const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.35, 2.5, 6), mat('#5a3d2a'), count * 2);
-  const leaf = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.2, 1), new THREE.MeshStandardMaterial({ roughness: 0.9 }), count);
-  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3();
-  const palette = autumn ? ['#c0552f', '#e0a03a', '#a33b2a', '#d8b14a', '#7a8a3a', '#e07a3a'] : ['#4f7a45', '#5f8a4a', '#3f6a3f'];
-  let np = 0, nl = 0, nt = 0;
-  for (let i = 0; i < count * 2; i++) {
-    const a = r() * Math.PI * 2, d = minD + Math.sqrt(r()) * (maxD - minD);
+  const r = rng(seed), G = treeGeos();
+  const tm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
+  const pine = new THREE.InstancedMesh(G.pine, tm, count), leaf = new THREE.InstancedMesh(G.leaf, tm, count);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3(), e = new THREE.Euler();
+  const greens = ['#2f5a3c', '#3a6644', '#28503a', '#46704a', '#355e3e'];
+  const palette = autumn ? ['#c0552f', '#e0a03a', '#a33b2a', '#d8b14a', '#c7792f', '#e07a3a', '#8f9a3e', '#b8452c'] : ['#4f7a45', '#5f8a4a', '#3f6a3f', '#6b9152', '#486f43'];
+  const c = new THREE.Color();
+  let np = 0, nl = 0;
+  for (let i = 0; i < count * 3 && (np < count || nl < count); i++) {
+    // 가까운 곳은 드문드문, 먼 산비탈은 빽빽하게 (무리 지어)
+    const a = r() * Math.PI * 2, d = minD + Math.pow(r(), 0.7) * (maxD - minD);
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (skip && skip(x, z)) continue;
+    if (noise(x * 0.6, z * 0.6) < -0.7 && r() < 0.6) continue;   // 숲 사이 빈터
     const y = h(x, z);
-    const sc = 0.7 + r() * 0.9;
-    s.set(sc, sc, sc);
-    v.set(x, y + 1.2 * sc, z); M.compose(v, q, s);
-    if (nt < count * 2) trunk.setMatrixAt(nt++, M);
-    if (r() < 0.45) {
-      if (np >= count) continue;
-      v.set(x, y + 4.5 * sc, z); M.compose(v, q, s); pine.setMatrixAt(np++, M);
-    } else {
-      if (nl >= count) continue;
-      v.set(x, y + 3.6 * sc, z); M.compose(v, q, s); leaf.setMatrixAt(nl, M);
-      leaf.setColorAt(nl++, new THREE.Color(palette[Math.floor(r() * palette.length)]));
-    }
+    const sc = (0.75 + r() * 0.85) * (1 + Math.min(1, d / 300) * 0.35);
+    e.set((r() - 0.5) * 0.08, r() * Math.PI * 2, (r() - 0.5) * 0.08); q.setFromEuler(e);
+    const isPine = r() < (autumn ? 0.4 : 0.55);
+    s.set(sc, sc * (isPine ? 0.9 + r() * 0.5 : 0.85 + r() * 0.3), sc);
+    v.set(x, y - 0.2, z); M.compose(v, q, s);
+    // 멀리 있을수록 색이 하늘빛에 살짝 묻히도록 조금 흐리게
+    const far = Math.min(1, d / 320) * 0.25;
+    if (isPine) { if (np >= count) continue; c.set(greens[Math.floor(r() * greens.length)]).lerp(new THREE.Color('#8fa59a'), far); pine.setMatrixAt(np, M); pine.setColorAt(np++, c); }
+    else { if (nl >= count) continue; c.set(palette[Math.floor(r() * palette.length)]).offsetHSL(0, 0, (r() - 0.5) * 0.06).lerp(new THREE.Color('#c9b9a0'), far); leaf.setMatrixAt(nl, M); leaf.setColorAt(nl++, c); }
   }
-  pine.count = np; leaf.count = nl; trunk.count = nt;
-  for (const m of [pine, trunk, leaf]) { m.castShadow = true; m.instanceMatrix.needsUpdate = true; }
-  if (leaf.instanceColor) leaf.instanceColor.needsUpdate = true;
-  const g = new THREE.Group(); g.add(pine, trunk, leaf);
+  pine.count = np; leaf.count = nl;
+  for (const m of [pine, leaf]) { m.castShadow = true; m.receiveShadow = true; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  const g = new THREE.Group(); g.add(pine, leaf);
   return g;
 }
 
 export function buildExterior(loc) {
   const g = new THREE.Group();
-  g.add(skyDome(loc.sky[0], loc.sky[1]));
+  const sky = skyDomeHQ(loc.sky[0], loc.sky[1], { clouds: loc.id === 'sea' ? 0.45 : 0.6 });
+  g.add(sky, mountainLayers(loc));
   const { mesh: ground, h } = terrain(loc.id);
   g.add(ground);
 
@@ -1017,7 +1167,7 @@ export function buildExterior(loc) {
   const pagodaPos = new THREE.Vector3(-12, 0, 6); // 디자인마다 아래에서 자리를 정한다
   const isSky = (x, z) => Math.hypot(x, z) < R0 + 2;
   if (loc.id === 'forest') {
-    g.add(scatterTrees(h, 700, 5, { maxD: 300 }));
+    g.add(scatterTrees(h, 1100, 5, { maxD: 330 }));
     // 수목원 온실
     const dome = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
       new THREE.MeshStandardMaterial({ color: '#cfe7ee', transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.2 }));
@@ -1027,7 +1177,7 @@ export function buildExterior(loc) {
     pagodaPos.set(-12, 0, 6);
   }
   if (loc.id === 'river') {
-    g.add(scatterTrees(h, 520, 9, { minD: R0 + 6, maxD: 420, autumn: true, skip: (x, z) => h(x, z) < -74 }));
+    g.add(scatterTrees(h, 900, 9, { minD: R0 + 6, maxD: 420, autumn: true, skip: (x, z) => h(x, z) < -74 }));
     const paths = riverPaths();
     const water = new THREE.MeshStandardMaterial({ color: '#7fa9c2', roughness: 0.15, metalness: 0.25 });
     const river = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), water);
@@ -1048,7 +1198,7 @@ export function buildExterior(loc) {
     addRailing(g, R0 - 1.5, -0.25 * Math.PI, 1.25 * Math.PI);
   }
   if (loc.id === 'sea') {
-    g.add(scatterTrees(h, 380, 21, { minD: R0 + 4, maxD: 400, autumn: false, skip: (x, z) => h(x, z) < -52 }));
+    g.add(scatterTrees(h, 650, 21, { minD: R0 + 4, maxD: 400, autumn: false, skip: (x, z) => h(x, z) < -52 }));
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000, 1, 1), new THREE.MeshStandardMaterial({ color: '#3f86ad', roughness: 0.18, metalness: 0.3 }));
     sea.rotation.x = -Math.PI / 2; sea.position.y = -55; g.add(sea);
     // 반짝이는 물비늘
@@ -1082,7 +1232,7 @@ export function buildExterior(loc) {
   const hemi = new THREE.HemisphereLight(loc.sky[0], '#6b5a44', 1.1);
   g.add(hemi);
   const sun = new THREE.DirectionalLight('#fff3dc', 2.4);
-  sun.position.set(30, 50, 40);
+  sun.position.copy(SUN_DIR).multiplyScalar(70).add(new THREE.Vector3(0, 12, 0));   // 하늘에 그린 해 쪽에서 비추게
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 140 });
@@ -1114,7 +1264,7 @@ export function buildExterior(loc) {
     setPagoda(id) { pagodaSlot.clear(); pagodaSlot.add(buildPagoda(id)); pagodaSlot.userData.id = id; },
     fog: new THREE.Fog(loc.fog, 120, 700),
     background: new THREE.Color(loc.sky[1]),
-    update: (t) => animated.forEach((f) => f(t)),
+    update: (t) => { sky.material.uniforms.time.value = t; animated.forEach((f) => f(t)); },
   };
 }
 
