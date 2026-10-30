@@ -471,6 +471,7 @@ function nextBlock(now = new Date()) {
 function pauseAuto() {
   if (S.autoAct) { S.autoAct = null; updateSchedChip(); }
   S.walking = false;
+  walkStarting = false;
 }
 
 async function applyActivity(act) {
@@ -530,9 +531,6 @@ function updateSchedChip() {
   const n = nextBlock();
   $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
   $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
-  const off = b && S.schedule.auto && !S.autoAct && ACTIVITIES[b.act].scene;
-  $('#btn-resume').hidden = !off || (S.scene === 'room' && ACTIVITIES[b.act].scene === 'in');   // 내 방의 [법당으로]와 겹치지 않게
-  if (off) $('#btn-resume .lbl').textContent = `${SCENES[ACTIVITIES[b.act].scene].name}으로`;
 }
 
 function renderSchedEditor(draft) {
@@ -736,9 +734,12 @@ function updateHud() {
   $('#hud-server').textContent = S.server ? `· 서버 ${S.server}` : '· 서버 찾는 중';
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
-  $('#btn-stand').hidden = S.seat == null || S.scene === 'room';
+  // 오른쪽 상황 단추는 장소마다 두 개: 법당 [내 방으로][일어서기] · 마당 [법당으로][산보하기]
+  // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
+  $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
+  $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
+  $('#btn-walk').hidden = S.scene !== 'out';
   $('#btn-scroll').hidden = S.scene !== 'room';
-  $('#btn-hall').hidden = S.scene !== 'room';
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
 }
 
@@ -746,6 +747,8 @@ function updateContext() {
   if (S.mode !== 'world' || !S.active) return;
   const p = S.me.group.position;
   $('#btn-wish').hidden = !(S.scene === 'in' && p.distanceTo(new THREE.Vector3(0, 0, -8.4)) < 3.4);
+  const walkLbl = S.walking || walkStarting ? '산보 멈추기' : '산보하기';
+  if ($('#btn-walk .lbl').textContent !== walkLbl) $('#btn-walk .lbl').textContent = walkLbl;
 }
 
 let timerTick = 1;
@@ -1224,9 +1227,20 @@ $('#nick-dice').onclick = () => { $('#nick').value = randomName(); };
 $('#creator-done').onclick = finishCreator;
 $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { pauseAuto(); standUp(); };
-$('#btn-hall').onclick = () => { pauseAuto(); goScene('in'); };   // 내 방: [법당으로] [족자 고르기] 한 세트
+$('#btn-go').onclick = () => { pauseAuto(); goScene(S.scene === 'in' ? 'room' : 'in'); };
+// 산보: 먼저 합장하고, 마당을 오른쪽(시계 방향, 법당을 오른쪽에 두고)으로 계속 돈다. 다시 누르면 멈춘다
+let walkStarting = false;
+$('#btn-walk').onclick = async () => {
+  if (S.walking || walkStarting) { walkStarting = false; pauseAuto(); S.target = null; return; }
+  standUp(true);
+  doAction('hapjang');
+  walkStarting = true;
+  await sleep(1800);
+  if (!walkStarting) return;
+  walkStarting = false;
+  if (S.scene === 'out') startWalk();
+};
 $('#btn-wish').onclick = openWish;
-$('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivity(b.act); };
 $('#sched-chip').onclick = openSched;
 $('#design-chip').onclick = showPlaces;
 // 왼쪽 도형 단추
