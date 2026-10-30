@@ -218,10 +218,10 @@
   </div>
 </div>
 
-<!-- 불상·탑 고르기 -->
+<!-- 불상·탑·염주 고르기 -->
 <div id="relic-modal" class="modal" hidden>
   <div class="sheet">
-    <header class="panel-head"><h2>불상·탑 고르기</h2><button class="icon-btn" data-close="relic-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <header class="panel-head"><h2>불상·탑·염주 고르기</h2><button class="icon-btn" data-close="relic-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
     <p class="sub">‹ › 를 누르면 바로 바뀌어요. 이 기기에 저장되고, 다른 분들 화면은 각자 고른 대로 보여요.</p>
     <div class="relic-row">
       <button id="relic-b-prev" class="icon-btn relic-arrow" type="button" aria-label="이전 불상"><span class="lbl">‹</span><small class="cap">이전</small></button>
@@ -232,6 +232,11 @@
       <button id="relic-p-prev" class="icon-btn relic-arrow" type="button" aria-label="이전 탑"><span class="lbl">‹</span><small class="cap">이전</small></button>
       <div class="relic-info"><small class="muted">마당 탑</small><b id="relic-p-name"></b><span id="relic-p-sub" class="muted small"></span></div>
       <button id="relic-p-next" class="icon-btn relic-arrow" type="button" aria-label="다음 탑"><span class="lbl">›</span><small class="cap">다음</small></button>
+    </div>
+    <div class="relic-row">
+      <button id="relic-m-prev" class="icon-btn relic-arrow" type="button" aria-label="이전 염주"><span class="lbl">‹</span><small class="cap">이전</small></button>
+      <div class="relic-info"><small class="muted">큰 염주 (염주를 돌릴 때)</small><b id="relic-m-name"></b><span id="relic-m-sub" class="muted small"></span></div>
+      <button id="relic-m-next" class="icon-btn relic-arrow" type="button" aria-label="다음 염주"><span class="lbl">›</span><small class="cap">다음</small></button>
     </div>
     <p class="muted small">불상은 국가유산청·국립중앙박물관 3D 자료(공공누리 제1유형), 탑은 실제 탑의 모양만 따서 만든 모형이에요. 자세한 출처는 메뉴의 "자료 출처"에 있어요.</p>
   </div>
@@ -299,7 +304,7 @@
       <div class="set-row"><span>소리</span><button id="set-sound" class="ghost small-btn" type="button"></button></div>
       <div class="set-row"><span>법당 음악</span><button id="set-music" class="ghost small-btn" type="button"><span class="lbl">곡 고르기</span></button></div>
       <div class="set-row"><span>108배</span><button id="set-bae" class="ghost small-btn" type="button"></button></div>
-      <div class="set-row"><span>불상 · 탑</span><button id="set-relic" class="ghost small-btn" type="button"><span class="lbl">고르기</span></button></div>
+      <div class="set-row"><span>불상 · 탑 · 염주</span><button id="set-relic" class="ghost small-btn" type="button"><span class="lbl">고르기</span></button></div>
       <div class="set-row"><span>크게 보기</span><button id="set-calm" class="ghost small-btn" type="button"><span class="lbl">시작</span></button></div>
     </section>
   </div>
@@ -354,7 +359,7 @@
 <div id="credit-modal" class="modal" hidden>
   <div class="sheet">
     <header class="panel-head"><h2>자료 출처</h2><button class="icon-btn" data-close="credit-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
-    <p class="sub">불상 자료는 모두 국가유산청·국립중앙박물관 3D 데이터이며 공공누리 제1유형(출처표시)으로 써요. 원본 3D 스캔을 웹용 크기·텍스처·압축으로 조정했어요. 메뉴의 "불상·탑 고르기"에서 바꿔 모실 수 있어요.</p>
+    <p class="sub">불상 자료는 모두 국가유산청·국립중앙박물관 3D 데이터이며 공공누리 제1유형(출처표시)으로 써요. 원본 3D 스캔을 웹용 크기·텍스처·압축으로 조정했어요. 메뉴의 "개인 설정 → 환경 → 불상 · 탑 · 염주"에서 바꿔 모실 수 있어요.</p>
     <ul class="credit-list">
       <li>금동보살좌상(판불) · 통일신라 · 국가유산청 "서라벌 천년왕경" 3D 자료 (공공데이터포털 15165302) · 기본 불상</li>
       <li>금동불좌상 · 고려 · 덕수2116 (금동불좌상·금동보살입상 중 좌불만 골라 씀)</li>

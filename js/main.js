@@ -18,6 +18,7 @@ import { addPhoto, listPhotos, removePhoto } from './album.js';
 import { openTyping, onTypingOpen } from './typing.js';
 import { setSound, sound, moktak, bowl, coin, bigBell, TRACKS, setMusic, music } from './audio.js';
 import { daylight, applyDaylight } from './daytime.js';
+import { Mala3D, MALAS } from './mala3d.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -229,7 +230,7 @@ async function loadBuddha(world, id = buddhaId) {
   } catch (e) { console.warn('불상 모델을 불러오지 못해 기본 불상을 써요', e); }
 }
 
-// 불상·탑 고르기: 메뉴의 설정 창에서 ‹ › 로 넘긴다 (화면을 가리지 않게). 고른 것은 이 기기에 남는다
+// 불상·탑·염주 고르기: 메뉴의 설정 창에서 ‹ › 로 넘긴다 (화면을 가리지 않게). 고른 것은 이 기기에 남는다
 function stepBuddha(step) {
   const i = BUDDHA_IDS.indexOf(buddhaId);
   buddhaId = BUDDHA_IDS[(i + step + BUDDHA_IDS.length) % BUDDHA_IDS.length];
@@ -256,6 +257,9 @@ function renderRelics() {
   const P = PAGODAS.find((p) => p.id === pagodaId);
   $('#relic-p-name').textContent = P.name;
   $('#relic-p-sub').textContent = `${P.from} · ${P.note} · ${PAGODA_IDS.indexOf(pagodaId) + 1} / ${PAGODA_IDS.length}`;
+  const M = MALAS.find((m) => m.id === malaId);
+  $('#relic-m-name').textContent = M.name;
+  $('#relic-m-sub').textContent = `${M.cap} · ${MALA_IDS.indexOf(malaId) + 1} / ${MALA_IDS.length}`;
 }
 function openRelics() { renderRelics(); $('#relic-modal').hidden = false; }
 
@@ -649,6 +653,16 @@ function startWalk(path = S.active.walkPath, mode = 'walk') {
 // 염주: 108알을 1초에 한 알씩 (한 바퀴 108초). 목탁: 치는 횟수 (위쪽 108배 칸을 같이 써요)
 const MALA_N = 108;
 let malaShown = -1, moktakShown = -1;
+// 큰 3D 염주: 셋 가운데 고른 것 (이 기기에 저장). 오른쪽 위 둥근 칸은 센 수를 보여 줘요
+const MALA_IDS = MALAS.map((m) => m.id);
+let malaId = [params.get('mala'), store.get('mala', null)].find((id) => MALA_IDS.includes(id)) || '3';
+let mala3d = null;
+function stepMala(step) {
+  malaId = MALA_IDS[(MALA_IDS.indexOf(malaId) + step + MALA_IDS.length) % MALA_IDS.length];
+  store.set('mala', malaId);
+  mala3d?.dispose(); mala3d = null;
+  renderRelics();
+}
 function buildMala() {
   if ($('#mala-ring').childElementCount) return;
   let h = '';
@@ -1394,6 +1408,15 @@ function loop() {
   }
   renderPreview(dt);
   renderer.render(scene, camera);
+  // 큰 3D 염주는 장면 위에 덧그려서 기둥·사람에 가리지 않게
+  if (S.mode === 'world' && S.me?.action === 'beads' && !S.photo) {
+    mala3d ??= new Mala3D(+malaId);
+    mala3d.update(S.me.actionT, S.me, camera, scene.environment);
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    renderer.render(mala3d.scene, camera);
+    renderer.autoClear = true;
+  }
 }
 
 // 목탁 소리: 채가 내려칠 때마다
@@ -1798,6 +1821,8 @@ document.addEventListener('focusout', () => setTimeout(() => { if (visualViewpor
 $('#relic-b-prev').onclick = () => stepBuddha(-1);
 $('#relic-b-next').onclick = () => stepBuddha(1);
 $('#relic-p-prev').onclick = () => stepPagoda(-1);
+$('#relic-m-prev').onclick = () => stepMala(-1);
+$('#relic-m-next').onclick = () => stepMala(1);
 $('#relic-p-next').onclick = () => stepPagoda(1);
 
 (async () => {
