@@ -2,6 +2,7 @@
 // 좌표: 법당 안에서 불상은 -z 쪽, 입구는 +z 쪽. 밖에서는 법당 건물이 -z 쪽, 경치가 +z 쪽.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mat } from './avatar.js';
 import { season } from './data.js';
 
@@ -164,6 +165,86 @@ function taenghwa() {
       g.fill();
     }
     g.strokeStyle = '#c9a24a'; g.lineWidth = 16; g.strokeRect(8, 8, w - 16, h - 16);
+  });
+}
+
+// 방석: 도톰하게 부푼 사각 방석. 겉감은 직물 결, 테두리 선단(가장자리 띠)과 바느질 땀, 가운데 연꽃 수
+const CUSHION_TEX = {};
+function cushionMat(cloth = '#7a2f2a', band = '#c9a24a', lotus = '#e8b8a0') {
+  const key = cloth + band + lotus;
+  if (CUSHION_TEX[key]) return CUSHION_TEX[key];
+  const map = canvasTex(512, 512, (g, w, h) => {
+    g.fillStyle = cloth; g.fillRect(0, 0, w, h);
+    // 직물 결: 가는 가로·세로 줄
+    for (let i = 0; i < w; i += 3) { g.fillStyle = `rgba(0,0,0,${0.05 + (i % 9 === 0 ? 0.05 : 0)})`; g.fillRect(i, 0, 1, h); g.fillStyle = 'rgba(255,255,255,0.035)'; g.fillRect(0, i, w, 1); }
+    // 선단 띠와 바느질 땀
+    g.strokeStyle = band; g.lineWidth = 26; g.strokeRect(34, 34, w - 68, h - 68);
+    g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 2; g.strokeRect(20, 20, w - 40, h - 40); g.strokeRect(48, 48, w - 96, h - 96);
+    g.setLineDash([7, 6]); g.strokeStyle = 'rgba(255,240,210,0.55)'; g.lineWidth = 2; g.strokeRect(62, 62, w - 124, h - 124); g.setLineDash([]);
+    // 가운데 연꽃 수 (여덟 잎)
+    g.save(); g.translate(w / 2, h / 2);
+    for (let i = 0; i < 8; i++) { g.rotate(Math.PI / 4); g.fillStyle = lotus; g.beginPath(); g.ellipse(0, -42, 17, 40, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(120,40,30,0.35)'; g.lineWidth = 2; g.stroke(); }
+    g.fillStyle = band; g.beginPath(); g.arc(0, 0, 18, 0, Math.PI * 2); g.fill();
+    g.restore();
+    // 오래 앉은 자리처럼 가운데가 살짝 어둡게
+    const rg = g.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, w * 0.6); rg.addColorStop(0, 'rgba(0,0,0,0.12)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  });
+  return (CUSHION_TEX[key] = new THREE.MeshStandardMaterial({ map, roughness: 0.92 }));
+}
+const cushionGeo = (wd, h) => new RoundedBoxGeometry(wd, h, wd, 3, Math.min(0.05, h * 0.45));
+
+// 불상 옆 벽화: 구름 사이를 나는 비천(飛天). 악기를 들고 긴 천자락이 흩날려요. 오래된 벽화처럼 바랜 바탕
+function muralTex(variant = 0) {
+  return canvasTex(512, 1024, (g, w, h) => {
+    const r = rng(90 + variant);
+    const bg = g.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#2f5a55'); bg.addColorStop(0.55, '#3f6b5c'); bg.addColorStop(1, '#5b4a32');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    // 바랜 얼룩·잔금
+    for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${r() < 0.5 ? '255,240,210' : '0,0,0'},${r() * 0.06})`; g.fillRect(r() * w, r() * h, 2 + r() * 14, 2 + r() * 14); }
+    // 상서로운 구름 (말린 구름머리 + 꼬리)
+    const cloud = (x, y, s, c) => {
+      g.fillStyle = c; g.strokeStyle = 'rgba(40,30,20,0.55)'; g.lineWidth = 2;
+      for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + k * s * 0.7, y - (k === 1 ? s * 0.35 : 0), s * 0.5, 0, Math.PI * 2); g.fill(); g.stroke(); }
+      g.beginPath(); g.moveTo(x - s * 0.4, y + s * 0.3); g.bezierCurveTo(x - s * 1.5, y + s * 0.6, x - s * 2.2, y + s * 0.1, x - s * 2.8, y + s * 0.5); g.lineWidth = s * 0.28; g.strokeStyle = c; g.stroke();
+      g.strokeStyle = 'rgba(200,60,40,0.6)'; g.lineWidth = 2; for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + k * s * 0.7, y - (k === 1 ? s * 0.35 : 0), s * 0.22, 0.3, 5.2); g.stroke(); }
+    };
+    for (let i = 0; i < 9; i++) cloud(60 + r() * 420, 80 + r() * 880, 26 + r() * 22, ['#e9dcc0', '#cfe0d6', '#e8c9a0'][i % 3]);
+    // 비천
+    g.save(); g.translate(w * 0.5, h * 0.44); g.rotate(variant ? 0.35 : -0.35); g.scale(variant ? -1 : 1, 1);
+    // 천자락 (리본)
+    const ribbon = (pts, c, wd) => { g.strokeStyle = c; g.lineWidth = wd; g.lineCap = 'round'; g.beginPath(); g.moveTo(pts[0], pts[1]); g.bezierCurveTo(pts[2], pts[3], pts[4], pts[5], pts[6], pts[7]); g.stroke(); };
+    ribbon([-10, -40, -160, -160, 120, -230, 40, -380], '#c84a32', 16);
+    ribbon([10, -30, 170, -40, -80, 160, 150, 330], '#e3b04a', 14);
+    ribbon([0, 40, -160, 120, -40, 260, -190, 380], '#3f7c8a', 12);
+    // 다리와 치마 (뒤로 길게)
+    g.fillStyle = '#b9483a'; g.beginPath(); g.moveTo(-40, 40); g.quadraticCurveTo(-20, 190, 60, 260); g.quadraticCurveTo(70, 160, 40, 40); g.closePath(); g.fill();
+    g.fillStyle = '#e6c27a'; g.beginPath(); g.moveTo(-20, 60); g.quadraticCurveTo(10, 170, 55, 230); g.lineTo(62, 215); g.quadraticCurveTo(30, 150, 20, 60); g.fill();
+    // 몸통 · 팔
+    g.fillStyle = '#f0d2b0'; g.beginPath(); g.ellipse(0, 0, 42, 62, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2f6b5a'; g.beginPath(); g.ellipse(0, 20, 44, 34, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#f0d2b0'; g.lineWidth = 16; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-28, -20); g.quadraticCurveTo(-80, 10, -60, 60); g.stroke();
+    g.beginPath(); g.moveTo(28, -20); g.quadraticCurveTo(80, -10, 70, 40); g.stroke();
+    // 악기: 비파 / 피리
+    if (variant) { g.strokeStyle = '#6b4a2a'; g.lineWidth = 9; g.beginPath(); g.moveTo(-70, 70); g.lineTo(90, 20); g.stroke(); }
+    else { g.fillStyle = '#8a5a2c'; g.beginPath(); g.ellipse(-55, 55, 30, 44, -0.6, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#5a3a1c'; g.lineWidth = 7; g.beginPath(); g.moveTo(-40, 30); g.lineTo(40, -70); g.stroke(); }
+    // 머리 · 두광 · 보관
+    g.fillStyle = 'rgba(240,200,110,0.55)'; g.beginPath(); g.arc(0, -100, 62, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#e3b04a'; g.lineWidth = 4; g.stroke();
+    g.fillStyle = '#f0d2b0'; g.beginPath(); g.ellipse(0, -96, 30, 36, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1f1a17'; g.beginPath(); g.ellipse(0, -122, 30, 16, 0, Math.PI, 0); g.fill(); g.beginPath(); g.arc(0, -142, 13, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e3b04a'; g.fillRect(-26, -128, 52, 8);
+    g.fillStyle = '#1f1a17'; g.fillRect(-14, -98, 9, 3); g.fillRect(6, -98, 9, 3);
+    g.fillStyle = '#b5584c'; g.fillRect(-5, -78, 10, 3);
+    g.restore();
+    // 흩날리는 꽃잎
+    for (let i = 0; i < 26; i++) { g.fillStyle = ['#f3b6c4', '#f6efe0', '#e3b04a'][i % 3]; g.beginPath(); g.ellipse(r() * w, r() * h, 6, 10, r() * 3, 0, Math.PI * 2); g.fill(); }
+    // 단청 테두리
+    g.lineWidth = 22; g.strokeStyle = '#7a2c22'; g.strokeRect(11, 11, w - 22, h - 22);
+    g.lineWidth = 8; g.strokeStyle = '#2f7d6d'; g.strokeRect(26, 26, w - 52, h - 52);
+    g.lineWidth = 3; g.strokeStyle = '#e3b04a'; g.strokeRect(33, 33, w - 66, h - 66);
   });
 }
 
@@ -827,6 +908,8 @@ export function buildInterior(loc) {
   const BAYS = [[-14, 3.2], [-7.5, 8], [1.5, 8], [10.5, 8], [17.5, 4]];   // [가운데 z, 너비]
   const WY = 4.55, WH = 6.1;
   for (const s of [-1, 1]) for (const [z, w] of BAYS) {
+    // 불상 바로 옆 칸은 창 대신 비천 벽화 (양쪽이 마주 보며 날아요)
+    if (z === -14) { const m = wall(w + 0.6, WH + 1.2, s * (HW - 0.04), WY + 0.2, z, -s * Math.PI / 2, new THREE.MeshStandardMaterial({ map: muralTex(s > 0 ? 1 : 0), roughness: 0.9 })); m.receiveShadow = false; continue; }
     const t = pano.clone();
     // 안에서 보면 왼쪽 벽은 -z 쪽으로, 오른쪽 벽은 +z 쪽으로 그림이 이어져요. 왼쪽 벽은 그림 앞 절반, 오른쪽 벽은 뒤 절반
     const u = s < 0 ? (HF - (z + w / 2)) / L : (z - w / 2 + HD) / L;
@@ -924,12 +1007,12 @@ export function buildInterior(loc) {
   // 방석 100개 (10줄 × 가운데 통로 양쪽 5개씩). 한 번에 그리도록 InstancedMesh
   const cushions = [];
   const cols = [-9.9, -7.85, -5.8, -3.75, -1.7, 1.7, 3.75, 5.8, 7.85, 9.9];
-  const cushionMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.15, 0.12, 1.15), mat('#625e53'), cols.length * 10);
+  const cushionMesh = new THREE.InstancedMesh(cushionGeo(1.15, 0.13), cushionMat('#6e2c27', '#c9a24a', '#e8b8a0'), cols.length * 10);
   const M = new THREE.Matrix4();
   for (let r = 0; r < 10; r++) for (const x of cols) {
     const z = -5.6 + r * 2.0;
     const id = cushions.length;
-    M.makeTranslation(x, 0.06, z);
+    M.makeTranslation(x, 0.065, z);
     cushionMesh.setMatrixAt(id, M);
     cushions.push({ id, pos: new THREE.Vector3(x, 0, z), rot: Math.PI, y: 0.12 });
   }
@@ -1350,7 +1433,7 @@ export function buildMealHall(loc) {
   const rows = [[-6.4, 0], [-2.4, Math.PI], [2.0, 0], [6.0, Math.PI]];
   const xs = []; for (let x = -10.5; x <= 10.51; x += 1.5) xs.push(x);
   const n = rows.length * xs.length;
-  const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.1, 1.0), mat('#5d5a50'), n);
+  const cushion = new THREE.InstancedMesh(cushionGeo(1.0, 0.11), cushionMat('#4f5a4a', '#b89a5a', '#d8c8a0'), n);
   const bowl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.1, 0.11, 16), mat('#4a2418', { roughness: 0.3 }), n * 4);
   // 발우 네 그릇: 쌀밥 · 맑은 국 · 시금치나물 · 도라지무침 (빨간 반찬은 없음)
   // 밥: 소복한 흰 밥에 밥알 결 그림
@@ -1472,7 +1555,7 @@ export function buildRoom(loc) {
   const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.5), new THREE.MeshStandardMaterial({ map: scroll('일체유심조', '모든것은마음이짓는다') }));
   sc.position.set(0, 2.0, -HD + 0.05); g.add(sc);
   sc.userData.scroll = true;
-  const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), mat('#5d5a50')); cushion.position.set(0, 0.05, -0.65); cushion.receiveShadow = true; g.add(cushion);
+  const cushion = new THREE.Mesh(cushionGeo(0.9, 0.11), cushionMat('#3f4f6b', '#c9a24a', '#e6dcc6')); cushion.position.set(0, 0.055, -0.65); cushion.receiveShadow = true; g.add(cushion);
   cushion.userData.seats = 'room';
   roomLights(g, '#ffd9a0', { size: 5, at: [-4, 6, 2] });
   const seat = { id: 0, pos: new THREE.Vector3(0, 0, -0.65), rot: Math.PI, y: 0.1 };
