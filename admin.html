@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Gowun+Dodum&display=swap">
 <style>
-  /* 관리자 현황판: 한지 바탕, 숫자 세 칸 → 14일 막대 → 서버별 인원 */
+  /* 관리자 현황판: 한지 바탕, 숫자 칸 → 지금 어디서 무엇을 → 14일 막대 · 시간대 · 연등 → 서버별 인원 · 인기 · 걸린 연등 · 신고 */
   :root { --bg: #f6f1e7; --card: #fffdf8; --fg: #2b2420; --muted: #6d625a; --line: #e2d8c6; --jade: #2f6f62; --red: #b8463f; color-scheme: light; }
   @media (prefers-color-scheme: dark) { :root { --bg: #1d1916; --card: #27221e; --fg: #efe7da; --muted: #b3a797; --line: #3d352e; --jade: #6fb5a5; --red: #e07a70; color-scheme: dark; } }
   * { box-sizing: border-box; }
@@ -49,6 +49,24 @@
   .report .meta { color: var(--muted); font-size: 12.5px; }
   .report button { justify-self: start; padding: 6px 14px; font-size: 13px; }
   @media (max-width: 520px) { .tiles { grid-template-columns: 1fr 1fr; } .tile.live { grid-column: 1 / -1; } }
+  .tile em { font-style: normal; color: var(--muted); font-size: 12px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 520px) { .two { grid-template-columns: 1fr; } }
+  h3 { font-size: 13px; margin: 0 0 6px; font-weight: 700; }
+  /* 가로 막대 목록: 이름 · 막대 · 숫자 */
+  .hbar { display: grid; gap: 5px; }
+  .hbar div { display: grid; grid-template-columns: 92px 1fr 34px; gap: 8px; align-items: center; font-size: 13.5px; }
+  .hbar i { display: block; height: 10px; border-radius: 5px; background: var(--jade); min-width: 3px; }
+  .hbar b { text-align: right; font-variant-numeric: tabular-nums; }
+  .bars.hours { gap: 2px; height: 110px; }
+  .bars.hours span { font-size: 10px; }
+  .bars.wish i { background: #d9925a; }
+  .lantern { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+  .lantern + .lantern { margin-top: 6px; }
+  .lantern .dot { width: 14px; height: 18px; border-radius: 7px; border: 1px solid rgba(0,0,0,.15); flex: none; }
+  .lantern small { color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .lantern button { padding: 4px 12px; font-size: 12.5px; }
+  .lanterns { max-height: 360px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -80,9 +98,34 @@
       <div class="tile"><small>오늘 방문</small><b id="t-today">-</b></div>
       <div class="tile"><small>누적 방문</small><b id="t-total">-</b></div>
     </div>
+    <div class="tiles" style="margin-top:12px">
+      <div class="tile"><small>오늘 최고 동시접속</small><b id="t-peak">-</b><em id="t-peak-at"></em></div>
+      <div class="tile"><small>역대 최고 동시접속</small><b id="t-best">-</b><em id="t-best-at"></em></div>
+      <div class="tile"><small>오늘 올라온 연등</small><b id="t-wish">-</b><em id="t-wish-all"></em></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>지금 어디서 무엇을 하나요 <span class="muted">(모든 서버 합계)</span></h2>
+      <div class="two"><div><h3>장소</h3><div id="l-scenes" class="hbar"></div></div><div><h3>하는 일</h3><div id="l-acts" class="hbar"></div></div></div>
+    </div>
     <div class="card" style="margin-top:12px">
       <h2>최근 14일 방문</h2>
       <div id="bars" class="bars"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>몇 시에 많이 오나요 <span class="muted">(최근 14일 방문을 한국 시각으로 모아서)</span></h2>
+      <div id="hours" class="bars hours"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>최근 14일 연등</h2>
+      <div id="wbars" class="bars wish"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>지금 인기 <span class="muted">(접속한 분들이 고른 것)</span></h2>
+      <div class="two"><div><h3>내 옆 친구</h3><div id="l-pets" class="hbar"></div></div><div><h3>캐릭터</h3><div id="l-types" class="hbar"></div></div></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>걸린 연등 <span id="w-count"></span> <span class="muted">· 소원 글은 비공개라 서버에도 없어요 · 이상한 법명은 내리기</span></h2>
+      <div id="lanterns" class="lanterns"></div>
     </div>
     <div class="card" style="margin-top:12px">
       <h2>지금 사람이 있는 서버</h2>
@@ -102,7 +145,11 @@
 </main>
 
 <script type="module">
-  import { RELAY_URL, FIREBASE } from './js/data.js';
+  import { RELAY_URL, FIREBASE, SCENES, ACTIONS, CHAR_TYPES } from './js/data.js';
+  // 내 옆 친구 이름 (js/blocky.js 의 PETS 와 같게. 그 파일은 3D 그림 도구를 불러와서 여기서는 이름만 따로)
+  const PET_NAMES = { dog: '강아지', cat: '고양이', hamster: '햄스터', bunny: '토끼', coffee: '커피잔', icecoffee: '아이스커피', book: '책 친구', ai: 'AI 짝꿍', claude: '클로드', drone: '드론', panda: '판다', squirrel: '다람쥐', turtle: '거북이', squid: '오징어', fishbowl: '어항 물고기', plant: '화분 친구', ghost: '꼬마 유령', rocket: '꼬마 로켓' };
+  const ACT_NAMES = { ...Object.fromEntries(ACTIONS.map((a) => [a.id, a.name])), walk: '산보', jump: '점프' };
+  const TYPE_NAMES = Object.fromEntries(CHAR_TYPES.map((t) => [t.id, t.name]));
   const $ = (s) => document.querySelector(s);
   const KEY = 'maeum:adminToken'; // 법당 화면과 같은 입장권 (여기서 로그인하면 법당 화면에서도 관리자)
   const getTok = () => { try { const t = localStorage.getItem(KEY) || ''; if (t && +t.split('.')[0] < Date.now()) { localStorage.removeItem(KEY); return ''; } return t; } catch { return ''; } };
@@ -126,6 +173,36 @@
     $('#bars').innerHTML = days.length ? days.map(([d, n]) => `<div title="${d} · ${n}명"><em>${n}</em><i style="height:${(n / max) * 100}%"></i><span>${+d.slice(5, 7)}/${+d.slice(8)}</span></div>`).join('') : '<p class="muted">아직 기록이 없어요</p>';
     const rooms = Object.entries(s.rooms || {}).sort((a, b) => b[1] - a[1]);
     $('#rooms').innerHTML = rooms.length ? `<ul>${rooms.map(([k, n]) => `<li><span>큰법당 서버 ${k.split('-')[1]}</span><b>${n}명</b></li>`).join('')}</ul>` : '<p class="muted">지금은 접속한 분이 없어요</p>';
+    // 동시접속 최고 · 연등
+    const hm = (t) => t ? new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) : '';
+    const kday = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    const pk = s.peaks?.[kday];
+    $('#t-peak').textContent = pk ? `${pk.n}명` : '0명'; $('#t-peak-at').textContent = pk ? hm(pk.at) : '';
+    $('#t-best').textContent = `${s.best?.n || 0}명`; $('#t-best-at').textContent = s.best?.at ? new Date(s.best.at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) + ' ' + hm(s.best.at) : '';
+    $('#t-wish').textContent = `${s.wishDays?.[kday] || 0}개`; $('#t-wish-all').textContent = `지금 걸린 연등 ${s.wishes?.length || 0}개`;
+    // 지금 어디서 무엇을 · 인기 (가로 막대)
+    const hbar = (el, map, names, empty) => {
+      const rows = Object.entries(map || {}).sort((a, b) => b[1] - a[1]);
+      const max = Math.max(1, ...rows.map(([, n]) => n));
+      $(el).innerHTML = rows.length ? rows.map(([k, n]) => `<div><span>${esc(names[k] || k)}</span><i style="width:${(n / max) * 100}%"></i><b>${n}</b></div>`).join('') : `<p class="muted">${empty}</p>`;
+    };
+    const L = s.live || {};
+    hbar('#l-scenes', L.scenes, Object.fromEntries(Object.entries(SCENES).map(([k, v]) => [k, v.name])), '지금은 접속한 분이 없어요');
+    hbar('#l-acts', L.acts, ACT_NAMES, '하고 있는 동작이 없어요 (걷기 · 서 있기)');
+    hbar('#l-pets', L.pets, PET_NAMES, '친구를 데리고 온 분이 없어요');
+    hbar('#l-types', L.types, TYPE_NAMES, '-');
+    // 시간대별 방문: 최근 14일 24칸을 더해서
+    const hrs = Array(24).fill(0);
+    Object.entries(s.hours || {}).sort().slice(-14).forEach(([, a]) => a.forEach((n, h) => (hrs[h] += n)));
+    const hmax = Math.max(1, ...hrs);
+    $('#hours').innerHTML = hrs.some(Boolean) ? hrs.map((n, h) => `<div title="${h}시 · ${n}명"><em>${n || ''}</em><i style="height:${(n / hmax) * 100}%"></i><span>${h % 3 ? '' : h}</span></div>`).join('') : '<p class="muted">시간대 기록은 이번 업데이트부터 쌓여요</p>';
+    // 최근 14일 연등
+    const wd = Object.entries(s.wishDays || {}).sort().slice(-14), wmax = Math.max(1, ...wd.map(([, n]) => n));
+    $('#wbars').innerHTML = wd.length ? wd.map(([d, n]) => `<div title="${d} · 연등 ${n}개"><em>${n}</em><i style="height:${(n / wmax) * 100}%"></i><span>${+d.slice(5, 7)}/${+d.slice(8)}</span></div>`).join('') : '<p class="muted">연등 기록은 이번 업데이트부터 쌓여요</p>';
+    // 걸린 연등 (새것부터)
+    const ws = [...(s.wishes || [])].reverse();
+    $('#w-count').textContent = ws.length ? `${ws.length}개` : '';
+    $('#lanterns').innerHTML = ws.length ? ws.map((w) => `<div class="lantern"><span class="dot" style="background:${/^#[0-9a-f]{3,8}$/i.test(w.c) ? w.c : '#ddd'}"></span><span>${esc(w.n || '이름 없음')}</span>${w.v ? `<span class="muted">마음 시주 ${Number(w.v).toLocaleString()}원</span>` : ''}<small>${w.at ? new Date(w.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '예전 연등'}</small><button class="ghost" type="button" data-unwish="${esc(w.id)}">내리기</button></div>`).join('') : '<p class="muted">걸린 연등이 없어요</p>';
     $('#stamp').textContent = `${new Date().toLocaleTimeString('ko-KR')} 기준`;
     loadReports();
   }
@@ -153,6 +230,15 @@
     b.disabled = true;
     await fetch(`${RELAY_URL}/admin/report-delete`, { method: 'POST', headers: { Authorization: `Bearer ${getTok()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.del }) }).catch(() => {});
     loadReports();
+  });
+
+  // 연등 내리기: 모든 서버의 법당 천장에서 바로 사라져요
+  $('#lanterns').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-unwish]');
+    if (!b || !confirm('이 연등을 내릴까요? 모든 서버의 법당에서 바로 사라져요.')) return;
+    b.disabled = true;
+    await fetch(`${RELAY_URL}/admin/wish-delete`, { method: 'POST', headers: { Authorization: `Bearer ${getTok()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.unwish }) }).catch(() => {});
+    load();
   });
 
   $('#login-form').addEventListener('submit', async (e) => {

@@ -127,6 +127,12 @@ const net = new Net({
     if (r && def && !def.auto && d.on !== false && r.st.s === S.scene) toast(`${r.st.n}님이 ${def.verb}`);
   },
   onWish: (peer, w, backlog) => addWish(w, { animate: !backlog, announce: !backlog }),
+  // 관리자가 내린 연등은 천장에서도 바로 내린다
+  onUnwish: (id) => {
+    S.wishes = S.wishes.filter((w) => w.id !== id);
+    const l = S.lanterns.get(id);
+    if (l) { l.removeFromParent(); S.lanterns.delete(id); }
+  },
   onLeave: (peer) => removeRemote(peer, true),
   onReset: () => { for (const id of [...S.remotes.keys()]) removeRemote(id, false); },
   // 다시 붙었을 때: 서버가 알려 준 분들만 남기고 정리 (그대로 있는 분은 다시 '오셨어요' 하지 않게)

@@ -59,10 +59,24 @@ export default {
       const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
       if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
       const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
-      const rooms = {};
-      await Promise.all(['hall'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
-        env.ROOMS.get(env.ROOMS.idFromName(`${loc}-${i + 1}`)).fetch('https://room/count').then((r) => r.json()).then((j) => { if (j.n) rooms[`${loc}-${i + 1}`] = j.n; }).catch(() => {}))));
-      return json(req, { ...stats, rooms, online: Object.values(rooms).reduce((a, b) => a + b, 0) });
+      const rooms = {}, live = { scenes: {}, acts: {}, pets: {}, types: {} };
+      await Promise.all(Array.from({ length: SERVERS }, (_, i) => `hall-${i + 1}`).map((k) =>
+        env.ROOMS.get(env.ROOMS.idFromName(k)).fetch('https://room/live').then((r) => r.json()).then((j) => {
+          if (!j.n) return;
+          rooms[k] = j.n;
+          for (const g of Object.keys(live)) for (const [x, n] of Object.entries(j[g] || {})) live[g][x] = (live[g][x] || 0) + n;
+        }).catch(() => {})));
+      return json(req, { ...stats, rooms, live, online: Object.values(rooms).reduce((a, b) => a + b, 0) });
+    }
+    // 관리자: 연등 하나 내리기 (모든 서버의 법당에서 바로 사라져요)
+    if (url.pathname === '/admin/wish-delete' && req.method === 'POST') {
+      const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
+      if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
+      const { id } = await req.json().catch(() => ({}));
+      await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/wish/delete', { method: 'POST', body: JSON.stringify({ id: String(id || '') }) });
+      const body = JSON.stringify({ id: String(id || '') });
+      await Promise.all(Array.from({ length: SERVERS }, (_, i) => env.ROOMS.get(env.ROOMS.idFromName(`hall-${i + 1}`)).fetch('https://room/unwish', { method: 'POST', body }).catch(() => {})));
+      return json(req, { ok: true });
     }
     // 신고 보내기: 누구나. 글 1000자, 사진 1장(약 1.3MB까지)
     if (url.pathname === '/report' && req.method === 'POST') {
@@ -182,9 +196,36 @@ export class Stats extends DurableObject {
     if (url.pathname === '/wish/add') {
       const add = [].concat(await req.json());
       const list = (await this.ctx.storage.get('wishes')) || [];
-      const fresh = add.filter((w) => w?.id && !list.some((x) => x.id === w.id));
-      if (fresh.length) await this.ctx.storage.put('wishes', [...list, ...fresh].slice(-60));
+      const fresh = add.filter((w) => w?.id && !list.some((x) => x.id === w.id)).map((w) => ({ at: Date.now(), ...w }));
+      if (fresh.length) {
+        await this.ctx.storage.put('wishes', [...list, ...fresh].slice(-60));
+        // 날짜별 연등 수 (예전 연등을 한꺼번에 옮길 때는 세지 않음)
+        if (add.length === 1) await this.bump('wishDays', kstDay(), 1);
+      }
       return Response.json({ added: fresh.map((w) => w.id) });
+    }
+    if (url.pathname === '/wish/delete') {
+      const { id } = await req.json();
+      const list = (await this.ctx.storage.get('wishes')) || [];
+      await this.ctx.storage.put('wishes', list.filter((w) => w.id !== id));
+      return Response.json({ ok: true });
+    }
+    // 동시접속 최고 기록: 방마다 인원이 바뀔 때 알려 오면 모두 더해서 오늘 최고 · 역대 최고를 남긴다
+    if (url.pathname === '/peak') {
+      const { room, n } = await req.json();
+      const live = (await this.ctx.storage.get('live')) || {};
+      if (n) live[room] = n; else delete live[room];
+      await this.ctx.storage.put('live', live);
+      const sum = Object.values(live).reduce((a, b) => a + b, 0), d = kstDay();
+      const peaks = (await this.ctx.storage.get('peaks')) || {};
+      if (sum > (peaks[d]?.n || 0)) {
+        peaks[d] = { n: sum, at: Date.now() };
+        for (const k of Object.keys(peaks).sort().slice(0, -90)) delete peaks[k];
+        await this.ctx.storage.put('peaks', peaks);
+      }
+      const best = (await this.ctx.storage.get('best')) || { n: 0 };
+      if (sum > best.n) await this.ctx.storage.put('best', { n: sum, at: Date.now() });
+      return Response.json({ ok: true });
     }
     if (url.pathname === '/wish/list') return Response.json({ wishes: (await this.ctx.storage.get('wishes')) || [] });
     if (url.pathname === '/report/list') {
@@ -205,9 +246,23 @@ export class Stats extends DurableObject {
       const keys = Object.keys(s.days).sort();
       for (const k of keys.slice(0, Math.max(0, keys.length - 90))) delete s.days[k];
       await this.ctx.storage.put('s', s);
+      // 시간대별 방문 (한국 시각 0~23시, 날짜마다 24칸)
+      const hours = (await this.ctx.storage.get('hours')) || {};
+      (hours[d] = hours[d] || Array(24).fill(0))[new Date(Date.now() + 9 * 3600e3).getUTCHours()]++;
+      for (const k of Object.keys(hours).sort().slice(0, -30)) delete hours[k];
+      await this.ctx.storage.put('hours', hours);
       return Response.json({ ok: true });
     }
-    return Response.json({ total: s.total, today: s.days[kstDay()] || 0, days: s.days });
+    const [hours, wishDays, peaks, best, wishes] = await Promise.all(['hours', 'wishDays', 'peaks', 'best', 'wishes'].map((k) => this.ctx.storage.get(k)));
+    return Response.json({ total: s.total, today: s.days[kstDay()] || 0, days: s.days, hours: hours || {}, wishDays: wishDays || {}, peaks: peaks || {}, best: best || { n: 0 }, wishes: wishes || [] });
+  }
+
+  // 날짜별 숫자 하나 올리기 (최근 90일만)
+  async bump(key, day, by) {
+    const m = (await this.ctx.storage.get(key)) || {};
+    m[day] = (m[day] || 0) + by;
+    for (const k of Object.keys(m).sort().slice(0, -90)) delete m[k];
+    await this.ctx.storage.put(key, m);
   }
 }
 
@@ -226,6 +281,20 @@ export class Room extends DurableObject {
   async fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === '/count') return Response.json({ n: this.members().length });
+    // 관리자 현황판: 지금 어디서(법당·마당…) 무엇을(합장·108배…) 하는지, 어떤 친구·캐릭터인지 숫자만
+    if (url.pathname === '/live') {
+      const out = { n: 0, scenes: {}, acts: {}, pets: {}, types: {} };
+      const add = (g, k) => { if (k) out[g][k] = (out[g][k] || 0) + 1; };
+      for (const { a } of this.members()) {
+        out.n++;
+        add('scenes', clean(a.st.s, 12)); add('acts', clean(a.st.a, 12));
+        add('pets', a.st.l?.pet && a.st.l.pet !== 'none' ? clean(a.st.l.pet, 16) : '');
+        add('types', clean(a.st.l?.type, 16));
+      }
+      return Response.json(out);
+    }
+    // 관리자가 내린 연등을 이 방 사람들 화면에서도 내린다
+    if (url.pathname === '/unwish') { this.broadcast({ t: 'unwish', d: await req.json() }); return Response.json({ ok: true }); }
     // 다른 서버에서 올라온 연등을 이 방 사람들에게
     if (url.pathname === '/push') { this.broadcast({ t: 'wish', id: 'relay', d: await req.json() }); return Response.json({ ok: true }); }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
@@ -253,6 +322,7 @@ export class Room extends DurableObject {
       }
     }
     server.serializeAttachment({ id, k, st, n: 0, w: Date.now(), room: url.searchParams.get('room') || '', lw });
+    if (st) this.reportPeak(url.searchParams.get('room') || '', this.members().length);   // 30초 안에 돌아온 분
     const gone = await this.ctx.storage.list({ prefix: 'gone:' });
     const peers = [...this.members().filter((m) => m.ws !== server && !m.a.quiet), ...[...gone.values()].map((g) => ({ a: g }))].map((m) => ({ id: m.a.id, st: m.a.st }));
     const stats = this.env.STATS.get(this.env.STATS.idFromName('stats'));
@@ -277,7 +347,9 @@ export class Room extends DurableObject {
     if (++a.n > 15) { ws.serializeAttachment(a); return; }
     let m; try { m = JSON.parse(msg); } catch { return; }
     if (m.t === 'st' && m.d && typeof m.d === 'object') {
+      const first = !a.st;
       a.st = m.d;
+      if (first) this.reportPeak(a.room, this.members().length + (this.members().some((x) => x.ws === ws) ? 0 : 1));
       ws.serializeAttachment(a);
       this.broadcast({ t: 'st', id: a.id, d: m.d }, ws);
     } else if (m.t === 'act' && m.d) {
@@ -305,6 +377,7 @@ export class Room extends DurableObject {
     const a = ws.deserializeAttachment();
     try { ws.close(code === 1005 ? 1000 : code, 'bye'); } catch {}
     if (!a?.st || a.quiet) return;
+    this.reportPeak(a.room, this.members().filter((m) => m.ws !== ws).length);
     // 바로 '나섰어요' 하지 않고 30초 기다린다. 그 안에 같은 탭이 다시 붙으면 없던 일
     if (a.k) {
       await this.ctx.storage.put(`gone:${a.k}`, { id: a.id, st: a.st, lw: a.lw || 0, at: Date.now() });
@@ -312,6 +385,12 @@ export class Room extends DurableObject {
       return;
     }
     this.broadcast({ t: 'leave', id: a.id }, ws);
+  }
+
+  // 인원이 바뀌면 동시접속 최고 기록 저장소(Stats)에 알린다
+  reportPeak(room, n) {
+    if (!room) return;
+    this.ctx.waitUntil?.(this.env.STATS.get(this.env.STATS.idFromName('stats')).fetch('https://stats/peak', { method: 'POST', body: JSON.stringify({ room, n }) }).catch(() => {}));
   }
 
   // 30초 지나도 돌아오지 않은 분만 '나섰어요'

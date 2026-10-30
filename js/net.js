@@ -146,6 +146,7 @@ export class Net {
       } else if (m.t === 'st') this.h.onState?.(m.id, m.d);
       else if (m.t === 'act') this.h.onAct?.(m.id, m.d);
       else if (m.t === 'wish') this.h.onWish?.(m.id, m.d, false);
+      else if (m.t === 'unwish') this.h.onUnwish?.(m.d?.id);
       else if (m.t === 'leave') this.h.onLeave?.(m.id);
       else if (m.t === 'full') { ws.onclose = null; ws.close(); this.h.onFull?.(n); }
     };
