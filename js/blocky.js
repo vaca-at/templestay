@@ -330,7 +330,8 @@ export const PETS = [
   { id: 'cloud', name: '구름이', cap: '몽실몽실 떠다니는 구름', hover: true, preview: 2 },
   { id: 'dragon', name: '아기 청룡', cap: '푸른 비늘, 꼬리 살랑', hover: true, preview: 2 },
   // 시안 친구 세 번째 10: 직장인이 좋아하는 사물 (?gallery=newpets3)
-  { id: 'laptop', name: '노트북', cap: '화면에 웃는 얼굴, 뚜껑 팔랑', preview: 3, size: 1.6 },
+  { id: 'laptop', name: '노트북', cap: '화면에 웃는 얼굴, 뚜껑 팔랑', size: 1.6 },
+  { id: 'tablet', name: '태블릿', cap: '펜으로 끄적끄적, 화면에 웃는 얼굴', size: 1.6 },
   { id: 'postit', name: '포스트잇', cap: '노란 메모지가 한 장씩 팔랑', preview: 3, size: 1.6 },
   { id: 'tumbler', name: '텀블러', cap: '빨대 꽂은 하늘색 텀블러', preview: 3, size: 1.6 },
   { id: 'stapler', name: '스테이플러', cap: '입을 딸깍딸깍', preview: 3, size: 1.6 },
@@ -886,6 +887,22 @@ export function buildPet(id) {
       for (const x of [-0.05, 0.05]) box(lid, '#bff0ff', 0.03, 0.04, 0.006, x, 0.14, 0.014, { emissive: '#bff0ff', emissiveIntensity: 0.8 });
       box(lid, '#bff0ff', 0.07, 0.015, 0.006, 0, 0.09, 0.014, { emissive: '#bff0ff', emissiveIntensity: 0.8 });
       anim.push((t) => { lid.rotation.x = -0.25 + Math.sin(t * 1.5) * 0.12; });
+      break;
+    }
+    case 'tablet': {
+      // 태블릿: 얇은 은색 판이 비스듬히 서 있고, 화면에 웃는 얼굴, 옆에 흰 펜이 끄적끄적
+      const body = new THREE.Group(); body.position.set(0, 0.02, 0); body.rotation.x = -0.25; g.add(body);
+      box(body, '#c9ccd2', 0.26, 0.34, 0.02, 0, 0.17, 0);
+      box(body, '#1d2330', 0.235, 0.315, 0.005, 0, 0.17, 0.011);
+      box(body, '#3a6fa8', 0.22, 0.3, 0.006, 0, 0.17, 0.013, { emissive: '#3a6fa8', emissiveIntensity: 0.45 });
+      for (const x of [-0.05, 0.05]) box(body, '#f4f8ff', 0.03, 0.04, 0.007, x, 0.2, 0.016, { emissive: '#f4f8ff', emissiveIntensity: 0.8 });
+      box(body, '#f4f8ff', 0.07, 0.015, 0.007, 0, 0.14, 0.016, { emissive: '#f4f8ff', emissiveIntensity: 0.8 });
+      box(body, '#6a7080', 0.02, 0.02, 0.006, 0.07, 0.3, -0.011);
+      box(g, '#8a909a', 0.2, 0.02, 0.1, 0, 0.01, -0.06);   // 받침
+      const pen = new THREE.Group(); pen.position.set(0.18, 0.12, 0.06); g.add(pen);
+      box(pen, '#f6f6f8', 0.02, 0.2, 0.02, 0, 0, 0);
+      box(pen, '#9aa0a8', 0.012, 0.025, 0.012, 0, -0.11, 0);
+      anim.push((t) => { pen.rotation.z = 0.35 + Math.sin(t * 6) * 0.08; pen.position.y = 0.12 + Math.sin(t * 3) * 0.015; });
       break;
     }
     case 'postit': {
