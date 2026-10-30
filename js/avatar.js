@@ -527,7 +527,7 @@ export class Avatar {
     this.armR.add(cloth);
     // 돌탑: 캐릭터 앞 바닥에 납작한 돌이 하나씩 쌓인다 (손에는 올릴 돌 하나)
     const cairn = new THREE.Group();
-    const stoneGeo = new THREE.DodecahedronGeometry(0.1, 0);
+    const stoneGeo = new THREE.DodecahedronGeometry(0.13, 0);
     [['#9a958c', 1.25], ['#b3ada2', 1.05], ['#8c877e', 0.9], ['#c2bcb0', 0.74], ['#a49e93', 0.58]].forEach(([c, k], i) => {
       const st = new THREE.Mesh(stoneGeo, mat(c));
       st.scale.set(k, k * 0.45, k * 0.9);
@@ -536,7 +536,7 @@ export class Avatar {
       st.castShadow = true;
       cairn.add(st);
     });
-    cairn.position.set(0.05, 0, 0.62);
+    cairn.position.set(-0.45, 0, 0.4);   // 오른손 쪽 앞 (친구는 왼쪽): 뒤에서 보는 카메라에도 보이게
     cairn.visible = false;
     this.group.add(cairn);
     const handStone = mesh(G.box, mat('#b3ada2'), 0.1, 0.05, 0.08, 0, this.handY - 0.05, 0.05);
