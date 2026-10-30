@@ -370,3 +370,41 @@ body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
 .menu-links { border-top-color: rgba(255, 255, 255, .15); color: rgba(255, 255, 255, .6); }
 #menu #hud-timer { display: flex; gap: 8px; align-items: baseline; justify-content: center; padding: 4px 0 6px; background: none; border: 0; }
 #menu #hud-timer small { color: rgba(255, 255, 255, .6); }
+
+/* 꾸미기: 한눈에 보이게. 미리보기는 작게, 단추는 이름만 (설명은 커서를 올리면 말풍선, js/tip.js) */
+.creator { width: min(900px, 100%); grid-template-columns: 240px 1fr; }
+.preview-wrap { min-height: 0; }
+.preview-wrap .hint, .group h3 small, .creator .chip .cap, #creator-done .cap, #nick-dice .cap { display: none; }
+.options { padding: 16px 18px; gap: 10px; max-height: 92vh; }
+.options .panel-head h2 { font-size: 20px; }
+.group h3 { margin: 0 0 5px; font-size: 12px; }
+.creator .chips { gap: 5px; }
+.creator .chip { padding: 6px 11px; font-size: 13.5px; border-radius: 10px; }
+.creator .swatch { width: 26px; height: 26px; }
+.field input { padding: 8px 12px; font-size: 15px; }
+#creator-done { padding: 11px 18px; }
+.creator > * { min-width: 0; }
+.creator .field { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+#nick-dice { white-space: nowrap; padding: 7px 12px; }
+.options { gap: 8px; }
+.creator .chip { padding: 5px 10px; }
+@media (max-width: 760px) { .creator { grid-template-columns: 1fr; grid-template-rows: 22vh 1fr; width: 100%; } }
+
+/* 휴대폰: 꾸미기 창이 화면 폭을 넘지 않게, 소리 · 메뉴는 늘 오른쪽 위 */
+#creator { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 760px) { .hud-top { flex-direction: row; } .hud-right { justify-content: flex-end; margin-left: auto; } }
+
+/* 글자 한 단계 작게 */
+#scene-bar button { font-size: 12.5px; padding: 7px 11px; }
+#actions .act { font-size: 13px; min-width: 54px; height: 44px; padding: 0 10px; }
+#context-btns .ctx { font-size: 12.5px; padding: 8px 15px; }
+#welcome b { font-size: 14.5px; }
+#pick-pop button, #welcome .small-btn { font-size: 12.5px; }
+#pick-pop > b { font-size: 11px; }
+.menu button { font-size: 13px; }
+.toast { font-size: 13px; }
+#tip { font-size: 11px; }
+.creator .chip { font-size: 12.5px; }
+.group h3 { font-size: 11px; }
+.options .panel-head h2 { font-size: 18px; }
+@media (max-width: 520px) { #actions { gap: 4px; } #actions .act { min-width: 46px; padding: 0 8px; } }
