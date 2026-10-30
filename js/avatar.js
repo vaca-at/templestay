@@ -538,7 +538,22 @@ export class Avatar {
     const moved = Math.hypot(pet.position.x - before.x, pet.position.z - before.z) / Math.max(dt, 1e-4);
     const t = performance.now() / 1000;
     const hover = pet.userData.hover;
-    pet.position.y = hover ? 0.95 + Math.sin(t * 2.4) * 0.06 : moved > 0.3 ? Math.abs(Math.sin(t * 11)) * 0.07 : 0;
+    // 주인이 발우공양을 하면 친구 앞에도 작은 밥그릇이 놓이고, 친구가 고개를 숙여 먹는다
+    const eating = this.action === 'eat' && this.seated;
+    if (eating && !pet.userData.bowl) {
+      const b = new THREE.Group();
+      b.add(mesh(new THREE.CylinderGeometry(0.13, 0.09, 0.09, 16), mat('#4a2418', { roughness: 0.3 })));
+      const rice = mesh(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat('#f6f2e6'), 1, 0.5, 1, 0, 0.04, 0);
+      b.add(rice);
+      b.position.set(0, 0.045, 0.55);
+      pet.add(b);
+      pet.userData.bowl = b;
+    }
+    if (pet.userData.bowl) pet.userData.bowl.visible = eating;
+    const inner = pet.children[0];
+    if (inner) inner.rotation.x = eating ? 0.18 + Math.max(0, Math.sin(t * 3.2)) * 0.22 : 0;
+    pet.position.y = eating ? (hover ? 0.3 : 0) : hover ? 0.95 + Math.sin(t * 2.4) * 0.06 : moved > 0.3 ? Math.abs(Math.sin(t * 11)) * 0.07 : 0;
+    if (pet.userData.bowl) pet.userData.bowl.position.y = 0.045 - pet.position.y;
     const want = moved > 0.3 ? Math.atan2(pet.position.x - before.x, pet.position.z - before.z) : ry;
     const diff = Math.atan2(Math.sin(want - pet.rotation.y), Math.cos(want - pet.rotation.y));
     pet.rotation.y += diff * Math.min(1, dt * 6);

@@ -386,3 +386,15 @@ body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
   #context-btns { top: auto; transform: none; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 66px); }
   #context-btns .ctx { width: 96px; }
 }
+
+/* 발우공양 10분 시계와 다 먹은 뒤 묻는 창 */
+#meal-timer { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); border-radius: 16px; padding: 8px 16px; display: flex; align-items: baseline; gap: 8px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; font-family: var(--display); font-variant-numeric: tabular-nums; }
+#meal-timer b { font-size: 22px; }
+#meal-timer small { font-size: 12px; opacity: .8; }
+#meal-done { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 206px); width: min(400px, calc(100% - 24px)); border-radius: 20px; padding: 14px 18px; display: grid; gap: 6px; justify-items: center; text-align: center; background: rgba(18, 16, 15, .62); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; font-family: var(--display); }
+#meal-done b { font-size: 16px; }
+#meal-done p { margin: 0; font-size: 13px; opacity: .85; line-height: 1.5; }
+#meal-done .row { justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+#meal-done .small-btn { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px; padding: 7px 12px; font-weight: 700; font-family: var(--display); }
+#meal-done .small-btn:hover { background: rgba(255, 255, 255, .2); }
+#meal-timer[hidden], #meal-done[hidden] { display: none; }

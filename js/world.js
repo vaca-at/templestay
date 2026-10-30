@@ -1171,24 +1171,29 @@ export function buildMealHall(loc) {
   const n = rows.length * xs.length;
   const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.1, 1.0), mat('#5d5a50'), n);
   const bowl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.1, 0.11, 16), mat('#4a2418', { roughness: 0.3 }), n * 4);
-  const rice = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 14), mat('#f4efe2'), n * 4);
-  const M = new THREE.Matrix4();
-  let bi = 0;
+  // 발우 네 그릇: 흰 밥, 맑은 국, 나물 두 가지 (초록 시금치나물 · 노란 콩나물, 빨간 반찬은 없음)
+  const mound = new THREE.InstancedMesh(new THREE.SphereGeometry(0.12, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 0.8 }), n * 3);
+  const soup = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 0.01, 18), new THREE.MeshStandardMaterial({ color: '#e6d6a6', roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.85 }), n);
+  const FOOD = [['#f6f2e6', 0.55], [null], ['#5f8f45', 0.35], ['#e3d38c', 0.38]];   // [색, 높이 비율], null 은 국
+  const M = new THREE.Matrix4(), S = new THREE.Vector3(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), col = new THREE.Color();
+  let bi = 0, mi = 0, si = 0;
   for (const [z, rot] of rows) for (const x of xs) {
     const id = seats.length;
     M.makeTranslation(x, 0.05, z); cushion.setMatrixAt(id, M);
     seats.push({ id, pos: new THREE.Vector3(x, 0, z), rot, y: 0.1 });
     const dir = rot === 0 ? 1 : -1;
-    for (const [dx, dz] of [[-0.18, 0.62], [0.18, 0.62], [-0.18, 0.95], [0.18, 0.95]]) {
-      M.makeTranslation(x + dx, 0.07, z + dz * dir); bowl.setMatrixAt(bi, M);
-      M.makeTranslation(x + dx, 0.125, z + dz * dir); rice.setMatrixAt(bi, M);
-      bi++;
-    }
+    [[-0.18, 0.62], [0.18, 0.62], [-0.18, 0.95], [0.18, 0.95]].forEach(([dx, dz], k) => {
+      M.makeTranslation(x + dx, 0.07, z + dz * dir); bowl.setMatrixAt(bi++, M);
+      const [c, hy] = FOOD[k];
+      if (!c) { M.makeTranslation(x + dx, 0.115, z + dz * dir); soup.setMatrixAt(si++, M); return; }
+      M.compose(P.set(x + dx, 0.11, z + dz * dir), Q, S.set(1, hy, 1)); mound.setMatrixAt(mi, M);
+      mound.setColorAt(mi++, col.set(c));
+    });
   }
   cushion.userData.seats = 'meal';
   cushion.receiveShadow = true;
   bowl.castShadow = true;
-  g.add(cushion, bowl, rice);
+  g.add(cushion, bowl, mound, soup);
   // 마주 보는 두 줄 사이에 흰 천
   for (const z of [-4.4, 4.0]) {
     const cloth = new THREE.Mesh(new THREE.BoxGeometry(23, 0.02, 1.0), mat('#f3efe6'));
