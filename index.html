@@ -60,6 +60,7 @@
       <label class="field" for="nick">법명(닉네임)
         <span class="row"><input id="nick" maxlength="10" autocomplete="off"><button id="nick-dice" class="ghost small" type="button"><span class="lbl">다른 이름</span><small class="cap">무작위로 새 법명</small></button></span>
       </label>
+      <div class="group"><h3>체형</h3><div id="opt-body" class="bodies"></div></div>
       <div class="group"><h3>나</h3><div id="opt-gender" class="chips"></div></div>
       <div class="group"><h3>캐릭터</h3><div id="opt-type" class="chips"></div></div>
       <div class="group"><h3>피부색</h3><div id="opt-skin" class="swatches"></div></div>
@@ -108,7 +109,7 @@
     <button data-menu="record"><span class="lbl">내 기록</span><small class="cap">이 기기에 남은 하루 기록</small></button>
     <button data-menu="relic"><span class="lbl">불상·탑 고르기</span><small class="cap">법당 불상 6점, 마당 탑 5기</small></button>
     <button data-menu="photo"><span class="lbl">사진 찍기</span><small class="cap">버튼을 숨기고 지금 화면을 사진으로</small></button>
-    <button data-menu="music"><span class="lbl">법당 음악</span><small class="cap">반야심경·절 염불 녹음과 범종·싱잉볼·풍경</small></button>
+    <button data-menu="music"><span class="lbl">법당 음악</span><small class="cap">싱잉볼·절 염불 녹음·범종·풍경</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
     <button data-menu="credit"><span class="lbl">자료 출처</span><small class="cap">불상 3D 스캔 출처</small></button>
     <button data-menu="report"><span class="lbl">신고하기</span><small class="cap">욕설·불쾌한 법명이나 소원을 알려 주세요</small></button>
@@ -314,7 +315,7 @@
 <div id="music-modal" class="modal" hidden>
   <div class="sheet">
     <header class="panel-head"><h2>법당 음악</h2><button class="icon-btn" data-close="music-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
-    <p class="sub">1~4번은 실제 절에서 녹음한 스님 염불이에요. 1번은 반야심경 → 선운사 → 각원사 순서로 쉬지 않고 이어 틀어요(출처는 메뉴의 자료 출처). 나머지는 녹음 없이 이 사이트에서 직접 만든 소리예요.</p>
+    <p class="sub">2~5번은 실제 절에서 녹음한 스님 염불이에요. 2번은 반야심경 → 선운사 → 각원사 순서로 쉬지 않고 이어 틀어요(출처는 메뉴의 자료 출처). 싱잉볼·범종·풍경은 이 사이트에서 직접 만든 소리예요. 소리를 끄려면 위쪽 소리 단추를 눌러요.</p>
     <div id="music-list" class="chips"></div>
   </div>
 </div>

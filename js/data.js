@@ -174,7 +174,19 @@ export function isOldAutoName(name) {
 
 export const GENDERS = [{ id: 'f', name: '여자', cap: '긴 웨이브 머리' }, { id: 'm', name: '남자', cap: '짧은 머리' }];
 
+// 체형: 얼굴은 같고 키·등신·체격만 달라요. k 전체 크기 · leg 다리 길이 · th 몸통 높이 · tw 어깨 너비 · head 머리 크기 · limb 팔다리 굵기
+export const BODIES = [
+  { id: 'base', label: '보통', k: 1, leg: 1, th: 1, tw: 1, head: 1, limb: 1 },
+  { id: 'petite', label: '아담한 키', k: 0.95, leg: 0.76, th: 0.92, tw: 1, head: 1, limb: 1 },
+  { id: 'sturdy', label: '듬직한 체격', k: 1, leg: 1, th: 1, tw: 1.28, head: 1, limb: 1.25 },
+  { id: 'teen', label: '조금 작은 키', k: 0.9, leg: 0.9, th: 0.9, tw: 0.92, head: 1.03, limb: 0.92 },
+  { id: 'child', label: '작은 키', k: 0.82, leg: 0.62, th: 0.72, tw: 0.86, head: 1.12, limb: 0.86 },
+  { id: 'tiny', label: '아주 작은 키', k: 0.72, leg: 0.48, th: 0.58, tw: 0.82, head: 1.16, limb: 0.82 },
+];
+export const bodyOf = (look) => BODIES.find((b) => b.id === look?.body) || BODIES[0];
+
 export const defaultLook = () => ({
+  body: 'base',
   type: 'beige',
   gender: 'f',
   pet: 'claude',

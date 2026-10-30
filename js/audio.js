@@ -65,50 +65,20 @@ function startAmbient() {
 }
 function stopAmbient() { try { ambient?.src.stop(); } catch {} ambient = null; }
 
-// ───────── 법당 음악: 실제 녹음 세 곡 + 합성 네 곡 ─────────
+// ───────── 법당 음악: 실제 녹음 세 곡 + 합성 세 곡 ─────────
 // 녹음 파일 없이 여기서 합성해요 (저작권 걱정 없는 소리). 가락은 모두 이 사이트에서 새로 지었어요.
 // 곡마다 step(st, at, out) 이 한 박을 out 에 예약하고 다음 박까지 남은 초를 돌려줘요.
 // src 가 있는 곡은 실제 녹음 파일을 처음 고를 때 한 번 받아서 끝없이 이어 틀어요.
-// list 가 있는 곡은 그 녹음들을 차례로 이어 틀어요 (기본 곡)
+// list 가 있는 곡은 그 녹음들을 차례로 이어 틀어요. 맨 앞 싱잉볼이 기본 곡
 export const TRACKS = [
+  { id: 'bowl', name: '싱잉볼 명상', cap: '천천히 울리는 싱잉볼' },
   { id: 'all', name: '염불 이어 듣기', cap: '반야심경 → 선운사 → 각원사', list: ['banya', 'seonunsa', 'gakwonsa'] },
   { id: 'banya', name: '반야심경 염불', cap: '스님 염불과 목탁 녹음', src: 'assets/audio/banya-yeombul.m4a' },
   { id: 'seonunsa', name: '선운사 염불', cap: '새소리·샘물 속 염불과 목탁', src: 'assets/audio/seonunsa-yeombul.m4a' },
   { id: 'gakwonsa', name: '각원사 법당 염불', cap: '실제 법당 안 녹음', src: 'assets/audio/gakwonsa-chant.m4a' },
-  { id: 'yeombul', name: '나무아미타불', cap: '목탁에 맞춘 염불 가락' },
   { id: 'jong', name: '범종', cap: '길게 울리는 새벽 범종' },
-  { id: 'bowl', name: '싱잉볼 명상', cap: '천천히 울리는 싱잉볼' },
   { id: 'wind', name: '산사 풍경', cap: '바람과 처마 끝 풍경' },
 ];
-
-// 사람 목소리 비슷하게: 톱니파를 모음 소리 대역(포먼트)으로 거른다
-const FORMANT = { a: [730, 1090, 2440], e: [530, 1840, 2480], eo: [600, 1000, 2400], o: [450, 800, 2830], u: [320, 800, 2240], eu: [350, 1400, 2400], i: [280, 2250, 2900] };
-
-function voice(at, freq, dur, v, gain, out, glide = 1) {
-  const c = out.context;
-  const o = c.createOscillator();
-  o.type = 'sawtooth';
-  o.frequency.setValueAtTime(freq, at);
-  if (glide !== 1) o.frequency.linearRampToValueAtTime(freq * glide, at + dur);
-  const lfo = c.createOscillator(), lg = c.createGain();
-  lfo.frequency.value = 5; lg.gain.value = freq * 0.006;
-  lfo.connect(lg).connect(o.frequency);
-  const sum = c.createGain(), env = c.createGain();
-  for (const [f, q, g] of FORMANT[v].map((f, i) => [f, [5, 8, 10][i], [1.6, 0.8, 0.3][i]])) {
-    const b = c.createBiquadFilter(), bg = c.createGain();
-    b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; bg.gain.value = g;
-    o.connect(b).connect(bg).connect(sum);
-  }
-  const lp = c.createBiquadFilter(), lpg = c.createGain();
-  lp.type = 'lowpass'; lp.frequency.value = 350; lpg.gain.value = 0.25;
-  o.connect(lp).connect(lpg).connect(sum);
-  env.gain.setValueAtTime(0, at);
-  env.gain.linearRampToValueAtTime(gain, at + 0.05);
-  env.gain.setValueAtTime(gain, at + dur * 0.7);
-  env.gain.linearRampToValueAtTime(0, at + dur);
-  sum.connect(env).connect(out);
-  o.start(at); lfo.start(at); o.stop(at + dur + 0.05); lfo.stop(at + dur + 0.05);
-}
 
 // 울림 하나: [배수, 세기, 길이] 여러 개를 겹친다
 function ring(at, base, parts, gain, out, attack = 0.004) {
@@ -124,7 +94,6 @@ function ring(at, base, parts, gain, out, attack = 0.004) {
   }
 }
 
-const hit = (at, vol, out) => ring(at, 520, [[1, 0.5, 0.18], [2, 0.15, 0.08], [0.5, 0.2, 0.12]], vol, out, 0.002);
 
 function noiseBuf(c, sec) {
   const b = c.createBuffer(1, c.sampleRate * sec, c.sampleRate), d = b.getChannelData(0);
@@ -133,19 +102,10 @@ function noiseBuf(c, sec) {
   return b;
 }
 
-// 나무아미타불: 여섯 글자 + 두 박 쉼, 박마다 목탁
-const NAMU = [['a', 0], ['u', 0], ['a', 3], ['i', 3], ['a', 2], ['u', 0]];
-
 // 범종 울림. 1과 1.004 가 겹쳐 '맥놀이'로 웅웅 울려요
 const JONG = [[0.5, 0.5, 26], [1, 0.45, 20], [1.004, 0.4, 20], [1.19, 0.18, 12], [1.51, 0.14, 9], [2, 0.16, 8], [2.52, 0.08, 6], [2.68, 0.06, 5], [3.01, 0.05, 4]];
 
 const STEPS = {
-  yeombul(st, at, out) {
-    const k = (st.i = (st.i ?? -1) + 1) % 8;
-    hit(at, k === 0 ? 1 : 0.75, out);
-    if (k < 6) { const [v, s] = NAMU[k]; voice(at + 0.02, 123 * 2 ** (s / 12), k === 5 ? 1.2 : 0.58, v, 0.5, out, k === 5 ? 0.96 : 1); }
-    return 0.62;
-  },
   jong(st, at, out) {
     // 처음 한 번은 바로, 그다음부터 14초마다
     ring(at, 128, JONG, 0.7, out, 0.01);

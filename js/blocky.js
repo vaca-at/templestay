@@ -161,6 +161,19 @@ function buildHair(head, style, H, S, hy, fz) {
   }
 }
 
+// 체형 비율 입히기: 다리 길이 · 몸통 · 어깨 너비 · 머리 크기 (머리는 몸통 비율을 되돌려 따로 맞춰요)
+export function applyBody(av, B) {
+  const legY = 0.46;
+  for (const leg of [av.legL, av.legR]) { leg.position.y = legY * B.leg; leg.scale.set(B.limb, B.leg, B.limb); }
+  av.hips.position.y = legY * B.leg;
+  av.hips.scale.set(B.tw, B.th, B.tw);
+  for (const arm of [av.armL, av.armR]) arm.scale.set(B.limb / B.tw, 1, B.limb / B.tw);
+  av.head.scale.set(B.head / B.tw, B.head / B.th, B.head / B.tw);
+  av.body.scale.setScalar(B.k);
+  av.torsoY = B.th;
+  av.sitK = B.leg * B.k;
+}
+
 export function buildBlock(av, body, look, outfit, skinColor) {
   const P = PRESETS[look.type] || PRESETS.beige;
   const own = outfit.style === 'own';

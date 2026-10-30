@@ -454,3 +454,10 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 #btn-sound[aria-pressed="false"] .on { display: none; }
 #btn-sound[aria-pressed="false"] .off { display: inline; stroke: #ff8a7a; }
 #btn-sound[aria-pressed="false"] .spk { opacity: .7; }
+
+/* 체형 고르기: 글자 없이 실루엣 그림 단추 */
+.bodies { display: flex; gap: 6px; flex-wrap: wrap; }
+.body-pick { width: 44px; height: 54px; padding: 2px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: grid; place-items: end center; cursor: pointer; }
+.body-pick svg { width: 38px; height: 48px; fill: #8f877d; }
+.body-pick[aria-pressed="true"] { border-color: var(--jade); box-shadow: 0 0 0 2px var(--jade); background: #eef6f2; }
+.body-pick[aria-pressed="true"] svg { fill: var(--jade); }

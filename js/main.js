@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, season, inSeason, BUDDHAS, randomName, defaultLook, isOldAutoName,
+  SCENES, SCENE_ACTIONS, SCENE_ACTION_NAMES, BODIES, season, inSeason, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
@@ -966,6 +966,7 @@ function renderPreview(dt) {
 
 function renderCreatorOptions() {
   const L = draft.look;
+  $('#opt-body').innerHTML = BODIES.map((b) => `<button class="body-pick" data-body="${b.id}" aria-pressed="${(L.body || 'base') === b.id}" aria-label="${b.label}" title="${b.label}">${bodySvg(b)}</button>`).join('');
   $('#opt-gender').innerHTML = GENDERS.map((g) => `<button class="chip" data-gender="${g.id}" aria-pressed="${L.gender === g.id}"><span class="lbl">${g.name}</span><small class="cap">${g.cap}</small></button>`).join('');
   $('#opt-type').innerHTML = CHAR_TYPES.map((t) => `<button class="chip" data-type="${t.id}" aria-pressed="${L.type === t.id}"><span class="lbl">${t.name}</span><small class="cap">${t.desc}</small></button>`).join('');
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
@@ -1271,7 +1272,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.scene) { document.body.classList.remove('show-scenes'); stopWalk(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
   if (t.dataset.place) { $('#places').hidden = true; return changeDesign(t.dataset.place); }
   if (t.dataset.server) { $('#server-modal').hidden = true; return switchServer(+t.dataset.server); }
-  const pick = ['type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
+  const pick = ['body', 'type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
   if (pick && t.closest('#creator')) { draft.look[pick] = t.dataset[pick]; renderCreatorOptions(); preview.avatar.setLook(draft.look, 'out'); return; }
   if (t.dataset.c) { wishColor = t.dataset.c; return renderWishForm(); }
   if (t.dataset.music != null) return pickMusic(t.dataset.music);
@@ -1331,20 +1332,32 @@ $('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 �
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
-// 법당 음악: 끄기 + 실제 녹음 세 곡 + 합성 네 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
-setMusic(store.get('music', 'all'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
+// 법당 음악: 실제 녹음 세 곡 + 합성 세 곡 (끄기는 위쪽 소리 단추). 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
+// 처음 온 분(또는 예전에 끄기·지운 곡을 골랐던 분)은 1번 싱잉볼로 시작. 소리를 끄려면 위쪽 소리 단추
+{ const m = store.get('music'); setMusic(TRACKS.some((t) => t.id === m) ? m : 'bowl'); }
+// 체형 단추 그림: 글자 없이 실루엣만 (같은 바닥선, 같은 축척이라 키 차이가 보여요)
+function bodySvg(B) {
+  const u = 26, base = 58, leg = 0.46 * B.leg * B.k * u, th = 0.56 * B.th * B.k * u, hd = 0.52 * B.head * B.k * u, tw = 0.5 * B.tw * B.k * u;
+  const lw = 0.2 * B.limb * B.k * u, aw = 0.15 * B.limb * B.k * u, cx = 24;
+  const ty = base - leg - th, hy = ty - hd - 0.5;
+  return `<svg viewBox="0 0 48 60" aria-hidden="true">
+    <rect x="${cx - tw * 0.24 - lw / 2}" y="${base - leg}" width="${lw}" height="${leg}" rx="1"/><rect x="${cx + tw * 0.24 - lw / 2}" y="${base - leg}" width="${lw}" height="${leg}" rx="1"/>
+    <rect x="${cx - tw / 2}" y="${ty}" width="${tw}" height="${th}" rx="1.5"/>
+    <rect x="${cx - tw / 2 - aw - 0.4}" y="${ty + 0.5}" width="${aw}" height="${th * 0.82}" rx="1"/><rect x="${cx + tw / 2 + 0.4}" y="${ty + 0.5}" width="${aw}" height="${th * 0.82}" rx="1"/>
+    <rect x="${cx - hd / 2}" y="${hy}" width="${hd}" height="${hd}" rx="2"/></svg>`;
+}
+
 // 내 옆 친구 순서: 동물 → AI → 사물 → 할로윈 → 없음
 const PET_GROUP = { ai: 1, claude: 1, drone: 1, coffee: 2, icecoffee: 2, book: 2, laptop: 2, tablet: 2, none: 4 };
 const petGroup = (p) => (p.season ? 3 : PET_GROUP[p.id] ?? 0);
 
 function renderMusic() {
-  const list = [{ id: '', name: '음악 끄기', cap: '바람 소리와 동작 소리만' }, ...TRACKS];
-  $('#music-list').innerHTML = list.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${(music() || '') === t.id}"><span class="lbl">${i ? `${i}. ` : ''}${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');
+  $('#music-list').innerHTML = TRACKS.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${music() === t.id}"><span class="lbl">${i + 1}. ${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');
 }
 function pickMusic(id) {
-  store.set('music', id || null);
-  if (id && !sound.on) { setSound(true); store.set('muted', false); syncSoundBtn(); }
-  setMusic(id || null);
+  store.set('music', id);
+  if (!sound.on) { setSound(true); store.set('muted', false); syncSoundBtn(); }
+  setMusic(id);
   renderMusic();
 }
 
@@ -1443,6 +1456,7 @@ function gallery(kind) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 20), new THREE.MeshStandardMaterial({ color: '#e6d9c2' }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
+    : kind === 'bodies' ? BODIES.flatMap((b) => ['f', 'm'].map((g) => ({ look: { ...defaultLook(), body: b.id, type: 'moral', gender: g, pet: 'none' } })))
     : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
     : kind.startsWith('newpets') ? PETS.filter((p) => p.preview === ({ newpets: true, newpets2: 2, newpets3: 3 }[kind])).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))

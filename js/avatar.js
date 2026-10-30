@@ -2,8 +2,8 @@
 // 모든 부품은 기본 도형으로 만들고, 관절(hips, head, 팔다리) 회전값으로 동작을 표현한다.
 // 캐릭터는 +z 방향을 바라본다.
 import * as THREE from 'three';
-import { OUTFITS, SKIN_TONES, dressFor } from './data.js';
-import { buildBlock, buildPet, bakeBlock, PRESETS } from './blocky.js';
+import { OUTFITS, SKIN_TONES, dressFor, bodyOf } from './data.js';
+import { buildBlock, buildPet, bakeBlock, applyBody, PRESETS } from './blocky.js';
 
 const FUR = ['#c27a45', '#a9643a', '#8a5a3c', '#d9a06b', '#6e4a35'];
 const RABBIT_FUR = ['#f3efe8', '#e2d6c6', '#cbbba6', '#a99a88', '#8a7d70'];
@@ -192,7 +192,7 @@ export class Avatar {
     if (this.tag) this.group.remove(this.tag);
     this.name = name;
     this.tag = nameTag(name, this.mine);
-    this.tag.position.y = 2.05;
+    this.tag.position.y = this.tagY ?? 2.05;
     this.group.add(this.tag);
   }
 
@@ -225,7 +225,12 @@ export class Avatar {
       this.petFresh = true;
     }
 
-    if (isBlock) buildBlock(this, body, look, outfit, look.skin);
+    this.torsoY = 1; this.sitK = 1;
+    // 이름표는 키에 맞춰 머리 위로
+    const B = bodyOf(look);
+    this.tagY = isBlock ? B.k * (0.46 * B.leg + 0.56 * B.th + 0.58 * B.head) + 0.45 : 2.05;
+    if (this.tag) this.tag.position.y = this.tagY;
+    if (isBlock) { buildBlock(this, body, look, outfit, look.skin); applyBody(this, B); }
     else {
 
     // 다리 (엉덩이 관절에 매달림)
@@ -564,9 +569,9 @@ export class Avatar {
 
     const bob = !this.seated && this.speed > 0.05 ? Math.abs(Math.sin(this.walkPhase)) * (this.running ? 0.09 : 0.04) : 0;
     const breathe = Math.sin(performance.now() / 900) * 0.006;
-    this.body.position.y = p.y + bob;
+    this.body.position.y = p.y * this.sitK + bob;   // 다리가 짧은 체형은 앉을 때 덜 내려가요
     this.hips.rotation.x = p.hip;
-    this.hips.scale.y = 1 + breathe;
+    this.hips.scale.y = this.torsoY * (1 + breathe);
     this.head.rotation.x = p.head;
     this.armL.rotation.set(p.aL[0], 0, p.aL[1]);
     this.armR.rotation.set(p.aR[0], 0, p.aR[1]);
