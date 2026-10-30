@@ -1477,6 +1477,7 @@ async function demo(which) {
   if (cam) {
     const [x, y, z, tx, ty, tz] = cam.split(',').map(Number);
     camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update();
+    camTurn = null;   // 확인용 카메라: 앉으며 도는 카메라에 덮이지 않게
   }
   document.querySelectorAll('.toast').forEach((t) => t.remove());
   if (params.get('toast')) toast(params.get('toast'));

@@ -1185,29 +1185,63 @@ export function buildMealHall(loc) {
   const n = rows.length * xs.length;
   const cushion = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.1, 1.0), mat('#5d5a50'), n);
   const bowl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.1, 0.11, 16), mat('#4a2418', { roughness: 0.3 }), n * 4);
-  // 발우 네 그릇: 흰 밥, 맑은 국, 나물 두 가지 (초록 시금치나물 · 노란 콩나물, 빨간 반찬은 없음)
-  const mound = new THREE.InstancedMesh(new THREE.SphereGeometry(0.12, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 0.8 }), n * 3);
-  const soup = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 0.01, 18), new THREE.MeshStandardMaterial({ color: '#e6d6a6', roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.85 }), n);
-  const FOOD = [['#f6f2e6', 0.55], [null], ['#5f8f45', 0.35], ['#e3d38c', 0.38]];   // [색, 높이 비율], null 은 국
-  const M = new THREE.Matrix4(), S = new THREE.Vector3(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), col = new THREE.Color();
-  let bi = 0, mi = 0, si = 0;
+  // 발우 네 그릇: 쌀밥 · 맑은 국 · 시금치나물 · 도라지무침 (빨간 반찬은 없음)
+  // 밥: 소복한 흰 밥에 밥알 결 그림
+  const riceTex = canvasTex(128, 128, (cg, w, h) => {
+    cg.fillStyle = '#f4efe2'; cg.fillRect(0, 0, w, h);
+    const r = rng(11);
+    for (let k = 0; k < 260; k++) { cg.fillStyle = r() < 0.5 ? '#fffdf6' : '#e6dfcc'; cg.beginPath(); cg.ellipse(r() * w, r() * h, 3.2, 1.6, r() * Math.PI, 0, Math.PI * 2); cg.fill(); }
+  });
+  const rice = new THREE.InstancedMesh(new THREE.SphereGeometry(0.125, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ map: riceTex, roughness: 0.85 }), n);
+  // 맑은 국: 옅은 맑은 국물 + 두부 · 파 · 미역 건더기
+  const soup = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 0.01, 18), new THREE.MeshStandardMaterial({ color: '#f3e9c8', emissive: '#4a3e22', roughness: 0.08, metalness: 0.05, transparent: true, opacity: 0.88 }), n);
+  const tofu = new THREE.InstancedMesh(new THREE.BoxGeometry(0.045, 0.03, 0.045), mat('#f7f3e8'), n * 3);
+  const scallion = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.018, 0.018, 0.01, 8), mat('#7cc04f'), n * 5);
+  const seaweed = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.004, 0.035), mat('#2f4a2c', { roughness: 0.4 }), n * 2);
+  // 나물 · 도라지: 낮은 무더기 위에 길쭉한 가닥을 엇갈려 쌓는다
+  const heap = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 0.8 }), n * 2);
+  const NAMUL = 9, DORAJI = 9;
+  const namul = new THREE.InstancedMesh(new THREE.BoxGeometry(0.17, 0.014, 0.02), mat('#4f8a3a', { roughness: 0.6 }), n * NAMUL);
+  const doraji = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.016, 0.024), mat('#e8dcc0', { roughness: 0.7 }), n * DORAJI);
+  const sesame = new THREE.InstancedMesh(new THREE.BoxGeometry(0.008, 0.004, 0.012), mat('#f6ecc8'), n * 6);
+  const M = new THREE.Matrix4(), S = new THREE.Vector3(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), E = new THREE.Euler(), col = new THREE.Color();
+  const one = new THREE.Vector3(1, 1, 1);
+  const put = (im, i, x, y, z, ry = 0, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1) => { M.compose(P.set(x, y, z), Q.setFromEuler(E.set(rx, ry, rz)), S.set(sx, sy, sz)); im.setMatrixAt(i, M); };
+  const r = rng(29);
+  let bi = 0, hi = 0, ni = 0, di = 0, ti = 0, ci = 0, wi = 0, ei = 0;
   for (const [z, rot] of rows) for (const x of xs) {
     const id = seats.length;
     M.makeTranslation(x, 0.05, z); cushion.setMatrixAt(id, M);
     seats.push({ id, pos: new THREE.Vector3(x, 0, z), rot, y: 0.1 });
     const dir = rot === 0 ? 1 : -1;
     [[-0.18, 0.62], [0.18, 0.62], [-0.18, 0.95], [0.18, 0.95]].forEach(([dx, dz], k) => {
-      M.makeTranslation(x + dx, 0.07, z + dz * dir); bowl.setMatrixAt(bi++, M);
-      const [c, hy] = FOOD[k];
-      if (!c) { M.makeTranslation(x + dx, 0.115, z + dz * dir); soup.setMatrixAt(si++, M); return; }
-      M.compose(P.set(x + dx, 0.11, z + dz * dir), Q, S.set(1, hy, 1)); mound.setMatrixAt(mi, M);
-      mound.setColorAt(mi++, col.set(c));
+      const bx = x + dx, bz = z + dz * dir;
+      M.makeTranslation(bx, 0.07, bz); bowl.setMatrixAt(bi++, M);
+      if (k === 0) put(rice, id, bx, 0.11, bz, r() * 6, 0, 0, 1, 0.6, 1);
+      if (k === 1) {
+        put(soup, id, bx, 0.128, bz);   // 그릇은 막힌 원통이라 국물은 테두리 높이에
+        for (let t = 0; t < 3; t++) { const a = r() * 6.28, d = 0.03 + r() * 0.06; put(tofu, ti++, bx + Math.cos(a) * d, 0.136, bz + Math.sin(a) * d, r() * 3); }
+        for (let t = 0; t < 5; t++) { const a = r() * 6.28, d = r() * 0.1; put(scallion, ci++, bx + Math.cos(a) * d, 0.135, bz + Math.sin(a) * d); }
+        for (let t = 0; t < 2; t++) { const a = r() * 6.28, d = 0.02 + r() * 0.07; put(seaweed, wi++, bx + Math.cos(a) * d, 0.134, bz + Math.sin(a) * d, r() * 3, 0, 0.1); }
+      }
+      if (k >= 2) {
+        const greens = k === 2;
+        put(heap, hi, bx, 0.105, bz, 0, 0, 0, 0.95, 0.32, 0.95); heap.setColorAt(hi++, col.set(greens ? '#3f7330' : '#d9cba8'));
+        const im = greens ? namul : doraji, cnt = greens ? NAMUL : DORAJI;
+        for (let t = 0; t < cnt; t++) {
+          const a = r() * 6.28, d = r() * 0.04, y = 0.13 + (t / cnt) * 0.03;
+          put(im, greens ? ni++ : di++, bx + Math.cos(a) * d, y, bz + Math.sin(a) * d, r() * Math.PI, (r() - 0.5) * 0.4, (r() - 0.5) * 0.5, 0.8 + r() * 0.35);
+        }
+        if (greens) for (let t = 0; t < 3; t++) put(sesame, ei++, bx + (r() - 0.5) * 0.1, 0.165, bz + (r() - 0.5) * 0.1, r() * 3);
+        else for (let t = 0; t < 3; t++) put(sesame, ei++, bx + (r() - 0.5) * 0.1, 0.165, bz + (r() - 0.5) * 0.1, r() * 3);
+      }
     });
   }
+  for (const im of [namul, doraji, rice, tofu]) im.castShadow = true;
   cushion.userData.seats = 'meal';
   cushion.receiveShadow = true;
   bowl.castShadow = true;
-  g.add(cushion, bowl, mound, soup);
+  g.add(cushion, bowl, rice, soup, tofu, scallion, seaweed, heap, namul, doraji, sesame);
   // 마주 보는 두 줄 사이에 흰 천
   for (const z of [-4.4, 4.0]) {
     const cloth = new THREE.Mesh(new THREE.BoxGeometry(23, 0.02, 1.0), mat('#f3efe6'));
