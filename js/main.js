@@ -101,6 +101,7 @@ const net = new Net({
   onState: handleRemoteState,
   onAct: (peer, d) => {
     const r = S.remotes.get(peer);
+    if (d.a === 'jump') { if (r) r.jumpT = 0; return; }
     const def = ACTIONS.find((a) => a.id === d.a);
     if (r && def && !def.auto && d.on !== false && r.st.s === S.scene) toast(`${r.st.n}님이 ${def.verb}`);
   },
@@ -738,6 +739,7 @@ function updateHud() {
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
   $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
+  $('#jump-btn').hidden = !canRun(); // 휴대폰 점프 단추: 점프할 수 있는 곳(마당·내 방)에서만
   $('#btn-walk').hidden = S.scene !== 'out';
   $('#btn-scroll').hidden = S.scene !== 'room';
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
@@ -1051,6 +1053,23 @@ const SPEED = 2.7;        // 걷는 속도
 const SEAT_SPEED = 1.8;   // 자리로 걸어갈 때는 더 천천히
 const RUN_SPEED = 5.4;    // 뛰는 속도: 마당과 내 방에서만 (법당·공양간에서는 걷는다)
 const canRun = () => S.scene === 'out' || S.scene === 'room';
+
+// 점프: 스페이스 (휴대폰은 오른쪽 아래 ↑ 단추). 뛰기처럼 마당과 내 방에서만
+const JUMP_V = 5.2, GRAVITY = 15;
+let jumpV = 0, jumpY = 0;
+const jumpArc = (t) => JUMP_V * t - 0.5 * GRAVITY * t * t;
+function jump() {
+  if (S.mode !== 'world' || !canRun() || S.seat != null || jumpY > 0) return;
+  jumpV = JUMP_V;
+  jumpY = 0.001;
+  net.sendAct({ a: 'jump' });
+}
+addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || S.mode !== 'world' || e.target.closest('input, textarea, select')) return;
+  e.preventDefault(); // 눌러 둔 버튼이 다시 눌리거나 화면이 내려가지 않게
+  if (!e.repeat) jump();
+}, true);
+$('#jump-btn').addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
 function moveMe(dt) {
   const me = S.me, g = me.group;
   let dx = 0, dz = 0;
@@ -1089,9 +1108,18 @@ function moveMe(dt) {
     if (S.target && !S.walking && g.position.distanceTo(before) < speed * dt * 0.2) S.target = null;
   }
   me.speed = dir ? g.position.distanceTo(before) / Math.max(dt, 1e-4) : 0;
-  const delta = g.position.clone().sub(before);
+  const delta = g.position.clone().sub(before).setY(0);
   camera.position.add(delta);
   controls.target.add(delta);
+
+  // 점프: 솟았다가 떨어진다 (카메라는 따라 출렁이지 않게 높이는 빼고 따라온다)
+  if (S.seat != null) jumpY = 0;
+  if (jumpY > 0) {
+    jumpV -= GRAVITY * dt;
+    jumpY = Math.max(0, jumpY + jumpV * dt);
+    g.position.y = jumpY;
+  }
+  me.airborne = jumpY > 0;
 
   // 문으로 드나들기
   const w = S.active;
@@ -1145,7 +1173,15 @@ function loop() {
       if (g.position.distanceTo(target) > 6) g.position.copy(target);
       const diff = r.rot - g.rotation.y;
       g.rotation.y += Math.atan2(Math.sin(diff), Math.cos(diff)) * Math.min(1, dt * 8);
-      r.av.speed = r.av.seated ? 0 : g.position.distanceTo(before) / Math.max(dt, 1e-4);
+      r.av.speed = r.av.seated ? 0 : Math.hypot(g.position.x - before.x, g.position.z - before.z) / Math.max(dt, 1e-4);
+      // 다른 분이 점프하면 같은 높이로 솟았다 떨어진다
+      if (r.jumpT != null) {
+        r.jumpT += dt;
+        const jy = jumpArc(r.jumpT);
+        if (jy <= 0 || r.av.seated) { r.jumpT = null; jy <= 0 && !r.av.seated && (g.position.y = 0); }
+        else g.position.y = jy;
+      }
+      r.av.airborne = r.jumpT != null;
       if (!g.visible) continue;
       r.av.update(dt, ACTIONS);
       r.av.tag.visible = g.position.distanceTo(camera.position) < 13;

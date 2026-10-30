@@ -484,6 +484,8 @@ export class Avatar {
         lL: [s, 0], lR: [-s, 0], aL: [-s * (0.8 + run * 0.5) - run * 0.5, 0.1], aR: [s * (0.8 + run * 0.5) - run * 0.5, -0.1] };
     }
     this.running = !this.seated && this.speed > 4;
+    // 점프하는 동안: 두 팔을 번쩍 들고 다리를 굽힌다
+    if (this.airborne && !this.seated) target = { ...target, hip: -0.05, head: -0.1, lL: [-0.75, 0.1], lR: [0.45, -0.1], aL: [-2.6, 0.35], aR: [-2.6, -0.35] };
 
     // 처음 나타날 때는 자세를 바로 맞춘다 (앉아 있던 사람이 서 있다가 앉는 모습 방지)
     const k = this.fresh ? 1 : Math.min(1, dt * 9);
