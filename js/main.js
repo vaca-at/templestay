@@ -359,7 +359,7 @@ function pushState(force = false) {
   if (!S.me || S.mode !== 'world') return;
   const g = S.me.group;
   const st = {
-    n: S.profile.name, l: S.profile.look, s: S.scene,
+    n: S.profile.name, l: S.profile.look, s: S.scene, d: S.loc?.id,
     p: [Math.round(g.position.x * 100) / 100, Math.round(g.position.z * 100) / 100],
     r: Math.round(g.rotation.y * 100) / 100,
     seat: S.seat, y: S.seat != null ? g.position.y : 0,

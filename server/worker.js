@@ -59,7 +59,7 @@ export default {
       const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
       if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
       const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
-      const rooms = {}, live = { scenes: {}, acts: {}, pets: {}, types: {} };
+      const rooms = {}, live = { scenes: {}, acts: {}, pets: {}, types: {}, designs: {} };
       await Promise.all(Array.from({ length: SERVERS }, (_, i) => `hall-${i + 1}`).map((k) =>
         env.ROOMS.get(env.ROOMS.idFromName(k)).fetch('https://room/live').then((r) => r.json()).then((j) => {
           if (!j.n) return;
@@ -200,9 +200,21 @@ export class Stats extends DurableObject {
       if (fresh.length) {
         await this.ctx.storage.put('wishes', [...list, ...fresh].slice(-60));
         // 날짜별 연등 수 (예전 연등을 한꺼번에 옮길 때는 세지 않음)
-        if (add.length === 1) await this.bump('wishDays', kstDay(), 1);
+        if (add.length === 1) { await this.bump('wishDays', kstDay(), 1); await this.ctx.storage.put('wishTotal', ((await this.ctx.storage.get('wishTotal')) || 0) + 1); }
       }
       return Response.json({ added: fresh.map((w) => w.id) });
+    }
+    // 숫자 세기: 날짜별 입장 수 · 머문 시간, 누적 순위(캐릭터 · 친구 · 옷 · 장신구 · 디자인 · 동작)
+    if (url.pathname === '/tally') {
+      const b = await req.json(), d = kstDay();
+      if (b.join) await this.bump('joins', d, 1);
+      if (b.stay > 0 && b.stay < 86400) { await this.bump('staySec', d, Math.round(b.stay)); await this.bump('stayN', d, 1); }
+      if (b.picks) {
+        const t = (await this.ctx.storage.get('tally')) || {};
+        for (const [g, k] of Object.entries(b.picks)) if (k) { t[g] = t[g] || {}; t[g][k] = (t[g][k] || 0) + 1; }
+        await this.ctx.storage.put('tally', t);
+      }
+      return Response.json({ ok: true });
     }
     if (url.pathname === '/wish/delete') {
       const { id } = await req.json();
@@ -253,8 +265,10 @@ export class Stats extends DurableObject {
       await this.ctx.storage.put('hours', hours);
       return Response.json({ ok: true });
     }
-    const [hours, wishDays, peaks, best, wishes] = await Promise.all(['hours', 'wishDays', 'peaks', 'best', 'wishes'].map((k) => this.ctx.storage.get(k)));
-    return Response.json({ total: s.total, today: s.days[kstDay()] || 0, days: s.days, hours: hours || {}, wishDays: wishDays || {}, peaks: peaks || {}, best: best || { n: 0 }, wishes: wishes || [] });
+    const K = ['hours', 'wishDays', 'peaks', 'best', 'wishes', 'wishTotal', 'joins', 'staySec', 'stayN', 'tally'];
+    const v = Object.fromEntries((await Promise.all(K.map((k) => this.ctx.storage.get(k)))).map((x, i) => [K[i], x]));
+    return Response.json({ total: s.total, today: s.days[kstDay()] || 0, days: s.days, hours: v.hours || {}, wishDays: v.wishDays || {}, peaks: v.peaks || {}, best: v.best || { n: 0 }, wishes: v.wishes || [],
+      wishTotal: v.wishTotal || 0, joins: v.joins || {}, staySec: v.staySec || {}, stayN: v.stayN || {}, tally: v.tally || {} });
   }
 
   // 날짜별 숫자 하나 올리기 (최근 90일만)
@@ -283,13 +297,13 @@ export class Room extends DurableObject {
     if (url.pathname === '/count') return Response.json({ n: this.members().length });
     // 관리자 현황판: 지금 어디서(법당·마당…) 무엇을(합장·108배…) 하는지, 어떤 친구·캐릭터인지 숫자만
     if (url.pathname === '/live') {
-      const out = { n: 0, scenes: {}, acts: {}, pets: {}, types: {} };
+      const out = { n: 0, scenes: {}, acts: {}, pets: {}, types: {}, designs: {} };
       const add = (g, k) => { if (k) out[g][k] = (out[g][k] || 0) + 1; };
       for (const { a } of this.members()) {
         out.n++;
         add('scenes', clean(a.st.s, 12)); add('acts', clean(a.st.a, 12));
         add('pets', a.st.l?.pet && a.st.l.pet !== 'none' ? clean(a.st.l.pet, 16) : '');
-        add('types', clean(a.st.l?.type, 16));
+        add('types', clean(a.st.l?.type, 16)); add('designs', clean(a.st.d, 12));
       }
       return Response.json(out);
     }
@@ -308,20 +322,20 @@ export class Room extends DurableObject {
     }
     // 같은 탭(k)이 30초 안에 다시 붙으면 예전 번호와 모습을 그대로 이어 받는다
     const k = clean(url.searchParams.get('k'), 24);
-    let id = crypto.randomUUID().slice(0, 8), st = null, lw = 0;
+    let id = crypto.randomUUID().slice(0, 8), st = null, lw = 0, t0 = Date.now();
     if (k) {
       const back = await this.ctx.storage.get(`gone:${k}`);
-      if (back) { ({ id, st, lw } = back); await this.ctx.storage.delete(`gone:${k}`); }
+      if (back) { ({ id, st, lw } = back); t0 = back.t0 || t0; await this.ctx.storage.delete(`gone:${k}`); }
       // 서버가 아직 못 알아챈 예전 연결이 남아 있으면 조용히 닫는다
       for (const m of this.ctx.getWebSockets()) {
         const x = m.deserializeAttachment();
         if (m === server || x?.k !== k) continue;
-        if (!back) ({ id, st, lw = 0 } = x);
+        if (!back) ({ id, st, lw = 0 } = x), t0 = x.t0 || t0;
         m.serializeAttachment({ ...x, quiet: true });
         try { m.close(4000, 'replaced'); } catch {}
       }
     }
-    server.serializeAttachment({ id, k, st, n: 0, w: Date.now(), room: url.searchParams.get('room') || '', lw });
+    server.serializeAttachment({ id, k, st, n: 0, w: Date.now(), room: url.searchParams.get('room') || '', lw, t0 });
     if (st) this.reportPeak(url.searchParams.get('room') || '', this.members().length);   // 30초 안에 돌아온 분
     const gone = await this.ctx.storage.list({ prefix: 'gone:' });
     const peers = [...this.members().filter((m) => m.ws !== server && !m.a.quiet), ...[...gone.values()].map((g) => ({ a: g }))].map((m) => ({ id: m.a.id, st: m.a.st }));
@@ -349,12 +363,18 @@ export class Room extends DurableObject {
     if (m.t === 'st' && m.d && typeof m.d === 'object') {
       const first = !a.st;
       a.st = m.d;
-      if (first) this.reportPeak(a.room, this.members().length + (this.members().some((x) => x.ws === ws) ? 0 : 1));
+      if (first) {
+        this.reportPeak(a.room, this.members().length + (this.members().some((x) => x.ws === ws) ? 0 : 1));
+        // 들어올 때 고른 모습을 센다 (누가 골랐는지는 남기지 않고 숫자만)
+        const l = m.d.l || {};
+        this.tally({ join: 1, picks: { type: `${clean(l.type, 16)}:${l.gender === 'm' ? 'm' : 'f'}`, pet: clean(l.pet || 'none', 16), outfit: clean(l.outfit || 'own', 16), acc: clean(l.acc || 'none', 16), design: clean(m.d.d, 12) } });
+      }
       ws.serializeAttachment(a);
       this.broadcast({ t: 'st', id: a.id, d: m.d }, ws);
     } else if (m.t === 'act' && m.d) {
       ws.serializeAttachment(a);
       this.broadcast({ t: 'act', id: a.id, d: { a: clean(m.d.a, 16), on: m.d.on !== false } }, ws);
+      if (m.d.on !== false && m.d.a !== 'jump') this.tally({ picks: { act: clean(m.d.a, 16) } });
     } else if (m.t === 'wish' && m.d) {
       if (now - (a.lw || 0) < WISH_GAP) { ws.serializeAttachment(a); return; }
       a.lw = now;
@@ -380,11 +400,17 @@ export class Room extends DurableObject {
     this.reportPeak(a.room, this.members().filter((m) => m.ws !== ws).length);
     // 바로 '나섰어요' 하지 않고 30초 기다린다. 그 안에 같은 탭이 다시 붙으면 없던 일
     if (a.k) {
-      await this.ctx.storage.put(`gone:${a.k}`, { id: a.id, st: a.st, lw: a.lw || 0, at: Date.now() });
+      await this.ctx.storage.put(`gone:${a.k}`, { id: a.id, st: a.st, lw: a.lw || 0, t0: a.t0, at: Date.now() });
       if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + GRACE);
       return;
     }
     this.broadcast({ t: 'leave', id: a.id }, ws);
+    if (a.t0) this.tally({ stay: (Date.now() - a.t0) / 1000 });
+  }
+
+  // 숫자 세기 저장소(Stats)에 보내기: join(입장 1) · stay(머문 초) · picks({무리: 이름})
+  tally(body) {
+    this.ctx.waitUntil?.(this.env.STATS.get(this.env.STATS.idFromName('stats')).fetch('https://stats/tally', { method: 'POST', body: JSON.stringify(body) }).catch(() => {}));
   }
 
   // 인원이 바뀌면 동시접속 최고 기록 저장소(Stats)에 알린다
@@ -398,7 +424,10 @@ export class Room extends DurableObject {
     const gone = await this.ctx.storage.list({ prefix: 'gone:' });
     let next = Infinity;
     for (const [key, g] of gone) {
-      if (Date.now() - g.at >= GRACE) { this.broadcast({ t: 'leave', id: g.id }); await this.ctx.storage.delete(key); }
+      if (Date.now() - g.at >= GRACE) {
+        this.broadcast({ t: 'leave', id: g.id }); await this.ctx.storage.delete(key);
+        if (g.t0) this.tally({ stay: (g.at - g.t0) / 1000 });   // 끊긴 때까지 머문 시간
+      }
       else next = Math.min(next, g.at + GRACE);
     }
     if (next !== Infinity) await this.ctx.storage.setAlarm(next);

@@ -67,6 +67,13 @@
   .lantern small { color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
   .lantern button { padding: 4px 12px; font-size: 12.5px; }
   .lanterns { max-height: 360px; overflow-y: auto; }
+  .hbar.rank div { grid-template-columns: 22px 120px 1fr 40px; }
+  .hbar.rank u { text-decoration: none; color: var(--muted); font-size: 12px; text-align: right; }
+  table.daily { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .daily th, .daily td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+  .daily th:first-child, .daily td:first-child { text-align: left; }
+  .daily th { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+  .daily tr.today td { font-weight: 700; color: var(--jade); }
 </style>
 </head>
 <body>
@@ -103,6 +110,11 @@
       <div class="tile"><small>역대 최고 동시접속</small><b id="t-best">-</b><em id="t-best-at"></em></div>
       <div class="tile"><small>오늘 올라온 연등</small><b id="t-wish">-</b><em id="t-wish-all"></em></div>
     </div>
+    <div class="tiles" style="margin-top:12px">
+      <div class="tile"><small>오늘 입장</small><b id="t-joins">-</b><em>법당에 들어온 횟수 (다시 들어와도 셈)</em></div>
+      <div class="tile"><small>평균 머문 시간</small><b id="t-stay">-</b><em id="t-stay-sub"></em></div>
+      <div class="tile"><small>누적 연등</small><b id="t-wishall">-</b><em>지금까지 올라온 소원 연등</em></div>
+    </div>
     <div class="card" style="margin-top:12px">
       <h2>지금 어디서 무엇을 하나요 <span class="muted">(모든 서버 합계)</span></h2>
       <div class="two"><div><h3>장소</h3><div id="l-scenes" class="hbar"></div></div><div><h3>하는 일</h3><div id="l-acts" class="hbar"></div></div></div>
@@ -120,8 +132,19 @@
       <div id="wbars" class="bars wish"></div>
     </div>
     <div class="card" style="margin-top:12px">
+      <h2>좋아하는 캐릭터 순위 <span class="muted">(누적 · 들어올 때 고른 모습)</span></h2>
+      <div class="two"><div><h3>캐릭터</h3><div id="r-types" class="hbar rank"></div></div><div><h3>내 옆 친구</h3><div id="r-pets" class="hbar rank"></div></div></div>
+      <div class="two" style="margin-top:14px"><div><h3>옷</h3><div id="r-outfits" class="hbar rank"></div></div><div><h3>장신구</h3><div id="r-accs" class="hbar rank"></div></div></div>
+      <div class="two" style="margin-top:14px"><div><h3>디자인</h3><div id="r-designs" class="hbar rank"></div></div><div><h3>많이 한 동작</h3><div id="r-acts" class="hbar rank"></div></div></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>날짜별 한눈에 <span class="muted">(최근 14일, 한국 날짜)</span></h2>
+      <div style="overflow-x:auto"><table id="daily" class="daily"></table></div>
+    </div>
+    <div class="card" style="margin-top:12px">
       <h2>지금 인기 <span class="muted">(접속한 분들이 고른 것)</span></h2>
       <div class="two"><div><h3>내 옆 친구</h3><div id="l-pets" class="hbar"></div></div><div><h3>캐릭터</h3><div id="l-types" class="hbar"></div></div></div>
+      <div class="two" style="margin-top:14px"><div><h3>디자인</h3><div id="l-designs" class="hbar"></div></div><div></div></div>
     </div>
     <div class="card" style="margin-top:12px">
       <h2>걸린 연등 <span id="w-count"></span> <span class="muted">· 소원 글은 비공개라 서버에도 없어요 · 이상한 법명은 내리기</span></h2>
@@ -145,11 +168,17 @@
 </main>
 
 <script type="module">
-  import { RELAY_URL, FIREBASE, SCENES, ACTIONS, CHAR_TYPES } from './js/data.js';
+  import { RELAY_URL, FIREBASE, SCENES, ACTIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, LOCATIONS } from './js/data.js';
   // 내 옆 친구 이름 (js/blocky.js 의 PETS 와 같게. 그 파일은 3D 그림 도구를 불러와서 여기서는 이름만 따로)
   const PET_NAMES = { dog: '강아지', cat: '고양이', hamster: '햄스터', bunny: '토끼', coffee: '커피잔', icecoffee: '아이스커피', book: '책 친구', ai: 'AI 짝꿍', claude: '클로드', drone: '드론', panda: '판다', squirrel: '다람쥐', turtle: '거북이', squid: '오징어', fishbowl: '어항 물고기', plant: '화분 친구', ghost: '꼬마 유령', rocket: '꼬마 로켓' };
   const ACT_NAMES = { ...Object.fromEntries(ACTIONS.map((a) => [a.id, a.name])), walk: '산보', jump: '점프' };
   const TYPE_NAMES = Object.fromEntries(CHAR_TYPES.map((t) => [t.id, t.name]));
+  // 캐릭터 순위는 남녀를 나눠 셉니다 ('moral:f' → '남색 카디건 · 여')
+  const TYPE_G_NAMES = Object.fromEntries(CHAR_TYPES.flatMap((t) => [[`${t.id}:f`, `${t.name} · 여`], [`${t.id}:m`, `${t.name} · 남`]]));
+  const OUTFIT_NAMES = { ...Object.fromEntries(OUTFITS.map((o) => [o.id, o.name])), own: '캐릭터 기본 옷' };
+  const ACC_NAMES = Object.fromEntries(ACCESSORIES.map((a) => [a.id, a.name]));
+  const DESIGN_NAMES = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.name]));
+  const mmss = (sec) => { sec = Math.round(sec || 0); return sec >= 3600 ? `${Math.floor(sec / 3600)}시간 ${Math.round((sec % 3600) / 60)}분` : `${Math.floor(sec / 60)}분 ${sec % 60}초`; };
   const $ = (s) => document.querySelector(s);
   const KEY = 'maeum:adminToken'; // 법당 화면과 같은 입장권 (여기서 로그인하면 법당 화면에서도 관리자)
   const getTok = () => { try { const t = localStorage.getItem(KEY) || ''; if (t && +t.split('.')[0] < Date.now()) { localStorage.removeItem(KEY); return ''; } return t; } catch { return ''; } };
@@ -191,6 +220,7 @@
     hbar('#l-acts', L.acts, ACT_NAMES, '하고 있는 동작이 없어요 (걷기 · 서 있기)');
     hbar('#l-pets', L.pets, PET_NAMES, '친구를 데리고 온 분이 없어요');
     hbar('#l-types', L.types, TYPE_NAMES, '-');
+    hbar('#l-designs', L.designs, DESIGN_NAMES, '-');
     // 시간대별 방문: 최근 14일 24칸을 더해서
     const hrs = Array(24).fill(0);
     Object.entries(s.hours || {}).sort().slice(-14).forEach(([, a]) => a.forEach((n, h) => (hrs[h] += n)));
@@ -203,6 +233,29 @@
     const ws = [...(s.wishes || [])].reverse();
     $('#w-count').textContent = ws.length ? `${ws.length}개` : '';
     $('#lanterns').innerHTML = ws.length ? ws.map((w) => `<div class="lantern"><span class="dot" style="background:${/^#[0-9a-f]{3,8}$/i.test(w.c) ? w.c : '#ddd'}"></span><span>${esc(w.n || '이름 없음')}</span>${w.v ? `<span class="muted">마음 시주 ${Number(w.v).toLocaleString()}원</span>` : ''}<small>${w.at ? new Date(w.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '예전 연등'}</small><button class="ghost" type="button" data-unwish="${esc(w.id)}">내리기</button></div>`).join('') : '<p class="muted">걸린 연등이 없어요</p>';
+    // 입장 · 머문 시간 · 누적 연등
+    const last7 = Array.from({ length: 7 }, (_, i) => new Date(Date.now() + 9 * 3600e3 - i * 864e5).toISOString().slice(0, 10));
+    const sumOf = (m, ks) => ks.reduce((n, k) => n + (m?.[k] || 0), 0);
+    $('#t-joins').textContent = `${s.joins?.[kday] || 0}번`;
+    const avgToday = (s.stayN?.[kday] || 0) ? s.staySec[kday] / s.stayN[kday] : 0, n7 = sumOf(s.stayN, last7);
+    $('#t-stay').textContent = avgToday ? mmss(avgToday) : '-';
+    $('#t-stay-sub').textContent = n7 ? `오늘 나간 분 기준 · 최근 7일 평균 ${mmss(sumOf(s.staySec, last7) / n7)}` : '나간 분이 생기면 계산해요';
+    $('#t-wishall').textContent = `${(s.wishTotal || 0).toLocaleString()}개`;
+    // 누적 순위 (1·2·3등에 메달)
+    const rank = (el, map, names) => {
+      const rows = Object.entries(map || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const sum = rows.reduce((n, [, v]) => n + v, 0), max = Math.max(1, ...rows.map(([, n]) => n));
+      $(el).innerHTML = rows.length ? rows.map(([k, n], i) => `<div><span>${['🥇', '🥈', '🥉'][i] || i + 1}</span><span>${esc(names[k] || k)}</span><i style="width:${(n / max) * 100}%"></i><u>${Math.round((n / sum) * 100)}%</u></div>`).join('') : '<p class="muted">이번 업데이트부터 쌓여요</p>';
+    };
+    const T = s.tally || {};
+    rank('#r-types', T.type, TYPE_G_NAMES); rank('#r-pets', T.pet, { ...PET_NAMES, none: '친구 없이' }); rank('#r-outfits', T.outfit, OUTFIT_NAMES);
+    rank('#r-accs', T.acc, ACC_NAMES); rank('#r-designs', T.design, DESIGN_NAMES); rank('#r-acts', T.act, ACT_NAMES);
+    // 날짜별 표 (새 날짜가 위)
+    const dl = Array.from({ length: 14 }, (_, i) => new Date(Date.now() + 9 * 3600e3 - i * 864e5).toISOString().slice(0, 10));
+    $('#daily').innerHTML = `<tr><th>날짜</th><th>방문</th><th>입장</th><th>연등</th><th>평균 머문 시간</th><th>최고 동시접속</th></tr>` + dl.map((d) => {
+      const st = s.stayN?.[d] ? mmss(s.staySec[d] / s.stayN[d]) : '-';
+      return `<tr class="${d === kday ? 'today' : ''}"><td>${+d.slice(5, 7)}/${+d.slice(8)} (${'일월화수목금토'[new Date(d + 'T00:00:00Z').getUTCDay()]})</td><td>${s.days?.[d] || 0}</td><td>${s.joins?.[d] || 0}</td><td>${s.wishDays?.[d] || 0}</td><td>${st}</td><td>${s.peaks?.[d]?.n || 0}</td></tr>`;
+    }).join('');
     $('#stamp').textContent = `${new Date().toLocaleTimeString('ko-KR')} 기준`;
     loadReports();
   }
