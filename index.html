@@ -7,6 +7,13 @@
 <meta name="description" content="산과 강과 바다가 보이는 3D 법당에서 함께 합장하고, 절하고, 소원을 올려요.">
 <meta property="og:title" content="큰법당 템플스테이">
 <meta property="og:description" content="수목원 숲, 두물머리 산꼭대기, 남해 절벽의 3D 법당에 함께 머물러요.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://templestay.site/">
+<meta property="og:image" content="https://templestay.site/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="연등 줄 아래 큰법당 템플스테이 제목과 블록 캐릭터 일곱 명">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#2b2420">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,7 +59,7 @@
     <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><b class="ld-pct">0%</b></div>
     <p class="ld-msg" id="ld-next">큰법당 템플스테이</p>
   </div>
-  <p class="ld-credit">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116), 공공누리 제1유형 · <a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>
+  <p class="ld-credit">불상 자료 · 국립중앙박물관 3D 데이터 5점, 공공누리 제1유형 ·<a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>
 </section>
 
 <!-- 캐릭터 꾸미기 -->
@@ -142,8 +149,21 @@
     <button id="btn-stand" class="glass ctx" hidden><span class="lbl">일어서기</span><small class="cap">자리에서 일어나 걷기</small></button>
     <button id="btn-scroll" class="glass ctx" hidden><span class="lbl">족자 문구 고르기</span><small class="cap">여러 개 고르면 돌아가며 걸려요</small></button>
   </div>
+  <!-- 왼쪽 도형 단추: 글씨 없이 도형만, 설명은 커서를 올리면 말풍선으로 -->
+  <nav id="side-btns" aria-label="바로가기">
+    <button id="side-place" aria-label="장소"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg><small class="cap">장소 · 숲 · 두물머리 · 남해</small></button>
+    <button id="side-char" aria-label="꾸미기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3l4 2 4-2 5 4-3 3-2-1v12H8V9l-2 1-3-3z"/></svg><small class="cap">캐릭터 꾸미기</small></button>
+    <button id="side-sched" aria-label="일정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><small class="cap">내 하루 일정</small></button>
+    <button id="side-wish" aria-label="소원"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3"/><ellipse cx="12" cy="11" rx="6" ry="5.5"/><path d="M9 7.5c-1 2-1 5 0 7M15 7.5c1 2 1 5 0 7M10 16.5v4h4v-4"/></svg><small class="cap">소원 올리기</small></button>
+  </nav>
   <nav id="actions" class="glass"></nav>
   <div id="joystick"><div class="knob"></div></div>
+  <!-- 불상 넘기기: 불상 쪽에 커서를 올리면 나온다 -->
+  <div id="buddha-nav" hidden>
+    <button id="buddha-prev" class="glass buddha-arrow" aria-label="이전 불상"><span class="lbl">‹</span></button>
+    <button id="buddha-next" class="glass buddha-arrow" aria-label="다음 불상"><span class="lbl">›</span></button>
+    <p id="buddha-label" class="glass"><b id="buddha-name"></b><small id="buddha-count"></small></p>
+  </div>
   <button id="admin-btn" aria-label="관리자">관리자</button>
 </section>
 
@@ -249,7 +269,14 @@
 <div id="credit-modal" class="modal" hidden>
   <div class="sheet">
     <header class="panel-head"><h2>자료 출처</h2><button class="icon-btn" data-close="credit-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
-    <p class="sub">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116)<br>공공누리 제1유형(출처표시). 원본 3D 스캔 중 좌불만 골라 웹용 크기·텍스처·압축을 조정했어요.</p>
+    <p class="sub">불상 자료는 모두 국립중앙박물관 3D 데이터이며 공공누리 제1유형(출처표시)으로 써요. 원본 3D 스캔을 웹용 크기·텍스처·압축으로 조정했어요. 법당에서 불상 쪽에 커서를 올리면 ‹ › 로 바꿔 모실 수 있어요.</p>
+    <ul class="credit-list">
+      <li>금동불좌상 · 고려 · 덕수2116 (금동불좌상·금동보살입상 중 좌불만 골라 씀)</li>
+      <li>금동관음보살좌상 · 조선 · 덕수3310</li>
+      <li>철제여래좌상 · 통일신라 · 본관5191</li>
+      <li>부여 군수리 석조여래좌상 · 백제 · 보물 · M번435</li>
+      <li>경주 구황동 금제여래좌상 · 통일신라 · 국보 · 본관14752 (스캔에 색이 없어 금빛을 입힘)</li>
+    </ul>
     <p class="sub">법당, 풍경, 캐릭터는 모두 이 앱에서 직접 만든 3D 모형이에요.</p>
   </div>
 </div>

@@ -6,7 +6,7 @@ tip.setAttribute('role', 'tooltip');
 tip.hidden = true;
 document.body.appendChild(tip);
 
-const SEL = '#actions .act, #scene-bar button';
+const SEL = '#actions .act, #scene-bar button, #side-btns button';
 
 function show(btn) {
   const cap = btn.querySelector('.cap');
