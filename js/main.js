@@ -1422,11 +1422,11 @@ function gallery(kind) {
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
     : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
-    : kind === 'newpets' ? PETS.filter((p) => p.preview).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
+    : kind.startsWith('newpets') ? PETS.filter((p) => p.preview === ({ newpets: true, newpets2: 2, newpets3: 3 }[kind])).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : kind === 'pets' ? PETS.filter((p) => !p.hidden && !p.preview && inSeason(p) && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', acc: a.id, pet: 'none' } }));
   const acts = (params.get('acts') || '').split(',');
-  const isPets = kind === 'pets' || kind === 'newpets';
+  const isPets = kind === 'pets' || kind.startsWith('newpets');
   const gap = isPets ? 1.7 : 1.3;
   items.forEach((it, i) => {
     const av = new Avatar(it.look, CHAR_TYPES[i % 8].name);
@@ -1438,8 +1438,9 @@ function gallery(kind) {
     galleryAvatars.push(av);
   });
   camera.fov = 40; camera.updateProjectionMatrix();
-  camera.position.set(0, kind === 'newpets' ? 1.3 : 1.6, kind === 'newpets' ? 10.5 : isPets ? 15 : 9.6);
-  camera.lookAt(0, kind === 'newpets' ? 0.6 : 0.85, 0);
+  const np = kind.startsWith('newpets');
+  camera.position.set(0, np ? 1.3 : 1.6, np ? 10.5 : isPets ? 15 : 9.6);
+  camera.lookAt(0, np ? 0.6 : 0.85, 0);
   controls.enabled = false;
 }
 

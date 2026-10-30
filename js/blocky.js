@@ -318,6 +318,28 @@ export const PETS = [
   { id: 'frog', name: '연잎 개구리', cap: '연잎 배를 타고 미끄러져요', preview: true },
   { id: 'tteok', name: '찹쌀떡 말랑이', cap: '말랑말랑 쫀득쫀득', preview: true },
   { id: 'firefly', name: '반딧불이', cap: '꼬리가 반짝반짝', hover: true, preview: true },
+  // 시안 친구 두 번째 10 (?gallery=newpets2)
+  { id: 'baekgu', name: '백구', cap: '하얀 진돗개, 말린 꼬리' },
+  { id: 'fawn', name: '아기 꽃사슴', cap: '등에 하얀 점박이', preview: 2 },
+  { id: 'otter', name: '수달', cap: '조개를 들고 뒤뚱뒤뚱' },
+  { id: 'mandarin', name: '원앙', cap: '알록달록 금슬 좋은 새', preview: 2 },
+  { id: 'hedgehog', name: '고슴도치', cap: '뾰족뾰족 등, 콧등 촉촉', preview: 2 },
+  { id: 'raccoon', name: '너구리', cap: '눈가 까만 줄무늬 꼬리', preview: 2 },
+  { id: 'bamtol', name: '밤톨이', cap: '알밤 친구, 머리에 밤송이 가시', preview: 2 },
+  { id: 'lotusbud', name: '연꽃 봉오리', cap: '가끔 활짝 피어요', preview: 2 },
+  { id: 'cloud', name: '구름이', cap: '몽실몽실 떠다니는 구름', hover: true, preview: 2 },
+  { id: 'dragon', name: '아기 청룡', cap: '푸른 비늘, 꼬리 살랑', hover: true, preview: 2 },
+  // 시안 친구 세 번째 10: 직장인이 좋아하는 사물 (?gallery=newpets3)
+  { id: 'laptop', name: '노트북', cap: '화면에 웃는 얼굴, 뚜껑 팔랑', preview: 3, size: 1.6 },
+  { id: 'postit', name: '포스트잇', cap: '노란 메모지가 한 장씩 팔랑', preview: 3, size: 1.6 },
+  { id: 'tumbler', name: '텀블러', cap: '빨대 꽂은 하늘색 텀블러', preview: 3, size: 1.6 },
+  { id: 'stapler', name: '스테이플러', cap: '입을 딸깍딸깍', preview: 3, size: 1.6 },
+  { id: 'mouse', name: '마우스', cap: '꼬리 같은 줄, 휠이 반짝', preview: 3, size: 1.6 },
+  { id: 'calc', name: '계산기', cap: '화면에 숫자가 깜빡', preview: 3, size: 1.6 },
+  { id: 'stamp', name: '결재 도장', cap: '빨간 인주, 쿵 찍어요', preview: 3, size: 1.6 },
+  { id: 'idcard', name: '사원증', cap: '파란 목줄 달린 명찰', preview: 3, size: 1.6 },
+  { id: 'deskcal', name: '탁상 달력', cap: '금요일만 기다려요', preview: 3, size: 1.6 },
+  { id: 'cupramen', name: '컵라면', cap: '김이 모락모락 야근 친구', preview: 3, size: 1.6 },
   { id: 'none', name: '없음', cap: '혼자 다니기' },
   { id: 'plant', name: '화분 친구', hidden: true },
   { id: 'ghost', name: '꼬마 유령', cap: '할로윈 한정 · 10/31까지', hover: true, season: 'halloween' },
@@ -392,8 +414,10 @@ export function buildPet(id) {
       box(g, '#9fa9b4', 0.12, 0.07, 0.04, 0, 0.32, 0.31);
       box(g, '#c98a96', 0.035, 0.025, 0.02, 0, 0.35, 0.325);
       for (const s of [1, -1]) {
-        box(g, '#7fc06a', 0.055, 0.05, 0.02, 0.06 * s, 0.4, 0.312);      // 초록 눈
-        box(g, '#1d1a18', 0.018, 0.045, 0.021, 0.06 * s, 0.4, 0.314);    // 세로 눈동자
+        // 사진 속 러시안 블루처럼 동그랗고 까만 큰 눈동자에 초록 테두리만 살짝 (눈동자가 커지면 이렇게 보여요)
+        box(g, '#6fae5a', 0.064, 0.064, 0.02, 0.06 * s, 0.4, 0.312);
+        box(g, '#151414', 0.054, 0.054, 0.021, 0.06 * s, 0.4, 0.314);
+        box(g, '#ffffff', 0.016, 0.016, 0.022, 0.06 * s + 0.012, 0.413, 0.315);   // 반짝
         const ear = box(g, d, 0.08, 0.1, 0.04, 0.08 * s, 0.51, 0.2); ear.rotation.z = -0.4 * s;
         box(g, '#b98c96', 0.035, 0.05, 0.01, 0.08 * s, 0.505, 0.222);
         for (const dy of [0.01, -0.02]) box(g, '#e6ebf0', 0.1, 0.008, 0.008, 0.15 * s, 0.33 + dy, 0.3);
@@ -721,6 +745,234 @@ export function buildPet(id) {
       anim.push((t) => { wings.forEach(([w, s]) => (w.rotation.z = Math.sin(t * 20) * 0.5 * s)); tail.material.emissiveIntensity = 0.3 + (Math.sin(t * 2.5) * 0.5 + 0.5) * 1.4; });
       break;
     }
+    case 'baekgu': {
+      // 백구: 하얀 진돗개, 쫑긋 세모 귀, 등 위로 둥글게 말린 꼬리
+      const c = '#f4efe4', d = '#e6dccb';
+      box(g, c, 0.24, 0.2, 0.38, 0, 0.21, 0);
+      box(g, c, 0.24, 0.22, 0.22, 0, 0.38, 0.21);
+      box(g, d, 0.12, 0.08, 0.08, 0, 0.32, 0.34);
+      box(g, '#2a2220', 0.05, 0.04, 0.03, 0, 0.36, 0.38);
+      eyes(g, 0.42, 0.321, 0.06, 0.04);
+      for (const s of [1, -1]) { const e = box(g, c, 0.07, 0.11, 0.04, 0.08 * s, 0.54, 0.19); e.rotation.z = -0.25 * s; box(g, '#f0c6c0', 0.03, 0.06, 0.01, 0.08 * s, 0.53, 0.212); }
+      for (const [x, z] of [[0.08, 0.13], [-0.08, 0.13], [0.08, -0.13], [-0.08, -0.13]]) box(g, c, 0.07, 0.12, 0.07, x, 0.06, z);
+      const tail = new THREE.Group(); tail.position.set(0, 0.3, -0.2); g.add(tail);
+      box(tail, c, 0.08, 0.14, 0.08, 0, 0.06, 0); box(tail, c, 0.08, 0.08, 0.12, 0, 0.13, 0.06);
+      anim.push((t) => { tail.rotation.y = Math.sin(t * 8) * 0.35; });
+      break;
+    }
+    case 'fawn': {
+      // 아기 꽃사슴: 밤색 몸에 하얀 점, 가는 다리, 큰 귀
+      const c = '#b8743e';
+      box(g, c, 0.2, 0.18, 0.34, 0, 0.3, 0);
+      for (const [x, z] of [[0.05, -0.08], [-0.05, 0.02], [0.04, 0.1], [-0.06, -0.12], [0.0, -0.02]]) box(g, '#f6efe0', 0.035, 0.01, 0.035, x, 0.395, z);
+      box(g, c, 0.16, 0.18, 0.18, 0, 0.48, 0.2);
+      box(g, '#f2e2c8', 0.1, 0.07, 0.06, 0, 0.42, 0.3);
+      box(g, '#2a2220', 0.04, 0.03, 0.02, 0, 0.45, 0.33);
+      eyes(g, 0.51, 0.291, 0.05, 0.04);
+      for (const s of [1, -1]) { const e = box(g, c, 0.1, 0.05, 0.03, 0.12 * s, 0.56, 0.18); e.rotation.z = 0.4 * s; }
+      const legs = []; for (const [x, z] of [[0.06, 0.12], [-0.06, 0.12], [0.06, -0.12], [-0.06, -0.12]]) legs.push(box(g, '#9a5e30', 0.04, 0.22, 0.04, x, 0.11, z));
+      g.userData.legs = legs;
+      box(g, '#f6efe0', 0.06, 0.06, 0.04, 0, 0.36, -0.18);
+      break;
+    }
+    case 'otter': {
+      // 수달: 갈색 길쭉한 몸, 밝은 얼굴, 두 손에 조개
+      const c = '#7a5236';
+      box(g, c, 0.22, 0.26, 0.2, 0, 0.18, 0);
+      box(g, c, 0.2, 0.18, 0.18, 0, 0.38, 0.02);
+      box(g, '#d9b894', 0.14, 0.1, 0.04, 0, 0.35, 0.11);
+      box(g, '#2a2220', 0.04, 0.03, 0.02, 0, 0.38, 0.135);
+      eyes(g, 0.42, 0.111, 0.05, 0.03);
+      for (const s of [1, -1]) box(g, c, 0.04, 0.04, 0.03, 0.08 * s, 0.48, 0.02);
+      const shell = box(g, '#f2c9b0', 0.1, 0.03, 0.08, 0, 0.24, 0.12);
+      for (const s of [1, -1]) box(g, '#6a442c', 0.05, 0.05, 0.05, 0.07 * s, 0.24, 0.1);
+      box(g, c, 0.07, 0.05, 0.24, 0, 0.05, -0.18);
+      anim.push((t) => { shell.rotation.x = Math.sin(t * 3) * 0.2; });
+      break;
+    }
+    case 'mandarin': {
+      // 원앙: 주황 볏, 흰 눈썹 줄, 보라 가슴, 주황 돛깃 — 둘이 한 쌍처럼 꼬마 짝꿍도 함께
+      const mk = (x, s) => {
+        const b = new THREE.Group(); b.position.x = x; b.scale.setScalar(s); g.add(b);
+        box(b, '#8a6a4a', 0.16, 0.12, 0.24, 0, 0.1, 0);
+        box(b, '#5b3a6a', 0.15, 0.1, 0.06, 0, 0.12, 0.12);
+        box(b, '#e8873a', 0.04, 0.1, 0.08, 0.07, 0.17, -0.04); box(b, '#e8873a', 0.04, 0.1, 0.08, -0.07, 0.17, -0.04);
+        box(b, '#e8873a', 0.12, 0.12, 0.12, 0, 0.24, 0.12);
+        box(b, '#2f6f4a', 0.12, 0.05, 0.13, 0, 0.31, 0.1);
+        box(b, '#f6f2ea', 0.125, 0.025, 0.06, 0, 0.27, 0.13);
+        box(b, '#d9443a', 0.05, 0.03, 0.05, 0, 0.23, 0.2);
+        for (const s2 of [1, -1]) box(b, '#1d1a18', 0.02, 0.025, 0.02, 0.06 * s2, 0.255, 0.16);
+        return b;
+      };
+      const a = mk(-0.1, 1), b = mk(0.14, 0.8);
+      anim.push((t) => { a.position.y = Math.abs(Math.sin(t * 3)) * 0.02; b.position.y = Math.abs(Math.sin(t * 3 + 1)) * 0.02; });
+      break;
+    }
+    case 'hedgehog': {
+      // 고슴도치: 동그란 몸 위로 뾰족한 가시, 콩 같은 코
+      box(g, '#e8d2b0', 0.26, 0.16, 0.3, 0, 0.1, 0);
+      for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2, r = 0.09 + (i % 3) * 0.02; const sp = box(g, i % 2 ? '#6a5442' : '#8a7058', 0.05, 0.12, 0.05, Math.cos(a) * r, 0.2 + (i % 2) * 0.02, Math.sin(a) * r - 0.03); sp.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); }
+      box(g, '#e8d2b0', 0.14, 0.1, 0.1, 0, 0.1, 0.17);
+      box(g, '#1d1a18', 0.04, 0.035, 0.03, 0, 0.11, 0.23);
+      eyes(g, 0.14, 0.221, 0.04, 0.03);
+      break;
+    }
+    case 'raccoon': {
+      // 너구리: 회갈색, 눈가 까만 가면, 줄무늬 꼬리
+      const c = '#8a7d6e', k = '#2e2a26';
+      box(g, c, 0.24, 0.2, 0.34, 0, 0.2, 0);
+      box(g, c, 0.26, 0.22, 0.2, 0, 0.38, 0.18);
+      box(g, k, 0.26, 0.07, 0.02, 0, 0.4, 0.281);
+      box(g, '#f0ebe2', 0.12, 0.07, 0.04, 0, 0.32, 0.29);
+      box(g, k, 0.04, 0.03, 0.02, 0, 0.35, 0.31);
+      for (const s of [1, -1]) { box(g, '#fff', 0.035, 0.035, 0.01, 0.07 * s, 0.4, 0.292); box(g, c, 0.07, 0.07, 0.04, 0.09 * s, 0.52, 0.16); }
+      for (const [x, z] of [[0.08, 0.12], [-0.08, 0.12], [0.08, -0.12], [-0.08, -0.12]]) box(g, k, 0.07, 0.11, 0.07, x, 0.055, z);
+      const tail = new THREE.Group(); tail.position.set(0, 0.24, -0.18); g.add(tail);
+      for (let i = 0; i < 4; i++) box(tail, i % 2 ? k : '#b0a492', 0.1, 0.1, 0.06, 0, 0, -0.03 - i * 0.06);
+      anim.push((t) => { tail.rotation.y = Math.sin(t * 2.4) * 0.35; });
+      break;
+    }
+    case 'bamtol': {
+      // 밤톨이: 반질반질 알밤 몸, 머리 위 초록 밤송이 가시
+      box(g, '#7a4524', 0.26, 0.24, 0.24, 0, 0.16, 0, { roughness: 0.35 });
+      box(g, '#e8d2a8', 0.2, 0.06, 0.2, 0, 0.04, 0);
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const sp = box(g, '#8ab04a', 0.03, 0.1, 0.03, Math.cos(a) * 0.06, 0.32, Math.sin(a) * 0.06); sp.rotation.set(Math.sin(a) * 0.6, 0, -Math.cos(a) * 0.6); }
+      eyes(g, 0.17, 0.121, 0.06, 0.04, '#f6efe0');
+      for (const s of [1, -1]) box(g, '#e89a8a', 0.04, 0.02, 0.01, 0.09 * s, 0.13, 0.121);
+      const legs = []; for (const x of [-0.06, 0.06]) legs.push(box(g, '#5a3018', 0.05, 0.05, 0.05, x, 0.02, 0.06));
+      g.userData.legs = legs;
+      break;
+    }
+    case 'lotusbud': {
+      // 연꽃 봉오리: 초록 잎 받침 위 분홍 봉오리, 가끔 꽃잎이 활짝 벌어져요
+      box(g, '#4f9a4a', 0.28, 0.03, 0.28, 0, 0.02, 0);
+      box(g, '#3f8a3a', 0.04, 0.1, 0.04, 0, 0.08, 0);
+      const petals = [];
+      for (let i = 0; i < 5; i++) { const p = new THREE.Group(); p.position.y = 0.14; p.rotation.y = (i / 5) * Math.PI * 2; g.add(p); box(p, i % 2 ? '#f4b6c6' : '#f09aae', 0.1, 0.22, 0.04, 0, 0.11, 0.05); petals.push(p); }
+      const face = box(g, '#fbe7ec', 0.12, 0.12, 0.12, 0, 0.24, 0);
+      eyes(g, 0.25, 0.061, 0.03, 0.025);
+      anim.push((t) => { const open = Math.max(0, Math.sin(t * 0.5)) ** 3; petals.forEach((p) => (p.rotation.x = 0.1 + open * 0.8)); face.visible = open > 0.3; });
+      break;
+    }
+    case 'cloud': {
+      // 구름이: 몽실몽실 하얀 구름, 졸린 눈, 가끔 작은 빗방울
+      const m = mat('#ffffff', { roughness: 0.9 });
+      for (const [x, y, z, s] of [[0, 0.2, 0, 0.22], [-0.14, 0.17, 0, 0.16], [0.14, 0.17, 0, 0.16], [0.06, 0.29, -0.02, 0.15], [-0.07, 0.28, 0.02, 0.13]]) box(g, m, s, s * 0.8, s, x, y, z);
+      box(g, '#2a2a30', 0.05, 0.015, 0.02, 0.05, 0.21, 0.112); box(g, '#2a2a30', 0.05, 0.015, 0.02, -0.05, 0.21, 0.112);
+      box(g, '#f6b1b8', 0.04, 0.02, 0.01, 0.09, 0.18, 0.112); box(g, '#f6b1b8', 0.04, 0.02, 0.01, -0.09, 0.18, 0.112);
+      const drop = box(g, '#8cc4f0', 0.025, 0.04, 0.025, 0, 0.05, 0);
+      anim.push((t) => { const u = (t * 0.8) % 1; drop.position.y = 0.1 - u * 0.25; drop.visible = Math.sin(t * 0.3) > 0.4; });
+      break;
+    }
+    case 'dragon': {
+      // 아기 청룡: 푸른 몸에 노란 배, 작은 뿔 두 개, 구불구불 꼬리
+      const c = '#3f8ab0', y = '#f2d37a';
+      box(g, c, 0.2, 0.18, 0.28, 0, 0.2, 0);
+      box(g, y, 0.14, 0.12, 0.02, 0, 0.18, 0.141);
+      box(g, c, 0.2, 0.18, 0.2, 0, 0.36, 0.16);
+      box(g, '#5aa6c8', 0.12, 0.08, 0.08, 0, 0.32, 0.29);
+      for (const s of [1, -1]) { box(g, '#f6efe0', 0.03, 0.08, 0.03, 0.06 * s, 0.48, 0.12); box(g, '#1d1a18', 0.035, 0.045, 0.02, 0.06 * s, 0.39, 0.261); box(g, '#5aa6c8', 0.1, 0.02, 0.1, 0.14 * s, 0.26, 0.02); }
+      for (let i = 0; i < 5; i++) box(g, '#2f6f92', 0.04, 0.04, 0.04, 0, 0.3, 0.1 - i * 0.07);
+      const tail = []; for (let i = 0; i < 4; i++) tail.push(box(g, c, 0.1 - i * 0.015, 0.1 - i * 0.015, 0.1, 0, 0.18, -0.18 - i * 0.08));
+      anim.push((t) => tail.forEach((b, i) => (b.position.x = Math.sin(t * 3 - i * 0.8) * 0.04 * (i + 1))));
+      break;
+    }
+    case 'laptop': {
+      box(g, '#c9ccd2', 0.34, 0.03, 0.24, 0, 0.03, 0);
+      box(g, '#9aa0a8', 0.28, 0.005, 0.12, 0, 0.047, 0.03);
+      const lid = new THREE.Group(); lid.position.set(0, 0.045, -0.11); g.add(lid);
+      box(lid, '#c9ccd2', 0.34, 0.24, 0.02, 0, 0.12, 0);
+      box(lid, '#2c3e58', 0.3, 0.2, 0.005, 0, 0.12, 0.011, { emissive: '#2c4e78', emissiveIntensity: 0.4 });
+      for (const x of [-0.05, 0.05]) box(lid, '#bff0ff', 0.03, 0.04, 0.006, x, 0.14, 0.014, { emissive: '#bff0ff', emissiveIntensity: 0.8 });
+      box(lid, '#bff0ff', 0.07, 0.015, 0.006, 0, 0.09, 0.014, { emissive: '#bff0ff', emissiveIntensity: 0.8 });
+      anim.push((t) => { lid.rotation.x = -0.25 + Math.sin(t * 1.5) * 0.12; });
+      break;
+    }
+    case 'postit': {
+      box(g, '#f2d34a', 0.24, 0.12, 0.24, 0, 0.06, 0);
+      for (let k = 0; k < 6; k++) box(g, '#e6c43a', 0.245, 0.004, 0.245, 0, 0.02 + k * 0.018, 0);
+      eyes(g, 0.07, 0.121, 0.05, 0.03);
+      const sheet = box(g, '#f8e57a', 0.24, 0.005, 0.24, 0, 0.125, 0);
+      anim.push((t) => { const u = t % 3; sheet.position.y = 0.125 + Math.max(0, u - 2) * 0.2; sheet.rotation.z = Math.max(0, u - 2) * 0.6; sheet.visible = u < 2.9; });
+      break;
+    }
+    case 'tumbler': {
+      box(g, '#8cc4e6', 0.16, 0.34, 0.16, 0, 0.17, 0);
+      box(g, '#f4f6f8', 0.17, 0.06, 0.17, 0, 0.37, 0);
+      box(g, '#6aa8cc', 0.165, 0.04, 0.165, 0, 0.1, 0);
+      const straw = box(g, '#f0806a', 0.025, 0.16, 0.025, 0.03, 0.47, 0);
+      eyes(g, 0.24, 0.081, 0.04, 0.03);
+      box(g, '#f6b1b8', 0.03, 0.015, 0.01, 0.06, 0.2, 0.081); box(g, '#f6b1b8', 0.03, 0.015, 0.01, -0.06, 0.2, 0.081);
+      anim.push((t) => { straw.rotation.z = Math.sin(t * 2) * 0.12; });
+      break;
+    }
+    case 'stapler': {
+      box(g, '#2a2c30', 0.12, 0.04, 0.34, 0, 0.02, 0);
+      const top = new THREE.Group(); top.position.set(0, 0.05, -0.15); g.add(top);
+      box(top, '#d9443a', 0.12, 0.06, 0.32, 0, 0.03, 0.15);
+      for (const x of [-0.03, 0.03]) box(top, '#fff', 0.025, 0.03, 0.01, x, 0.04, 0.311);
+      for (const x of [-0.03, 0.03]) box(top, '#1d1a18', 0.012, 0.015, 0.012, x, 0.04, 0.315);
+      anim.push((t) => { top.rotation.x = -Math.max(0, Math.sin(t * 3)) * 0.35; });
+      break;
+    }
+    case 'mouse': {
+      box(g, '#f2f2f4', 0.16, 0.08, 0.24, 0, 0.05, 0);
+      box(g, '#f2f2f4', 0.14, 0.04, 0.2, 0, 0.1, -0.01);
+      box(g, '#d8d8de', 0.005, 0.05, 0.1, 0, 0.1, 0.06);
+      const wheel = box(g, '#5aa6c8', 0.025, 0.04, 0.04, 0, 0.125, 0.06, { emissive: '#5aa6c8', emissiveIntensity: 0.6 });
+      eyes(g, 0.07, 0.121, 0.04, 0.025);
+      const cord = []; for (let k = 0; k < 4; k++) cord.push(box(g, '#c8c8ce', 0.02, 0.02, 0.06, 0, 0.03, -0.15 - k * 0.06));
+      anim.push((t) => { wheel.rotation.x = t * 4; cord.forEach((c, k) => (c.position.x = Math.sin(t * 3 - k) * 0.02 * k)); });
+      break;
+    }
+    case 'calc': {
+      box(g, '#3a3e46', 0.22, 0.05, 0.3, 0, 0.03, 0);
+      const scr = box(g, '#a8c8a0', 0.18, 0.006, 0.07, 0, 0.058, -0.09, { emissive: '#7a9a70', emissiveIntensity: 0.3 });
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) box(g, c === 3 ? '#e8873a' : '#d8dce2', 0.035, 0.012, 0.03, -0.06 + c * 0.04, 0.06, -0.01 + r * 0.04);
+      anim.push((t) => { scr.material.emissiveIntensity = 0.2 + (Math.sin(t * 4) > 0 ? 0.4 : 0); });
+      break;
+    }
+    case 'stamp': {
+      box(g, '#c8443a', 0.16, 0.03, 0.16, 0, 0.015, 0);
+      const st = new THREE.Group(); g.add(st);
+      box(st, '#8a5a32', 0.12, 0.08, 0.12, 0, 0.07, 0);
+      box(st, '#6a4224', 0.05, 0.14, 0.05, 0, 0.18, 0);
+      box(st, '#8a5a32', 0.1, 0.06, 0.1, 0, 0.27, 0);
+      eyes(st, 0.08, 0.061, 0.03, 0.025, '#f6efe0');
+      anim.push((t) => { const u = t % 2; st.position.y = u < 1.7 ? 0.04 + Math.sin(u / 1.7 * Math.PI) * 0.06 : 0.04 - (u - 1.7) * 0.1; });
+      break;
+    }
+    case 'idcard': {
+      const card = new THREE.Group(); g.add(card); card.position.y = 0.05;
+      box(card, '#fafafa', 0.18, 0.26, 0.015, 0, 0.13, 0);
+      box(card, '#3d8fc4', 0.18, 0.05, 0.016, 0, 0.235, 0);
+      box(card, '#d8c4a8', 0.08, 0.09, 0.016, 0, 0.14, 0.001);
+      for (const x of [-0.015, 0.015]) box(card, '#1d1a18', 0.012, 0.015, 0.017, x, 0.15, 0.002);
+      box(card, '#9aa0a8', 0.12, 0.012, 0.016, 0, 0.06, 0.001);
+      box(card, '#3d8fc4', 0.03, 0.12, 0.015, 0, 0.32, 0);
+      anim.push((t) => { card.rotation.y = Math.sin(t * 1.5) * 0.4; });
+      break;
+    }
+    case 'deskcal': {
+      for (const s of [1, -1]) { const p = box(g, '#3a3e46', 0.26, 0.24, 0.015, 0, 0.12, 0.05 * s); p.rotation.x = 0.25 * s; }
+      const page = box(g, '#fbf8f0', 0.24, 0.2, 0.012, 0, 0.12, 0.072); page.rotation.x = 0.25;
+      box(g, '#d9443a', 0.24, 0.05, 0.013, 0, 0.21, 0.05).rotation.x = 0.25;
+      box(g, '#2a2420', 0.07, 0.07, 0.013, 0, 0.11, 0.077).rotation.x = 0.25;
+      for (const x of [-0.07, 0.07]) box(g, '#c8a24a', 0.02, 0.03, 0.03, x, 0.25, 0.03);
+      break;
+    }
+    case 'cupramen': {
+      box(g, '#f4efe4', 0.2, 0.2, 0.2, 0, 0.1, 0);
+      box(g, '#d9443a', 0.205, 0.06, 0.205, 0, 0.14, 0);
+      box(g, '#f2d37a', 0.22, 0.012, 0.22, 0, 0.205, 0);
+      const lid = box(g, '#f6f2ea', 0.2, 0.008, 0.12, 0, 0.215, -0.05); lid.rotation.x = -0.4;
+      box(g, '#1d1a18', 0.012, 0.15, 0.012, 0.06, 0.28, 0.04).rotation.z = 0.3;
+      box(g, '#1d1a18', 0.012, 0.15, 0.012, 0.08, 0.28, 0.04).rotation.z = 0.3;
+      eyes(g, 0.08, 0.101, 0.05, 0.03);
+      const steam = [0, 1].map((k) => box(g, '#ffffff', 0.04, 0.1, 0.04, -0.04 + k * 0.06, 0.3, 0.03, { transparent: true, opacity: 0.6 }));
+      anim.push((t) => steam.forEach((m, k) => { const u = (t * 0.4 + k * 0.5) % 1; m.position.y = 0.26 + u * 0.15; m.material.opacity = 0.6 * (1 - u); }));
+      break;
+    }
     case 'pumpkin': {
       // 호박 등불: 주황 호박에 세모 눈과 웃는 입이 안에서 빛나요
       const c = '#e8873a';
@@ -757,7 +1009,7 @@ export function buildPet(id) {
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   // 사람 무릎~허리 높이가 되도록 키운다
   const wrap = new THREE.Group();
-  g.scale.setScalar(1.5);
+  g.scale.setScalar(1.5 * (PETS.find((p) => p.id === id)?.size || 1));   // 납작한 사물 친구는 조금 크게
   wrap.add(g);
   wrap.userData.anim = anim;
   wrap.userData.legs = g.userData.legs;
