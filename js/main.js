@@ -1247,6 +1247,18 @@ addEventListener('keydown', (e) => {
   const btn = n && document.querySelectorAll('#actions .act')[n - 1];
   if (btn) { e.preventDefault(); btn.click(); }
 });
+// 왼쪽 도형 단추
+$('#side-place').onclick = showPlaces;
+$('#side-char').onclick = openCreator;
+$('#side-sched').onclick = openSched;
+$('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
+// 숫자 키 1~8 = 아래 동작 칸 차례대로
+addEventListener('keydown', (e) => {
+  if (S.mode !== 'world' || e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const n = /^Digit([1-9])$/.exec(e.code)?.[1];
+  const btn = n && document.querySelectorAll('#actions .act')[n - 1];
+  if (btn) { e.preventDefault(); btn.click(); }
+});
 $('#server-chip').onclick = () => { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; };
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
