@@ -740,6 +740,9 @@ function updateHud() {
   $('#hud-server').textContent = S.server ? `· 서버 ${S.server}` : '· 서버 찾는 중';
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
+  // 동시접속자: 지금 이 서버에 함께 있는 분 (모두에게 보임)
+  $('#online-n').textContent = S.remotes.size + 1;
+  $('#online-pill').title = `큰법당 서버 ${S.server || '-'}에 지금 함께 접속한 분`;
   // 오른쪽 상황 단추는 장소마다 두 개: 법당 [내 방으로][일어서기] · 마당 [법당으로][산보하기]
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';

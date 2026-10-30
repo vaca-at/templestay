@@ -300,6 +300,11 @@ body:not(.admin) .place .stay { display: none !important; }
 .credit-list { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
 /* 홈 화면에 추가 안내 */
 .install-steps { margin: 4px 0 8px; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.55; }
+/* 동시접속자: 위 오른쪽 소리 단추 옆, 초록 점 + 인원 (모두에게 보임) */
+#online-pill { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#online-pill i { width: 8px; height: 8px; border-radius: 50%; background: #5fd38a; box-shadow: 0 0 0 3px rgba(95, 211, 138, .25); }
+#online-pill b { font-size: 15px; }
+@media (max-width: 760px) { #online-pill { height: 36px; padding: 0 9px; gap: 5px; font-size: 12.5px; } #online-pill b { font-size: 13.5px; } .hud-right { flex-wrap: nowrap; } }
 #install-ios[hidden], #install-other[hidden] { display: none; }
 /* 불상·탑 고르기 창 */
 .relic-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
