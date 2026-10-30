@@ -1366,7 +1366,7 @@ $('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 �
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
-// 법당 음악: 실제 녹음 세 곡 + 합성 세 곡 (끄기는 위쪽 소리 단추). 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
+// 법당 음악: 실제 녹음 다섯 곡 + 합성 세 곡 (끄기는 위쪽 소리 단추). 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
 // 처음 온 분(또는 예전에 끄기·지운 곡을 골랐던 분)은 1번 싱잉볼로 시작. 소리를 끄려면 위쪽 소리 단추
 { const m = store.get('music'); setMusic(TRACKS.some((t) => t.id === m) ? m : 'bowl'); }
 // 체형 단추 그림: 글자 없이 실루엣만 (같은 바닥선, 같은 축척이라 키 차이가 보여요)

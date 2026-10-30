@@ -1,4 +1,4 @@
-// 소리는 녹음 파일 없이 Web Audio로 합성한다: 목탁, 싱잉볼(풍경), 동전, 바람, 법당 음악 (실제 녹음 세 곡은 assets/audio)
+// 소리는 녹음 파일 없이 Web Audio로 합성한다: 목탁, 싱잉볼(풍경), 동전, 바람, 법당 음악 (실제 녹음 다섯 곡은 assets/audio)
 let ctx = null, master = null, ambient = null;
 export const sound = { on: false };
 
@@ -65,7 +65,7 @@ function startAmbient() {
 }
 function stopAmbient() { try { ambient?.src.stop(); } catch {} ambient = null; }
 
-// ───────── 법당 음악: 실제 녹음 세 곡 + 합성 세 곡 ─────────
+// ───────── 법당 음악: 실제 녹음 다섯 곡 + 합성 세 곡 ─────────
 // 녹음 파일 없이 여기서 합성해요 (저작권 걱정 없는 소리). 가락은 모두 이 사이트에서 새로 지었어요.
 // 곡마다 step(st, at, out) 이 한 박을 out 에 예약하고 다음 박까지 남은 초를 돌려줘요.
 // src 가 있는 곡은 실제 녹음 파일을 처음 고를 때 한 번 받아서 끝없이 이어 틀어요.
@@ -76,6 +76,8 @@ export const TRACKS = [
   { id: 'banya', name: '반야심경 염불', cap: '스님 염불과 목탁 녹음', src: 'assets/audio/banya-yeombul.m4a' },
   { id: 'seonunsa', name: '선운사 염불', cap: '새소리·샘물 속 염불과 목탁', src: 'assets/audio/seonunsa-yeombul.m4a' },
   { id: 'gakwonsa', name: '각원사 법당 염불', cap: '실제 법당 안 녹음', src: 'assets/audio/gakwonsa-chant.m4a' },
+  { id: 'seonunsa_yebul', name: '선운사 저녁예불', cap: '범종 · 목어 · 운판 · 목탁', src: 'assets/audio/seonunsa-yebul.m4a' },
+  { id: 'silsangsa', name: '실상사 염불', cap: '매미 소리 속 염불과 목탁', src: 'assets/audio/silsangsa-yeombul.m4a' },
   { id: 'jong', name: '범종', cap: '길게 울리는 새벽 범종' },
   { id: 'wind', name: '산사 풍경', cap: '바람과 처마 끝 풍경' },
 ];
