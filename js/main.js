@@ -288,10 +288,13 @@ document.addEventListener('visibilitychange', hourBell);
 function makeMe() {
   if (S.me) { players.remove(S.me.group); S.me.dispose(); }
   S.me = new Avatar(S.profile.look, S.profile.name, { mine: true });
+  // 108배: '한 번'이면 108번에서 멈추고, '계속'이면 108번마다 한 바퀴로 세며 이어서 (위쪽 칸의 단추로 바꿔요)
+  S.me.baeLoop = store.get('baeLoop', false);
   S.me.onBow = (n) => {
-    $('#bae-counter').innerHTML = `<small>108배</small><b>${n}</b><small>/ 108</small>`;
+    const loop = S.me.baeLoop, k = loop ? n % 108 : n, round = Math.floor(n / 108);
+    $('#bae-counter').innerHTML = `<small>108배</small><b>${loop && n && !k ? 108 : k}</b><small>/ 108${loop && round ? ` · ${round}바퀴` : ''}</small><button id="bae-mode" type="button" aria-pressed="${loop}" title="108번에서 멈출지 계속할지">${loop ? '계속' : '한 번'}</button>`;
     if (n > 0) addRecord('bows', 1);
-    if (n >= 108) { bowl(); toast('108배를 모두 마쳤어요'); setTimeout(() => ($('#bae-counter').hidden = true), 2500); }
+    if (n > 0 && n % 108 === 0) { bowl(); toast(loop ? `108배 ${round}바퀴를 마쳤어요. 이어서 해요` : '108배를 모두 마쳤어요'); if (!loop) setTimeout(() => ($('#bae-counter').hidden = true), 2500); }
   };
   players.add(S.me.group);
 }
@@ -1422,6 +1425,7 @@ const syncSoundBtn = () => {
 };
 
 document.addEventListener('click', (e) => {
+  if (e.target.closest('#bae-mode')) { S.me.baeLoop = !S.me.baeLoop; store.set('baeLoop', S.me.baeLoop); S.me.onBow(S.me.bowCount || 0); toast(S.me.baeLoop ? '108배를 끝없이 이어서 해요' : '108배를 108번에서 멈춰요'); return; }
   const t = e.target.closest('button');
   if (t?.id === 'online-pill') return toggleOnline();
   if (!$('#online-list').hidden && !e.target.closest('#online-list')) toggleOnline(false);
@@ -1455,7 +1459,14 @@ document.addEventListener('click', (e) => {
   }
 });
 
-$('#nick-dice').onclick = () => { $('#nick').value = randomName(); };
+// 법명 저장: 쓴 이름을 바로 내 이름표에 (빈칸이면 무작위 법명)
+$('#nick-save').onclick = () => {
+  const name = $('#nick').value.trim().slice(0, 10) || randomName();
+  $('#nick').value = name; draft.name = name;
+  S.profile.name = name; store.set('profile', S.profile);
+  S.me?.setName(name); pushState(true); toast(`법명을 '${name}'(으)로 저장했어요`);
+};
+$('#nick').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#nick-save').click(); } });
 $('#creator-done').onclick = finishCreator;
 $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { stopWalk(); standUp(); };

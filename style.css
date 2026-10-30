@@ -532,3 +532,7 @@ html body .typing-sheet { width: min(720px, calc(100vw - 32px)); max-width: none
 .ty-done { text-align: center; padding: 18px 0; display: grid; gap: 14px; justify-items: center; }
 .ty-done p { font-size: 18px; line-height: 1.7; margin: 0; } .ty-done b { font-size: 28px; color: var(--jade); } .ty-done em { font-style: normal; color: #c9822a; font-weight: 700; }
 @media (max-width: 520px) { .ty-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+#bae-mode { margin-left: 4px; font: 12px var(--display); color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); border-radius: 999px; padding: 3px 10px; cursor: pointer; pointer-events: auto; }
+#bae-mode[aria-pressed="true"] { background: var(--jade); border-color: var(--jade); }
+#bae-counter { align-items: center; }

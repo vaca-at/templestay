@@ -636,7 +636,7 @@ export class Avatar {
     if (this.action === 'bae108') {
       const n = Math.floor(this.actionT / 4.2);
       if (n !== this.bowCount) { this.bowCount = n; this.onBow?.(n); }
-      if (n >= 108) this.action = null;
+      if (n >= 108 && !this.baeLoop) this.action = null;   // '계속'이면 멈추지 않아요
     }
 
     // 발우공양·독서는 앉아 있을 때만: 일어나거나 다른 장소로 가면 밥그릇·책을 내려놓는다
