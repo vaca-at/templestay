@@ -121,51 +121,15 @@ function lattice(frame = '#7a2e22', paper = '#efe3c4', flower = true) {
 
 // 탱화: 붉은 바탕, 가운데 커다란 광배, 둘레의 보살과 구름 무늬
 function taenghwa() {
-  return canvasTex(1536, 768, (g, w, h) => {
+  // 탱화 뒤 바탕: 짙은 비단에 은은한 구름무늬와 금빛 단청 테두리
+  return canvasTex(1536, 586, (g, w, h) => {
     const r = rng(42);
-    const bg = g.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, '#5a1a14'); bg.addColorStop(1, '#3a1410');
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#4a1a14'); bg.addColorStop(1, '#2f120e');
     g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    // 구름 무늬
-    for (let i = 0; i < 70; i++) {
-      const x = r() * w, y = r() * h, s = 18 + r() * 40;
-      g.fillStyle = ['#2f6b5a', '#3a5c8a', '#c9a24a', '#7a2c22'][i % 4];
-      g.globalAlpha = 0.5;
-      for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + k * s * 0.6, y + Math.sin(k) * s * 0.3, s * 0.45, 0, Math.PI * 2); g.fill(); }
-    }
-    g.globalAlpha = 1;
-    // 둘레 인물들
-    const figure = (x, y, s, robe, halo) => {
-      g.fillStyle = halo; g.beginPath(); g.arc(x, y - s * 1.1, s * 0.75, 0, Math.PI * 2); g.fill();
-      g.fillStyle = robe; g.beginPath(); g.moveTo(x - s * 0.9, y + s * 1.6); g.quadraticCurveTo(x, y - s * 0.6, x + s * 0.9, y + s * 1.6); g.fill();
-      g.fillStyle = '#e8c9a0'; g.beginPath(); g.arc(x, y - s * 1.1, s * 0.42, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#2b2422'; g.beginPath(); g.arc(x, y - s * 1.38, s * 0.3, Math.PI, 0); g.fill();
-    };
-    const robes = ['#2f6b5a', '#c9a24a', '#3a5c8a', '#b0462e', '#e8dcc0'];
-    for (let row = 0; row < 3; row++) {
-      for (let i = 0; i < 12; i++) {
-        const x = 90 + i * 124 + (row % 2) * 40;
-        if (Math.abs(x - w / 2) < 330) continue;
-        figure(x, 160 + row * 210, 34 + row * 4, robes[(i + row) % 5], '#d8a845');
-      }
-    }
-    // 큰 광배
-    const cx = w / 2, cy = h * 0.46;
-    for (let k = 0; k < 7; k++) {
-      g.strokeStyle = ['#e6c15a', '#2f6b5a', '#c8443a', '#3a5c8a', '#e6c15a', '#f2e7c9', '#c8443a'][k];
-      g.lineWidth = 14;
-      g.beginPath(); g.ellipse(cx, cy, 300 - k * 22, 340 - k * 22, 0, 0, Math.PI * 2); g.stroke();
-    }
-    for (let i = 0; i < 48; i++) {
-      const a = (i / 48) * Math.PI * 2;
-      g.fillStyle = i % 2 ? '#e6c15a' : '#c8443a';
-      g.beginPath();
-      g.moveTo(cx + Math.cos(a) * 320, cy + Math.sin(a) * 360);
-      g.lineTo(cx + Math.cos(a + 0.05) * 360, cy + Math.sin(a + 0.05) * 400);
-      g.lineTo(cx + Math.cos(a + 0.1) * 320, cy + Math.sin(a + 0.1) * 360);
-      g.fill();
-    }
-    g.strokeStyle = '#c9a24a'; g.lineWidth = 16; g.strokeRect(8, 8, w - 16, h - 16);
+    g.strokeStyle = 'rgba(201,162,74,0.16)'; g.lineWidth = 3;
+    for (let i = 0; i < 46; i++) { const x = r() * w, y = r() * h, s = 14 + r() * 18; for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + k * s * 1.3, y, s * 0.6, Math.PI, 0); g.stroke(); } }
+    g.lineWidth = 18; g.strokeStyle = '#2f7d6d'; g.strokeRect(9, 9, w - 18, h - 18);
+    g.lineWidth = 6; g.strokeStyle = '#c9a24a'; g.strokeRect(24, 24, w - 48, h - 48);
   });
 }
 
@@ -993,16 +957,6 @@ export function buildInterior(loc) {
   const WY = 4.55, WH = 6.1;
   for (const s of [-1, 1]) for (const [z, w] of BAYS) {
     // 불상 바로 옆 칸은 창 대신 비천 벽화 (양쪽이 마주 보며 날아요)
-    // 불상 바로 옆 칸은 창 대신 고려 수월관음도 (14세기, 스미소니언 국립아시아미술관 F1904.13, CC0).
-    // 오른쪽 벽은 좌우를 뒤집어 두 관음이 불상 쪽을 마주 보게. 둘레는 단청 테두리
-    if (z === -14) {
-      wall(w + 0.9, WH + 1.6, s * (HW - 0.035), WY + 0.2, z, -s * Math.PI / 2, mat('#7a2c22')).receiveShadow = false;
-      wall(w + 0.55, WH + 1.25, s * (HW - 0.04), WY + 0.2, z, -s * Math.PI / 2, mat('#2f7d6d')).receiveShadow = false;
-      const t = new THREE.TextureLoader().load('assets/suwol-gwaneum.jpg'); t.colorSpace = THREE.SRGBColorSpace;
-      if (s > 0) { t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; }
-      const m = wall(w + 0.3, WH + 1.0, s * (HW - 0.045), WY + 0.2, z, -s * Math.PI / 2, new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 }));
-      m.receiveShadow = false; continue;
-    }
     const t = pano.clone();
     // 안에서 보면 왼쪽 벽은 -z 쪽으로, 오른쪽 벽은 +z 쪽으로 그림이 이어져요. 왼쪽 벽은 그림 앞 절반, 오른쪽 벽은 뒤 절반
     const u = s < 0 ? (HF - (z + w / 2)) / L : (z - w / 2 + HD) / L;
@@ -1088,8 +1042,19 @@ export function buildInterior(loc) {
   burner.position.set(0, 1.62, 1.5); altar.add(burner);
   g.add(altar);
 
-  const painting = new THREE.Mesh(new THREE.PlaneGeometry(22, 11), new THREE.MeshStandardMaterial({ map: taenghwa(), roughness: 0.9 }));
-  painting.position.set(0, 5.6, -HD + 0.05); g.add(painting);
+  // 뒷벽: 차분한 비단 바탕에 단청 테두리. 불화 출처: 아미타팔대보살도 F1906.269 · 수월관음도 F1904.13 (스미소니언 국립아시아미술관, CC0)
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(22, 8.4), new THREE.MeshStandardMaterial({ map: taenghwa(), roughness: 0.9 }));
+  back.position.set(0, 4.6, -HD + 0.04); g.add(back);
+  // 불상 양옆 뒷벽에 고려 불화 두 점: 왼쪽 「아미타팔대보살도」, 오른쪽 「수월관음도」(관음이 불상 쪽을 바라봐요)
+  const hangPainting = (file, aspect, x) => {
+    const t = new THREE.TextureLoader().load(file); t.colorSpace = THREE.SRGBColorSpace;
+    const PH = 7.4, PW = PH * aspect, y = 4.7;
+    const f1 = new THREE.Mesh(new THREE.PlaneGeometry(PW + 0.6, PH + 0.5), mat('#2f7d6d')); f1.position.set(x, y, -HD + 0.06); g.add(f1);
+    const f2 = new THREE.Mesh(new THREE.PlaneGeometry(PW + 0.3, PH + 0.22), mat('#c9a24a')); f2.position.set(x, y, -HD + 0.07); g.add(f2);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 })); p.position.set(x, y, -HD + 0.08); g.add(p);
+  };
+  hangPainting('assets/amita-palbosal.jpg', 821 / 1540, -7.4);
+  hangPainting('assets/suwol-gwaneum.jpg', 540 / 1080, 7.4);
 
   // 부처님 비추는 조명
   const spot = new THREE.SpotLight('#fff1d6', 120, 30, 0.5, 0.6, 1.5);
