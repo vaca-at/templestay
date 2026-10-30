@@ -461,7 +461,25 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 .body-pick svg { width: 38px; height: 48px; fill: #8f877d; }
 .body-pick[aria-pressed="true"] { border-color: var(--jade); box-shadow: 0 0 0 2px var(--jade); background: #eef6f2; }
 .body-pick[aria-pressed="true"] svg { fill: var(--jade); }
-/* 휴대폰 가로: 높이가 낮아 왼쪽 세로 단추가 조이스틱과 겹치고 사진 단추가 잘려서, 장소 단추 옆 위쪽에 가로로 한 줄 */
+/* 휴대폰 가로: 높이가 낮아서 장소 줄과 왼쪽 단추를 위쪽에 가로 두 줄로 (조이스틱 자리를 비워요) */
 @media (max-height: 520px) and (orientation: landscape) {
-  html body #side-btns { top: max(12px, env(safe-area-inset-top)); left: calc(max(12px, env(safe-area-inset-left)) + 90px); transform: none; display: flex; gap: 6px; }
+  html body #scene-bar { display: flex; }
+  html body #scene-bar button { padding: 7px 10px; font-size: 13px; }
+  html body #side-btns { top: calc(max(12px, env(safe-area-inset-top)) + 50px); left: max(12px, env(safe-area-inset-left)); transform: none; display: flex; gap: 6px; }
+  html body #side-btns button { width: 42px; height: 42px; }
+  html body #pick-pop { top: calc(max(12px, env(safe-area-inset-top)) + 100px); left: calc(max(12px, env(safe-area-inset-left)) + 48px); }
+}
+/* 아이패드처럼 큰 터치 화면: 손가락으로 누르기 좋게 단추를 키워요 */
+@media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
+  html body #scene-bar button { padding: 10px 16px; font-size: 16px; }
+  html body #side-btns { top: calc(max(12px, env(safe-area-inset-top)) + 216px); gap: 10px; }
+  html body #side-btns button { width: 62px; height: 62px; border-radius: 16px; }
+  html body #side-btns svg { width: 30px; height: 30px; }
+  html body #pick-pop { top: calc(max(12px, env(safe-area-inset-top)) + 216px); left: calc(max(12px, env(safe-area-inset-left)) + 72px); }
+  html body #actions .act { height: 60px; min-width: 76px; padding: 0 16px; font-size: 17px; border-radius: 16px; }
+  html body #actions .act::before { font-size: 11px; }
+  html body .hud-right .icon-btn { width: 52px; height: 52px; }
+  html body #online-pill { height: 52px; padding: 0 14px; font-size: 16px; }
+  html body #context-btns .ctx { padding: 12px 22px; font-size: 16px; }
+  html body #context-btns .ctx { width: 128px; }
 }

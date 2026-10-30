@@ -293,7 +293,11 @@ async function goScene(which, { instant = false } = {}) {
 function placeCameraBehind(dist) {
   const me = S.me.group;
   const back = new THREE.Vector3(Math.sin(me.rotation.y), 0, Math.cos(me.rotation.y)).multiplyScalar(-dist);
-  controls.target.copy(me.position).add(new THREE.Vector3(0, S.active.camLookY ?? 1.1, 0));
+  // 아이패드 세로처럼 큰 세로 화면은 하늘이 반이라, 시선을 조금 내려 마당·사람이 크게 보이게
+  // (시선이 높은 마당만 많이 내리고, 법당처럼 원래 낮은 곳은 조금만)
+  const lookY = S.active.camLookY ?? 1.1;
+  const tilt = innerWidth < innerHeight && innerWidth >= 600 ? Math.min(1.3, Math.max(0, lookY - 1.5)) : 0;
+  controls.target.copy(me.position).add(new THREE.Vector3(0, lookY - tilt, 0));
   camera.position.copy(me.position).add(back).add(new THREE.Vector3(0, 1.1 + dist * (S.active.camRise ?? 0.42), 0));
   controls.update();
 }
@@ -1183,6 +1187,9 @@ function loop() {
     S.me.update(dt, ACTIONS);
     if (!S.me.action && document.querySelector('.act[aria-pressed="true"]')) syncActionButtons();
     soundFor(S.me, 1);
+    // 이름표: 내 캐릭터까지 거리보다 먼 사람은 거리만큼 키워(최대 2배) 내 이름표보다 작아지지 않게, 화면이 낮으면 모두 조금 크게
+    const tagNear = Math.max(5, camera.position.distanceTo(S.me.group.position));
+    const tagH = Math.min(1.5, Math.max(1, 640 / innerHeight));
     for (const r of S.remotes.values()) {
       const g = r.av.group;
       const before = g.position.clone();
@@ -1203,12 +1210,18 @@ function loop() {
       // 다른 장소에 있는 분은 친구도 함께 숨긴다 (친구만 덩그러니 남지 않게)
       if (!g.visible) { if (r.av.pet) r.av.pet.visible = false; continue; }
       r.av.update(dt, ACTIONS);
-      r.av.tag.visible = g.position.distanceTo(camera.position) < 13;
+      const far = g.position.distanceTo(camera.position);
+      r.av.tag.visible = far < 13;
+      // 멀리 있어도 이름표가 너무 작아지지 않게: 6m 넘으면 거리만큼 키우고(최대 2배), 화면이 낮으면 조금 더
+      const tk = Math.min(2, Math.max(1, far / tagNear)) * tagH;
+      r.av.tag.scale.set(1.35 * tk, 0.3 * tk, 1);
+      r.av.tag.position.y = (r.av.tagY ?? 2.05) + (tk - 1) * 0.15;
       soundFor(r.av, Math.max(0, 1 - g.position.distanceTo(S.me.group.position) / 16));
     }
     const now = performance.now();
     // 서버가 끊긴 분 자리를 30초 남겨 두니, 그보다 조금 길게 기다린다
     for (const [id, r] of S.remotes) if (now - r.seen > 40000) removeRemote(id, false);
+    S.me.tag.scale.set(1.35 * tagH, 0.3 * tagH, 1);
     pushState();
     updateContext();
     updateTimer(dt);
