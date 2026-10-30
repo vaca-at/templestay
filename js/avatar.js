@@ -515,7 +515,11 @@ export class Avatar {
     this.updatePet(dt);
 
     this.beads.visible = this.action === 'beads';
-    if (this.beads.visible) this.beads.rotation.z += dt * 1.6;
+    // 염주: 1초에 한 알씩, 엄지로 넘기듯 톡 넘어가고 잠시 멈춘다 (16알, 한 바퀴 16초)
+    if (this.beads.visible) {
+      const t = this.actionT, n = Math.floor(t), f = t - n;
+      this.beads.rotation.z = (n + Math.min(1, f / 0.25)) * (Math.PI * 2 / 16);
+    }
     this.moktak.visible = this.stick.visible = this.action === 'moktak';
     this.bowl.visible = this.spoon.visible = this.action === 'eat';
     this.book.visible = this.action === 'read';
