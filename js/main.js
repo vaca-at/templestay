@@ -231,7 +231,7 @@ function handleRemoteState(peer, d) {
     av.group.rotation.y = d.r;
     r = { av, st: d, pos: new THREE.Vector3(d.p[0], 0, d.p[1]), rot: d.r, appliedA: null, lookKey: JSON.stringify(d.l), seen: 0 };
     S.remotes.set(peer, r);
-    if (S.mode === 'world') toast(`${d.n}님이 ${S.loc ? S.loc.name : '법당'}에 오셨어요`);
+    if (S.mode === 'world') toast(`${d.n}님이 큰법당에 오셨어요`);
   }
   const lookKey = JSON.stringify(d.l);
   if (lookKey !== r.lookKey) { r.av.setLook(d.l, d.s); r.lookKey = lookKey; }
@@ -684,7 +684,8 @@ function renderSceneBar() {
 
 function updateHud() {
   if (!S.loc || S.mode !== 'world') return;
-  $('#hud-place').textContent = S.loc.name;
+  $('#hud-place').textContent = '큰법당';
+  $('#design-name').textContent = S.loc.name;
   $('#hud-server').textContent = S.server ? `· 서버 ${S.server}` : '· 서버 찾는 중';
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
@@ -714,14 +715,14 @@ function updateTimer(dt) {
 function renderServerGrid() {
   if (!S.loc) return;
   const counts = net.counts();
-  $('#server-title').textContent = `${S.loc.name} 서버`;
-  $('#server-now').textContent = S.server ? `현재 · ${S.loc.name} 서버 ${S.server}` : '서버를 찾는 중이에요';
+  $('#server-title').textContent = '큰법당 서버';
+  $('#server-now').textContent = S.server ? `현재 · 큰법당 서버 ${S.server}` : '서버를 찾는 중이에요';
   let html = '';
   for (let i = 1; i <= SERVER_COUNT; i++) {
     const c = counts[i] || 0;
     const cur = i === S.server, full = c >= SERVER_CAP && !cur;
     html += `<button class="server${cur ? ' current' : ''}${full ? ' full' : ''}" data-server="${i}" ${full ? 'disabled' : ''}>
-      <b>${S.loc.name} 서버 ${i}</b><span>${c} / ${SERVER_CAP}명${cur ? ' · 이용 중' : full ? ' · 만석' : ''}</span>
+      <b>큰법당 서버 ${i}</b><span>${c} / ${SERVER_CAP}명${cur ? ' · 이용 중' : full ? ' · 만석' : ''}</span>
       <small class="cap">${cur ? '지금 머무는 서버' : full ? '자리가 없어 들어갈 수 없어요' : '눌러서 이 서버로 옮기기'}</small></button>`;
   }
   $('#server-grid').innerHTML = html;
@@ -736,7 +737,7 @@ async function switchServer(n) {
   await net.joinServer(n);
   pushState(true);
   renderServerGrid();
-  toast(`${S.loc.name} 서버 ${n}에 들어왔어요`);
+  toast(`큰법당 서버 ${n}에 들어왔어요`);
 }
 
 // 자리가 남은 서버 중 가장 붐비는 곳으로
@@ -796,7 +797,8 @@ async function enterLocation(locId) {
   await sleep(30);
   const hall = worldFor(S.loc.id, 'in');
   setLoad(45, '부처님을 모시는 중');
-  const netReady = net.joinLobby(S.loc.id, true);
+  // 서버는 디자인과 상관없이 모두 '큰법당 서버 1~12' 하나로 모인다
+  const netReady = net.joinLobby('hall', true);
   await Promise.race([loadBuddha(hall), sleep(8000)]);
   setLoad(75, '방석을 까는 중');
   await sleep(30);
@@ -829,18 +831,33 @@ async function enterLocation(locId) {
   if (!store.get('welcomed', false)) $('#welcome').hidden = false;
   if (!net.online) { S.server = 1; updateHud(); toast('실시간 연결이 안 돼서 혼자 머무는 중이에요'); return; }
   if (net.mode === 'p2p') await sleep(1500);
-  if (S.loc.id !== locId) return;
   await switchServer(pickServer());
+}
+
+// 디자인(건물·배경·마당) 바꾸기: 서버와 함께 있는 사람은 그대로, 내 화면의 풍경만 바뀐다
+async function changeDesign(locId) {
+  if (S.mode !== 'world' || locId === S.loc?.id) return;
+  await fade(true);
+  S.loc = LOCATIONS.find((l) => l.id === locId) || LOCATIONS[0];
+  store.set('lastLoc', S.loc.id);
+  S.lanterns.clear();
+  const act = S.autoAct;
+  await goScene(S.scene, { instant: true });
+  if (act) applyActivity(act);
+  updateHud();
+  fade(false);
+  toast(`${S.loc.name} 디자인으로 바꿨어요`);
 }
 
 function showPlaces() {
   $('#places').hidden = false;
   $('#place-list').innerHTML = LOCATIONS.map((l) => {
     const stay = store.get(`stay:${l.id}`, 0);
-    return `<button class="place" data-place="${l.id}"><canvas width="400" height="300" data-art="${l.id}"></canvas>
+    const cur = S.loc?.id === l.id;
+    return `<button class="place${cur ? ' current' : ''}" data-place="${l.id}"><canvas width="400" height="300" data-art="${l.id}"></canvas>
       <div class="body"><h3>${l.name}</h3><span class="where">${l.place}</span><p>${l.desc}</p>
-      ${stay > 60 ? `<span class="stay">내가 머문 시간 ${fmtLong(stay)}</span>` : ''}
-      <small class="cap-line">눌러서 이 법당으로 옮기기 · 법당 안으로 바로 들어가요</small></div></button>`;
+      ${stay > 60 ? `<span class="stay">이 디자인에서 머문 시간 ${fmtLong(stay)}</span>` : ''}
+      <small class="cap-line">${cur ? '지금 쓰는 디자인' : '눌러서 이 디자인으로 바꾸기 · 서버와 함께 있는 분들은 그대로예요'}</small></div></button>`;
   }).join('') + '<p class="fine credit">불상 자료 · 국립중앙박물관, 금동불좌상·금동보살입상(덕수2116), 공공누리 제1유형</p>';
   document.querySelectorAll('[data-art]').forEach((c) => paintView(LOCATIONS.find((l) => l.id === c.dataset.art), c.getContext('2d'), c.width, c.height));
 }
@@ -1120,7 +1137,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.close) { $('#' + t.dataset.close).hidden = true; return; }
   if (t.dataset.act) return doAction(t.dataset.act);
   if (t.dataset.scene) { pauseAuto(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
-  if (t.dataset.place) { $('#places').hidden = true; return enterLocation(t.dataset.place); }
+  if (t.dataset.place) { $('#places').hidden = true; return changeDesign(t.dataset.place); }
   if (t.dataset.server) { $('#server-modal').hidden = true; return switchServer(+t.dataset.server); }
   if (t.dataset.del != null) { schedDraft.blocks.splice(+t.dataset.del, 1); return renderSchedEditor(schedDraft); }
   const pick = ['type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
@@ -1152,6 +1169,7 @@ $('#btn-stand').onclick = () => { pauseAuto(); standUp(); };
 $('#btn-wish').onclick = openWish;
 $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivity(b.act); };
 $('#sched-chip').onclick = openSched;
+$('#design-chip').onclick = showPlaces;
 $('#server-chip').onclick = () => { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; };
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };

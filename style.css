@@ -273,3 +273,6 @@ body:not(.admin) .place .stay { display: none !important; }
 .menu-links { margin: 6px 0 2px; padding: 8px 14px 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-soft); }
 .menu-links a { color: inherit; }
 .ld-credit a { color: inherit; }
+/* 디자인 고르기: 지금 쓰는 디자인 표시 */
+.place.current { border-color: var(--jade); box-shadow: 0 0 0 2px var(--jade); }
+#design-chip b { font-family: var(--display); }

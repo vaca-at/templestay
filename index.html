@@ -82,7 +82,7 @@
 <section id="places" class="screen" hidden>
   <div class="places">
     <header class="panel-head">
-      <div><p class="eyebrow">어디로 갈까요</p><h2>법당 위치</h2></div>
+      <div><p class="eyebrow">건물 · 배경 · 마당</p><h2>디자인 고르기</h2><p class="sub">내 화면의 풍경만 바뀌어요. 서버와 함께 있는 분들은 그대로예요.</p></div>
       <button class="icon-btn" data-close="places" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button>
     </header>
     <div id="place-list" class="place-list"></div>
@@ -94,6 +94,7 @@
   <div class="hud-top">
     <div class="hud-left">
       <button id="server-chip" class="glass chip-btn"><span class="lbl"><b id="hud-place"></b><span id="hud-server"></span></span><small class="cap">눌러서 서버 바꾸기</small></button>
+      <button id="design-chip" class="glass chip-btn"><span class="lbl">디자인 · <b id="design-name"></b></span><small class="cap">눌러서 건물·배경·마당 고르기</small></button>
       <span id="hud-people" class="glass mini"></span>
       <button id="sched-chip" class="glass chip-btn"><span class="lbl" id="sched-now"></span><small class="cap" id="sched-cap">눌러서 하루 일정 고치기</small></button>
     </div>
@@ -111,7 +112,7 @@
     <button data-menu="char"><span class="lbl">캐릭터 꾸미기</span><small class="cap">캐릭터·옷·내 옆 친구 바꾸기</small></button>
     <button data-menu="sched"><span class="lbl">내 하루 일정</span><small class="cap">산보·독서·공양 시간 정하기</small></button>
     <button data-menu="record"><span class="lbl">내 기록</span><small class="cap">이 기기에 남은 하루 기록</small></button>
-    <button data-menu="place"><span class="lbl">법당 위치 옮기기</span><small class="cap">숲·두물머리·남해 중에서</small></button>
+    <button data-menu="place"><span class="lbl">디자인 고르기</span><small class="cap">건물·배경·마당: 숲·두물머리·남해</small></button>
     <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 100명까지</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
     <button data-menu="credit"><span class="lbl">자료 출처</span><small class="cap">불상 3D 스캔 출처</small></button>

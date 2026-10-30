@@ -30,7 +30,7 @@ function setAdmin(on) {
 }
 
 function render(s) {
-  const locName = (id) => LOCATIONS.find((l) => l.id === id)?.name || id;
+  const locName = (id) => (id === 'hall' ? '큰법당' : LOCATIONS.find((l) => l.id === id)?.name || id);
   const days = Object.entries(s.days || {}).sort().slice(-14);
   const max = Math.max(1, ...days.map(([, n]) => n));
   $('#admin-stats').innerHTML = `

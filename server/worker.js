@@ -4,7 +4,8 @@
 import { DurableObject } from 'cloudflare:workers';
 
 const CAP = 100;
-const ROOM_RE = /^(forest|river|sea)-([1-9]|1[0-9]|20)$/;
+// 'hall' 이 큰법당 서버 1~12. 예전 위치별 방 이름도 받아 둔다
+const ROOM_RE = /^(hall|forest|river|sea)-([1-9]|1[0-9]|20)$/;
 const ORIGINS = ['https://templestay.site', 'https://www.templestay.site', 'https://vaca-at.github.io', 'http://127.0.0.1:8765', 'http://localhost:8765'];
 
 function cors(req) {
@@ -37,14 +38,14 @@ export default {
       if (!env.ADMIN_PASSWORD || !(await same(auth.replace(/^Bearer /, '').trim(), env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
       const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
       const rooms = {};
-      await Promise.all(['forest', 'river', 'sea'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
+      await Promise.all(['hall'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
         env.ROOMS.get(env.ROOMS.idFromName(`${loc}-${i + 1}`)).fetch('https://room/count').then((r) => r.json()).then((j) => { if (j.n) rooms[`${loc}-${i + 1}`] = j.n; }).catch(() => {}))));
       return json(req, { ...stats, rooms, online: Object.values(rooms).reduce((a, b) => a + b, 0) });
     }
     if (url.pathname === '/counts') {
       const loc = url.searchParams.get('loc') || '';
       const n = Math.min(20, Math.max(1, +url.searchParams.get('n') || 12));
-      if (!/^(forest|river|sea)$/.test(loc)) return json(req, { error: 'bad loc' }, 400);
+      if (!/^(hall|forest|river|sea)$/.test(loc)) return json(req, { error: 'bad loc' }, 400);
       const counts = await Promise.all(Array.from({ length: n }, (_, i) =>
         env.ROOMS.get(env.ROOMS.idFromName(`${loc}-${i + 1}`)).fetch('https://room/count').then((r) => r.json()).then((j) => j.n).catch(() => 0)));
       return json(req, { counts });
