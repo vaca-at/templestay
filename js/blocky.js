@@ -105,9 +105,11 @@ function buildHair(head, style, H, S, hy, fz) {
       break;
     case 'braids': // 양갈래 땋은 머리
       top(); backHair(0.32); sides(0.32); bangs(0.11);
+      // 귀 뒤에서 내려와 어깨 앞으로 늘어지게: 마디마디 굵기를 바꿔 땋은 느낌
       for (const s of [1, -1]) {
-        for (let k = 0; k < 4; k++) box(head, H, 0.12 - (k % 2) * 0.02, 0.12, 0.12, (side + 0.04) * s, hy - 0.38 - k * 0.11, -0.06);
-        box(head, tie, 0.1, 0.05, 0.1, (side + 0.04) * s, hy - 0.83, -0.06);
+        for (let k = 0; k < 5; k++) box(head, H, 0.12 - (k % 2) * 0.03, 0.11, 0.11 - (k % 2) * 0.02, (side - 0.01) * s, hy - 0.5 - k * 0.1, 0.06);
+        box(head, tie, 0.11, 0.05, 0.11, (side - 0.01) * s, hy - 1.0, 0.06);
+        box(head, H, 0.07, 0.08, 0.07, (side - 0.01) * s, hy - 1.06, 0.06);
       }
       break;
     case 'bowl': // 바가지 머리: 눈썹까지 덮은 두툼한 앞머리
@@ -188,7 +190,7 @@ export function buildBlock(av, body, look, outfit, skinColor) {
   box(hips, top, 0.5, 0.56, 0.28, 0, 0.28, 0);
   if (inner !== top) box(hips, inner, 0.16, 0.5, 0.02, 0, 0.3, 0.145);
   av.skirt = null;
-  if (!own && ['robe', 'kasaya', 'coat'].includes(outfit.style)) {
+  if (!own && ['robe', 'kasaya', 'coat', 'wizard'].includes(outfit.style)) {
     const sk = box(hips, outfit.style === 'robe' ? bottom : top, 0.54, 0.34, 0.32, 0, -0.12, 0);
     sk.userData = { sx: 0.54, sz: 0.32, h: 0.34, y: -0.12, box: true };
     av.skirt = sk;
@@ -202,6 +204,14 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     box(hips, outfit.sash, 0.05, 0.2, 0.02, -0.07, 0.22, 0.15);
   }
   if (!own && outfit.style === 'hiking') box(hips, '#f2f2f2', 0.02, 0.5, 0.02, 0, 0.28, 0.15);
+  if (!own && outfit.style === 'wizard') {   // 마법사 옷: 금빛 옷깃과 별, 등 뒤 망토
+    for (const s of [1, -1]) box(hips, outfit.sash, 0.04, 0.26, 0.02, 0.06 * s, 0.44, 0.15).rotation.z = 0.45 * s;   // V 옷깃
+    for (const [x, y] of [[0.14, 0.38], [-0.13, 0.16], [0.16, -0.08], [-0.15, -0.2]]) {
+      const st = box(hips, outfit.sash, 0.06, 0.06, 0.02, x, y, 0.17); st.rotation.z = Math.PI / 4;
+      box(hips, outfit.sash, 0.025, 0.1, 0.02, x, y, 0.172);
+    }
+    box(hips, '#3b2766', 0.56, 0.86, 0.04, 0, 0.12, -0.17);
+  }
   if (own) {
     if (P.extra === 'tie') box(hips, P.tie, 0.07, 0.34, 0.02, 0, 0.36, 0.16);
     if (P.extra === 'collar') { box(hips, P.inner, 0.24, 0.06, 0.02, 0, 0.53, 0.15); }
@@ -250,8 +260,10 @@ export function buildBlock(av, body, look, outfit, skinColor) {
     box(head, '#cfe6f0', 0.12, 0.09, 0.016, -0.11, eyeY, fz + 0.025, { transparent: true, opacity: 0.35 });
   }
   if (own && P.cap && look.acc === 'none') {
-    box(head, P.cap, S + 0.08, 0.14, S + 0.08, 0, hy + 0.06, 0);
-    box(head, P.cap, S + 0.08, 0.04, 0.24, 0, hy + 0.0, fz + 0.12);
+    // 야구모자: 머리 위를 푹 덮고 앞으로 챙
+    box(head, P.cap, S + 0.12, 0.17, S + 0.12, 0, hy + 0.03, -0.01);
+    box(head, P.cap, S - 0.02, 0.04, 0.22, 0, hy - 0.04, fz + 0.1);
+    box(head, '#ffffff', 0.08, 0.03, 0.08, 0, hy + 0.13, 0);
   }
   if (own && P.extra === 'beret' && look.acc === 'none') {
     const b = box(head, '#b23a4a', S + 0.1, 0.1, S + 0.06, 0.04, hy + 0.08, 0); b.rotation.z = -0.12;

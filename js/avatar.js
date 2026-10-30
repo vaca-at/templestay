@@ -251,7 +251,7 @@ export class Avatar {
     const torso = mesh(G.cyl, top, 1, 1, 1, 0, 0.27, 0);
     torso.geometry = new THREE.CylinderGeometry(0.22, 0.3, 0.56, 22);
     hips.add(torso);
-    const longSkirt = outfit.style === 'coat' || outfit.style === 'kasaya';
+    const longSkirt = outfit.style === 'coat' || outfit.style === 'kasaya' || outfit.style === 'wizard';
     if (outfit.style !== 'hiking' && outfit.style !== 'hanbok') {
       const skirt = mesh(G.cone, longSkirt ? top : bottom, 0.34, longSkirt ? 0.4 : 0.3, 0.32, 0, longSkirt ? -0.17 : -0.12, 0);
       skirt.material = (longSkirt ? top : bottom).clone();

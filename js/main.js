@@ -971,7 +971,7 @@ function renderCreatorOptions() {
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
   $('#opt-acc').innerHTML = ACCESSORIES.filter(inSeason).map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
-  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden && !p.preview && inSeason(p)).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
+  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden && !p.preview && inSeason(p)).sort((a, b) => petGroup(a) - petGroup(b)).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
 }
 
 function finishCreator() {
@@ -1333,6 +1333,10 @@ $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound
 
 // 법당 음악: 끄기 + 실제 녹음 세 곡 + 합성 네 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
 setMusic(store.get('music', 'all'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
+// 내 옆 친구 순서: 동물 → AI → 사물 → 할로윈 → 없음
+const PET_GROUP = { ai: 1, claude: 1, drone: 1, coffee: 2, icecoffee: 2, book: 2, laptop: 2, tablet: 2, none: 4 };
+const petGroup = (p) => (p.season ? 3 : PET_GROUP[p.id] ?? 0);
+
 function renderMusic() {
   const list = [{ id: '', name: '음악 끄기', cap: '바람 소리와 동작 소리만' }, ...TRACKS];
   $('#music-list').innerHTML = list.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${(music() || '') === t.id}"><span class="lbl">${i ? `${i}. ` : ''}${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');
