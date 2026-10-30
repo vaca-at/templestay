@@ -1332,7 +1332,7 @@ $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); 
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 
 // 법당 음악: 끄기 + 실제 녹음 세 곡 + 합성 네 곡. 고른 곡은 이 기기에 남고, 소리를 켜야 들려요
-setMusic(store.get('music', 'banya'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
+setMusic(store.get('music', 'all'));   // 처음 온 분은 1번 곡으로 시작 (끄기를 고르면 null 이 남아요)
 function renderMusic() {
   const list = [{ id: '', name: '음악 끄기', cap: '바람 소리와 동작 소리만' }, ...TRACKS];
   $('#music-list').innerHTML = list.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${(music() || '') === t.id}"><span class="lbl">${i ? `${i}. ` : ''}${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');

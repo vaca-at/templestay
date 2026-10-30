@@ -69,10 +69,12 @@ function stopAmbient() { try { ambient?.src.stop(); } catch {} ambient = null; }
 // 녹음 파일 없이 여기서 합성해요 (저작권 걱정 없는 소리). 가락은 모두 이 사이트에서 새로 지었어요.
 // 곡마다 step(st, at, out) 이 한 박을 out 에 예약하고 다음 박까지 남은 초를 돌려줘요.
 // src 가 있는 곡은 실제 녹음 파일을 처음 고를 때 한 번 받아서 끝없이 이어 틀어요.
+// list 가 있는 곡은 그 녹음들을 차례로 이어 틀어요 (기본 곡)
 export const TRACKS = [
+  { id: 'all', name: '염불 이어 듣기', cap: '반야심경 → 선운사 → 각원사', list: ['banya', 'seonunsa', 'gakwonsa'] },
   { id: 'banya', name: '반야심경 염불', cap: '스님 염불과 목탁 녹음', src: 'assets/audio/banya-yeombul.m4a' },
-  { id: 'gakwonsa', name: '각원사 법당 염불', cap: '실제 법당 안 녹음', src: 'assets/audio/gakwonsa-chant.m4a' },
   { id: 'seonunsa', name: '선운사 염불', cap: '새소리·샘물 속 염불과 목탁', src: 'assets/audio/seonunsa-yeombul.m4a' },
+  { id: 'gakwonsa', name: '각원사 법당 염불', cap: '실제 법당 안 녹음', src: 'assets/audio/gakwonsa-chant.m4a' },
   { id: 'yeombul', name: '나무아미타불', cap: '목탁에 맞춘 염불 가락' },
   { id: 'jong', name: '범종', cap: '길게 울리는 새벽 범종' },
   { id: 'bowl', name: '싱잉볼 명상', cap: '천천히 울리는 싱잉볼' },
@@ -206,19 +208,23 @@ function loadRecording(src) {
   if (!recorded.has(src)) recorded.set(src, fetch(src).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).catch((e) => { recorded.delete(src); throw e; }));
   return recorded.get(src);
 }
-function playRecording(src, out) {
-  let src_ = null, stopped = false;
+// 녹음 여러 곡을 차례로 이어 틀고 끝나면 처음부터. 한 곡이면 그 곡만 끝없이 돌려요
+function playRecording(srcs, out) {
+  let cur = null, stopped = false, i = 0;
   const g = ctx.createGain(); g.gain.value = 0; g.connect(out);
-  loadRecording(src).then((buf) => {
+  const play = () => loadRecording(srcs[i]).then((buf) => {
     if (stopped) return;
-    src_ = ctx.createBufferSource(); src_.buffer = buf; src_.loop = true;
-    src_.connect(g); src_.start();
-    g.gain.setTargetAtTime(1.4, ctx.currentTime, 0.8);
-  }).catch(() => {});
+    cur = ctx.createBufferSource(); cur.buffer = buf; cur.loop = srcs.length === 1;
+    cur.connect(g); cur.start();
+    cur.onended = () => { if (stopped) return; i = (i + 1) % srcs.length; play(); };
+    loadRecording(srcs[(i + 1) % srcs.length]).catch(() => {});   // 다음 곡은 미리 받아 둬요
+  }).catch(() => { if (!stopped && srcs.length > 1) { i = (i + 1) % srcs.length; setTimeout(play, 1000); } });
+  play();
+  g.gain.setTargetAtTime(1.4, ctx.currentTime, 0.8);
   return () => {
     stopped = true;
     g.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
-    setTimeout(() => { try { src_?.stop(); } catch {} g.disconnect(); }, 2000);
+    setTimeout(() => { try { cur?.stop(); } catch {} g.disconnect(); }, 2000);
   };
 }
 
@@ -230,7 +236,8 @@ export function setMusic(id) {
   if (!sound.on || !musicId) return;
   ensure();
   if (!musicGain) { musicGain = ctx.createGain(); musicGain.gain.value = 0.6; musicGain.connect(master); }
-  stopMusic = track.src ? playRecording(track.src, musicGain) : playTrack(musicId, musicGain);
+  const srcs = track.list ? track.list.map((id) => TRACKS.find((t) => t.id === id).src) : track.src && [track.src];
+  stopMusic = srcs ? playRecording(srcs, musicGain) : playTrack(musicId, musicGain);
 }
 export const music = () => musicId;
 
