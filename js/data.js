@@ -86,27 +86,6 @@ export function dressFor(look, scene) {
 }
 
 // 하루 활동. scene: 그 활동을 하러 가는 곳
-export const ACTIVITIES = {
-  walk: { name: '산보', scene: 'out', color: '#6f9a5a', desc: '절 주변을 천천히 걸어요' },
-  read: { name: '독서', scene: 'room', color: '#5a7fb0', desc: '내 방에서 혼자 책을 읽어요' },
-  meal: { name: '발우공양', scene: 'meal', color: '#c9953a', desc: '공양간에서 발우로 밥을 먹어요' },
-  pray: { name: '예불', scene: 'in', color: '#b8463f', desc: '법당 방석에 앉아 기도해요' },
-  free: { name: '자유', scene: null, color: '#b9ada0', desc: '마음대로 다녀요' },
-};
-
-// 기본 시간표: 출근·퇴근 한 시간은 산보, 일하는 시간은 독서, 점심은 발우공양
-export const DEFAULT_SCHEDULE = {
-  auto: true,
-  weekendOff: true,
-  blocks: [
-    { start: '08:00', end: '09:00', act: 'walk', label: '출근 산보' },
-    { start: '09:00', end: '12:00', act: 'read', label: '오전 독서' },
-    { start: '12:00', end: '13:00', act: 'meal', label: '점심 발우공양' },
-    { start: '13:00', end: '18:00', act: 'read', label: '오후 독서' },
-    { start: '18:00', end: '19:00', act: 'walk', label: '퇴근 산보' },
-  ],
-};
-
 // 장소 줄 순서: 법당 → 내 방 → 마당 → 공양간
 export const SCENES = {
   in: { name: '법당', cap: '방석에 앉아 예불' },

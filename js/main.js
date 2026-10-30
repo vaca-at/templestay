@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  ACTIVITIES, DEFAULT_SCHEDULE, SCENES, BUDDHAS, randomName, defaultLook, isOldAutoName,
+  SCENES, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
@@ -94,9 +94,6 @@ const S = {
   lanterns: new Map(),
   enteredAt: 0,
   mode: 'loading', // loading | world | gallery
-  schedule: store.get('schedule', structuredClone(DEFAULT_SCHEDULE)),
-  blockKey: undefined,
-  autoAct: null, // 지금 시간표가 시키고 있는 활동
   walking: false,
 };
 
@@ -379,7 +376,7 @@ function pushState(force = false) {
 // ───────── 앉기 / 일어서기 ─────────
 function sitOn(seat, { auto = false } = {}) {
   if (seat.id !== undefined && S.scene !== 'room' && seatTaken(seat.id)) { if (!auto) toast('다른 분이 앉아 계신 자리예요'); return false; }
-  if (!auto) pauseAuto();
+  if (!auto) stopWalk();
   S.seat = seat.id;
   S.target = null;
   S.walking = false;
@@ -421,7 +418,7 @@ controls.addEventListener('start', () => { camTurn = null; });
 // 빈자리를 누르면 그 자리까지 천천히 걸어가서 앉는다 (내 방은 자리가 하나라 바로)
 function walkToSeat(seat) {
   if (seat.id !== undefined && S.scene !== 'room' && seatTaken(seat.id)) { toast('다른 분이 앉아 계신 자리예요'); return; }
-  pauseAuto();
+  stopWalk();
   if (S.seat === seat.id) return;
   if (S.me.action) { S.me.stop(); syncActionButtons(); }
   const sit = () => {
@@ -472,7 +469,7 @@ function renderActions() {
 }
 
 function doAction(id) {
-  pauseAuto();
+  stopWalk();
   S.target = null;
   S.walking = false;
   const on = S.me.play(id);
@@ -497,38 +494,10 @@ function syncActionButtons() {
   if (S.me?.action !== 'bae108') $('#bae-counter').hidden = true;
 }
 
-// ───────── 시간표 ─────────
-function currentBlock(now = new Date()) {
-  const sc = S.schedule;
-  const day = now.getDay();
-  if (sc.weekendOff && (day === 0 || day === 6)) return null;
-  const m = now.getHours() * 60 + now.getMinutes();
-  return sc.blocks.find((b) => toMin(b.start) <= m && m < toMin(b.end)) || null;
-}
-
-function nextBlock(now = new Date()) {
-  const m = now.getHours() * 60 + now.getMinutes();
-  return [...S.schedule.blocks].sort((a, b) => toMin(a.start) - toMin(b.start)).find((b) => toMin(b.start) > m) || null;
-}
-
-// 직접 움직이면 시간표는 다음 칸이 시작될 때까지 쉰다
-function pauseAuto() {
-  if (S.autoAct) { S.autoAct = null; updateSchedChip(); }
+// 직접 움직이면(장소 옮기기 · 앉기 · 일어서기 · 동작) 하던 산보를 멈춘다
+function stopWalk() {
   S.walking = false;
   walkStarting = false;
-}
-
-async function applyActivity(act) {
-  const def = ACTIVITIES[act];
-  if (!def || !def.scene || S.mode !== 'world') return;
-  S.autoAct = act;
-  if (S.scene !== def.scene) await goScene(def.scene);
-  if (S.autoAct !== act) return;
-  if (act === 'walk') startWalk();
-  if (act === 'meal') { const s = freeSeat(S.active.seats); if (s && sitOn(s, { auto: true })) startLoop('eat'); }
-  if (act === 'read') { if (S.seat == null) sitOn(S.active.seats[0], { auto: true }); startLoop('read'); }
-  if (act === 'pray') { const s = freeSeat(S.active.seats); if (s && sitOn(s, { auto: true })) startLoop('meditate'); }
-  updateSchedChip();
 }
 
 // 산보는 삼보일배처럼: 세 걸음 걷고 한 번 합장, 이것을 되풀이하며 마당을 돈다
@@ -550,101 +519,6 @@ function startWalk() {
   };
   go(i);
 }
-
-function schedTick() {
-  if (S.mode !== 'world') return;
-  const b = currentBlock();
-  const key = b ? `${b.start}-${b.end}-${b.act}` : 'free';
-  if (key !== S.blockKey) {
-    const first = S.blockKey === undefined;
-    S.blockKey = key;
-    // 처음 들어올 때는 법당에 두고, 아래 작은 단추(예: '내 방으로')로 일정을 따라가요
-    if (!first) {
-      if (b) {
-        toast(`${b.start} · ${b.label || ACTIVITIES[b.act].name} 시간이에요`);
-        if (S.schedule.auto) applyActivity(b.act);
-      } else if (S.autoAct) {
-        S.autoAct = null;
-        S.walking = false;
-        S.target = null;
-      }
-    }
-  }
-  updateSchedChip();
-}
-setInterval(schedTick, 5000);
-
-
-function updateSchedChip() {
-  const b = currentBlock();
-  const n = nextBlock();
-  $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
-  $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
-}
-
-function renderSchedEditor(draft) {
-  $('#sched-auto').checked = draft.auto;
-  $('#sched-weekend').checked = draft.weekendOff;
-  const opts = (sel) => Object.entries(ACTIVITIES).filter(([k]) => k !== 'free').map(([k, a]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${a.name}</option>`).join('');
-  $('#sched-rows').innerHTML = draft.blocks.map((b, i) => `
-    <div class="sched-row" data-i="${i}">
-      <input type="time" value="${b.start}" data-k="start" aria-label="시작">
-      <span>–</span>
-      <input type="time" value="${b.end}" data-k="end" aria-label="끝">
-      <select data-k="act" aria-label="할 일">${opts(b.act)}</select>
-      <input type="text" value="${escapeHtml(b.label || '')}" data-k="label" maxlength="12" placeholder="이름" aria-label="이름">
-      <button type="button" class="icon-btn" data-del="${i}" aria-label="지우기"><span class="lbl">✕</span><small class="cap">지우기</small></button>
-    </div>`).join('');
-  renderTimeline(draft);
-}
-
-function renderTimeline(draft) {
-  const now = new Date();
-  const nowPct = ((now.getHours() * 60 + now.getMinutes()) / 1440) * 100;
-  const segs = draft.blocks.map((b) => {
-    const a = toMin(b.start), e = toMin(b.end);
-    if (!(e > a)) return '';
-    return `<i style="left:${(a / 1440) * 100}%;width:${((e - a) / 1440) * 100}%;background:${ACTIVITIES[b.act]?.color}" title="${b.start}–${b.end}"></i>`;
-  }).join('');
-  const ticks = [0, 6, 12, 18, 24].map((h) => `<span style="left:${(h / 24) * 100}%">${h}시</span>`).join('');
-  const legend = Object.entries(ACTIVITIES).filter(([k]) => k !== 'free').map(([, a]) => `<span><b style="background:${a.color}"></b>${a.name}</span>`).join('');
-  $('#timeline').innerHTML = `<div class="tl-bar">${segs}<em style="left:${nowPct}%"></em></div><div class="tl-ticks">${ticks}</div><div class="tl-legend">${legend}</div>`;
-}
-
-let schedDraft = null;
-function openSched() {
-  schedDraft = structuredClone(S.schedule);
-  renderSchedEditor(schedDraft);
-  $('#sched-modal').hidden = false;
-}
-
-$('#sched-rows').addEventListener('input', (e) => {
-  const row = e.target.closest('.sched-row');
-  if (!row) return;
-  schedDraft.blocks[+row.dataset.i][e.target.dataset.k] = e.target.value;
-  renderTimeline(schedDraft);
-});
-$('#sched-auto').onchange = (e) => (schedDraft.auto = e.target.checked);
-$('#sched-weekend').onchange = (e) => (schedDraft.weekendOff = e.target.checked);
-$('#sched-add').onclick = () => {
-  const last = schedDraft.blocks[schedDraft.blocks.length - 1];
-  const start = last ? last.end : '09:00';
-  const end = `${pad(Math.min(23, +start.slice(0, 2) + 1))}:${start.slice(3)}`;
-  schedDraft.blocks.push({ start, end, act: 'pray', label: '' });
-  renderSchedEditor(schedDraft);
-};
-$('#sched-reset').onclick = () => { schedDraft = structuredClone(DEFAULT_SCHEDULE); renderSchedEditor(schedDraft); };
-$('#sched-save').onclick = () => {
-  const bad = schedDraft.blocks.find((b) => !b.start || !b.end || toMin(b.end) <= toMin(b.start));
-  if (bad) return toast('끝나는 시간이 시작 시간보다 뒤여야 해요');
-  schedDraft.blocks.sort((a, b) => toMin(a.start) - toMin(b.start));
-  S.schedule = schedDraft;
-  store.set('schedule', S.schedule);
-  $('#sched-modal').hidden = true;
-  S.blockKey = null; // 저장하면 지금 칸을 새로 적용
-  schedTick();
-  toast('하루 일정을 저장했어요');
-};
 
 // ───────── 기록 (이 기기에만) ─────────
 function addRecord(k, v) {
@@ -722,7 +596,7 @@ function rebuildLanterns() {
 
 function openWish() {
   if (S.scene !== 'in') return;
-  pauseAuto();
+  stopWalk();
   const spot = new THREE.Vector3(0, 0, -7.1);
   if (S.me.group.position.distanceTo(spot) > 1.2) {
     standUp();
@@ -935,8 +809,6 @@ async function enterLocation(locId) {
   S.server = 0;
   S.wishes = [];
   S.lanterns.clear();
-  S.blockKey = undefined;
-  S.autoAct = null;
   makeMe();
   $('#loading').hidden = true;
   await goScene('in', { instant: true });
@@ -946,7 +818,6 @@ async function enterLocation(locId) {
   syncActionButtons();
   S.enteredAt = Date.now();
   updateHud();
-  schedTick();
   fade(false);
   if (!store.get('welcomed', false)) $('#welcome').hidden = false;
   if (!net.online) { S.server = 1; updateHud(); toast('실시간 연결이 안 돼서 혼자 머무는 중이에요'); return; }
@@ -961,7 +832,6 @@ async function changeDesign(locId) {
   S.loc = LOCATIONS.find((l) => l.id === locId) || LOCATIONS[0];
   store.set('lastLoc', S.loc.id);
   S.lanterns.clear();
-  const act = S.autoAct;
   // 배경만 바꾸고 나는 그 자리 그대로: 서 있던 곳 · 앉은 방석 · 카메라를 기억했다가 되돌린다 (하던 동작도 그대로)
   const g = S.me.group, seat = S.seat;
   const keep = { pos: g.position.clone(), rot: g.rotation.y, cam: camera.position.clone(), at: controls.target.clone() };
@@ -977,7 +847,6 @@ async function changeDesign(locId) {
   if (S.scene !== 'room') { camera.position.copy(keep.cam); controls.target.copy(keep.at); controls.update(); }
   S.me.petFresh = true;   // 친구도 바로 옆으로
   pushState(true);
-  if (act && !sameSeat) applyActivity(act);   // 방석에 그대로 앉아 있으면 일정 때문에 다른 자리로 옮겨 앉지 않게
   updateHud();
   fade(false);
   toast(`${S.loc.name} 디자인으로 바꿨어요`);
@@ -1106,7 +975,7 @@ canvas.addEventListener('pointerup', (e) => {
     if (o.userData.scroll) return openScrolls();
     if (o === w.floor) {
       if (S.me.action && !ACTIONS.find((a) => a.id === S.me.action)?.loop) return;
-      pauseAuto();
+      stopWalk();
       standUp();
       // 마당에서 멀리 누르면 뛰어간다
       const far = S.scene === 'out' && h.point.distanceTo(S.me.group.position) > 8;
@@ -1114,7 +983,7 @@ canvas.addEventListener('pointerup', (e) => {
       return;
     }
     if (S.scene === 'out' && h.distance < 60 && Math.abs(h.point.x) < 12 && h.point.z < -1 && h.point.z > -20) {
-      pauseAuto();
+      stopWalk();
       S.target = { pos: w.door.clone(), onArrive: () => goScene('in') };
       return;
     }
@@ -1154,7 +1023,7 @@ function moveMe(dt) {
   dx += joy.x; dz += joy.y;
   let dir = null, speed = SPEED;
   if (Math.hypot(dx, dz) > 0.15) {
-    pauseAuto();
+    stopWalk();
     S.target = null;
     if (S.seat != null) standUp();
     const yaw = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
@@ -1330,10 +1199,9 @@ document.addEventListener('click', (e) => {
   if (!t) return;
   if (t.dataset.close) { $('#' + t.dataset.close).hidden = true; return; }
   if (t.dataset.act) return doAction(t.dataset.act);
-  if (t.dataset.scene) { document.body.classList.remove('show-scenes'); pauseAuto(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
+  if (t.dataset.scene) { document.body.classList.remove('show-scenes'); stopWalk(); if (t.dataset.scene !== S.scene) goScene(t.dataset.scene); return; }
   if (t.dataset.place) { $('#places').hidden = true; return changeDesign(t.dataset.place); }
   if (t.dataset.server) { $('#server-modal').hidden = true; return switchServer(+t.dataset.server); }
-  if (t.dataset.del != null) { schedDraft.blocks.splice(+t.dataset.del, 1); return renderSchedEditor(schedDraft); }
   const pick = ['type', 'skin', 'outfit', 'acc', 'gender', 'pet'].find((k) => t.dataset[k] != null);
   if (pick && t.closest('#creator')) { draft.look[pick] = t.dataset[pick]; renderCreatorOptions(); preview.avatar.setLook(draft.look, 'out'); return; }
   if (t.dataset.c) { wishColor = t.dataset.c; return renderWishForm(); }
@@ -1344,7 +1212,6 @@ document.addEventListener('click', (e) => {
     const m = t.dataset.menu;
     if (m === 'calm') startCalm();
     if (m === 'char') openCreator();
-    if (m === 'sched') openSched();
     if (m === 'record') openRecords();
     if (m === 'scroll') openScrolls();
     if (m === 'relic') openRelics();
@@ -1364,12 +1231,12 @@ document.addEventListener('click', (e) => {
 $('#nick-dice').onclick = () => { $('#nick').value = randomName(); };
 $('#creator-done').onclick = finishCreator;
 $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
-$('#btn-stand').onclick = () => { pauseAuto(); standUp(); };
-$('#btn-go').onclick = () => { pauseAuto(); goScene(S.scene === 'in' ? 'room' : 'in'); };
+$('#btn-stand').onclick = () => { stopWalk(); standUp(); };
+$('#btn-go').onclick = () => { stopWalk(); goScene(S.scene === 'in' ? 'room' : 'in'); };
 // 산보: 먼저 합장하고, 마당을 오른쪽(시계 방향, 법당을 오른쪽에 두고)으로 계속 돈다. 다시 누르면 멈춘다
 let walkStarting = false;
 $('#btn-walk').onclick = async () => {
-  if (S.walking || walkStarting) { walkStarting = false; pauseAuto(); S.target = null; return; }
+  if (S.walking || walkStarting) { walkStarting = false; stopWalk(); S.target = null; return; }
   standUp(true);
   doAction('hapjang');
   walkStarting = true;
@@ -1379,7 +1246,6 @@ $('#btn-walk').onclick = async () => {
   if (S.scene === 'out') startWalk();
 };
 $('#btn-wish').onclick = openWish;
-$('#sched-chip').onclick = openSched;
 $('#design-chip').onclick = showPlaces;
 // 왼쪽 도형 단추
 // 위치 단추: 바로 옆에 디자인 이름 3개와 서버 번호만 (설명 · 그림 없이). 고르거나 다른 곳을 누르면 닫혀요
@@ -1395,7 +1261,6 @@ $('#side-place').onclick = togglePick;
 addEventListener('pointerdown', (e) => { if (!e.target.closest('#pick-pop, #side-place')) document.body.classList.remove('show-pick'); });
 $('#pick-pop').addEventListener('click', (e) => { if (e.target.closest('button')) document.body.classList.remove('show-pick'); });
 $('#side-char').onclick = openCreator;
-$('#side-sched').onclick = openSched;
 $('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
 // 숫자 키 1~8 = 아래 동작 칸 차례대로
 addEventListener('keydown', (e) => {
@@ -1462,7 +1327,7 @@ $('#photo-close').onclick = stopPhoto;
 addEventListener('keydown', (e) => { if (S.photo && e.code === 'Escape') stopPhoto(); });
 
 // 크게 보기 (화면보호기): 버튼을 모두 숨기고 전체 화면에서 카메라가 내 캐릭터 둘레를 천천히 돌아요.
-// 하루 일정은 그대로 따라가요. 화면을 누르거나 아무 키나 누르면 돌아와요. 5분 동안 손대지 않아도 저절로 켜져요.
+// 화면을 누르거나 아무 키나 누르면 돌아와요. 5분 동안 손대지 않아도 저절로 켜져요.
 const CALM_IDLE = 5 * 60 * 1000;
 let lastInput = Date.now();
 function startCalm() {
@@ -1499,7 +1364,6 @@ setInterval(() => {
   if (!S.calm && S.mode === 'world' && !busy && Date.now() - lastInput > CALM_IDLE) startCalm();
 }, 10000);
 $('#welcome-char').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); openCreator(); };
-$('#welcome-sched').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); openSched(); };
 $('#welcome-close').onclick = () => { $('#welcome').hidden = true; store.set('welcomed', true); };
 $('#wish-form').addEventListener('submit', submitWish);
 // 소리는 처음 화면을 누를 때 켠다 (브라우저 규칙)
@@ -1578,12 +1442,10 @@ async function demo(which) {
   }
   document.querySelectorAll('.toast').forEach((t) => t.remove());
   if (params.get('toast')) toast(params.get('toast'));
-  if (params.has('sched')) openSched();
   if (params.has('record')) openRecords();
   if (params.has('relic')) openRelics();
   if (params.get('act') === 'bae108') { $('#bae-counter').innerHTML = '<small>108배</small><b>12</b><small>/ 108</small>'; $('#bae-counter').hidden = false; }
   updateHud();
-  updateSchedChip();
 }
 
 // ───────── 시작 ─────────
