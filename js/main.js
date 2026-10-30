@@ -1851,3 +1851,10 @@ $('#relic-p-next').onclick = () => stepPagoda(1);
   const loc = params.get('loc') || store.get('lastLoc', 'forest');
   enterLocation(LOCATIONS.some((l) => l.id === loc) ? loc : 'forest');
 })();
+
+// 팝업 바깥(어두운 배경)이나 메뉴 바깥을 누르면 닫혀요
+addEventListener('click', (e) => { if (e.target.classList?.contains('modal')) e.target.hidden = true; });
+addEventListener('pointerdown', (e) => {
+  const menu = document.getElementById('menu');
+  if (menu && !menu.hidden && !e.target.closest('#menu, #btn-menu')) { menu.hidden = true; document.body.classList.remove('menu-open'); }
+});
