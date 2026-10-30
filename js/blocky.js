@@ -293,6 +293,7 @@ export function buildBlock(av, body, look, outfit, skinColor) {
 export const PETS = [
   { id: 'dog', name: '강아지', cap: '꼬리를 흔들어요' },
   { id: 'cat', name: '고양이', cap: '꼬리를 살랑살랑' },
+  { id: 'russianblue', name: '러시안 블루', cap: '청회색 털에 초록 눈' },
   { id: 'hamster', name: '햄스터', cap: '볼 빵빵' },
   { id: 'bunny', name: '토끼', cap: '귀가 쫑긋' },
   { id: 'coffee', name: '커피잔', cap: '김이 모락모락' },
@@ -306,6 +307,17 @@ export const PETS = [
   { id: 'turtle', name: '거북이', cap: '느릿느릿 고개 쏙' },
   { id: 'squid', name: '오징어', cap: '둥실둥실 다리 열 개', hover: true },
   { id: 'fishbowl', name: '어항 물고기', cap: '금붕어가 빙글빙글' },
+  // 시안 친구 10 (preview: 고르는 목록에는 아직 안 나와요. ?gallery=newpets 로 보기)
+  { id: 'chorong', name: '초롱이', cap: '걸어 다니는 연등, 밤에 빛나요', preview: true },
+  { id: 'ppokkeum', name: '뽀끔이', cap: '목어 물고기, 거품 뽀글뽀글', preview: true },
+  { id: 'dongja', name: '아기 동자', cap: '빡빡머리 꼬마 스님', preview: true },
+  { id: 'tiger', name: '아기 호랑이', cap: '민화 속 줄무늬 호랑이', preview: true },
+  { id: 'kkachi', name: '까치', cap: '반가운 소식을 물고 오는 새', hover: true, preview: true },
+  { id: 'toad', name: '복두꺼비', cap: '입에 엽전을 문 복덩이', preview: true },
+  { id: 'haetae', name: '해태', cap: '돌로 된 수호 친구', preview: true },
+  { id: 'frog', name: '연잎 개구리', cap: '연잎 배를 타고 미끄러져요', preview: true },
+  { id: 'tteok', name: '찹쌀떡 말랑이', cap: '말랑말랑 쫀득쫀득', preview: true },
+  { id: 'firefly', name: '반딧불이', cap: '꼬리가 반짝반짝', hover: true, preview: true },
   { id: 'none', name: '없음', cap: '혼자 다니기' },
   { id: 'plant', name: '화분 친구', hidden: true },
   { id: 'ghost', name: '꼬마 유령', cap: '할로윈 한정 · 10/31까지', hover: true, season: 'halloween' },
@@ -369,6 +381,30 @@ export function buildPet(id) {
       box(tail, stripe, 0.05, 0.16, 0.05, 0, 0.08, -0.13);
       g.add(tail);
       anim.push((t) => { tail.rotation.z = Math.sin(t * 2.2) * 0.35; });
+      break;
+    }
+    case 'russianblue': {
+      // 러시안 블루: 은빛 도는 청회색 짧은 털, 초록 눈, 날씬한 몸과 긴 꼬리, 쫑긋 큰 귀
+      const c = '#8d99a6', d = '#7a8794', light = '#a9b4bf';
+      box(g, c, 0.2, 0.17, 0.38, 0, 0.2, 0);
+      box(g, light, 0.21, 0.02, 0.36, 0, 0.29, 0);   // 등에 은빛
+      box(g, c, 0.24, 0.2, 0.2, 0, 0.37, 0.21);
+      box(g, '#9fa9b4', 0.12, 0.07, 0.04, 0, 0.32, 0.31);
+      box(g, '#c98a96', 0.035, 0.025, 0.02, 0, 0.35, 0.325);
+      for (const s of [1, -1]) {
+        box(g, '#7fc06a', 0.055, 0.05, 0.02, 0.06 * s, 0.4, 0.312);      // 초록 눈
+        box(g, '#1d1a18', 0.018, 0.045, 0.021, 0.06 * s, 0.4, 0.314);    // 세로 눈동자
+        const ear = box(g, d, 0.08, 0.1, 0.04, 0.08 * s, 0.51, 0.2); ear.rotation.z = -0.4 * s;
+        box(g, '#b98c96', 0.035, 0.05, 0.01, 0.08 * s, 0.505, 0.222);
+        for (const dy of [0.01, -0.02]) box(g, '#e6ebf0', 0.1, 0.008, 0.008, 0.15 * s, 0.33 + dy, 0.3);
+      }
+      for (const [x, z] of [[0.06, 0.13], [-0.06, 0.13], [0.06, -0.13], [-0.06, -0.13]]) box(g, c, 0.055, 0.13, 0.055, x, 0.065, z);
+      const tail = new THREE.Group();
+      tail.position.set(0, 0.25, -0.19);
+      box(tail, c, 0.045, 0.045, 0.16, 0, 0, -0.07);
+      box(tail, d, 0.045, 0.18, 0.045, 0, 0.09, -0.15);
+      g.add(tail);
+      anim.push((t) => { tail.rotation.z = Math.sin(t * 1.8) * 0.4; });
       break;
     }
     case 'hamster': {
@@ -549,6 +585,140 @@ export function buildPet(id) {
         arms.push([arm, a]);
       }
       anim.push((t) => arms.forEach(([arm, a], i) => { const w = Math.sin(t * 4 + i) * 0.35; arm.rotation.x = Math.sin(a) * w; arm.rotation.z = -Math.cos(a) * w; }));
+      break;
+    }
+    case 'chorong': {
+      // 연등 몸통(분홍 꽃잎 줄무늬) + 초록 받침 + 술, 밤에 은은하게 빛나요
+      const glow = { emissive: '#ff9fb4', emissiveIntensity: 0.35 };
+      box(g, '#f4a3b6', 0.28, 0.3, 0.28, 0, 0.27, 0, glow);
+      for (const y of [0.18, 0.27, 0.36]) box(g, '#e27d97', 0.29, 0.02, 0.29, 0, y, 0, glow);
+      box(g, '#3f8f5a', 0.24, 0.05, 0.24, 0, 0.1, 0);
+      box(g, '#c8443a', 0.04, 0.08, 0.04, 0, 0.47, 0);
+      eyes(g, 0.3, 0.142, 0.06, 0.04);
+      for (const s of [1, -1]) box(g, '#ff7f9a', 0.05, 0.025, 0.01, 0.1 * s, 0.24, 0.142);
+      const tassel = box(g, '#c8443a', 0.03, 0.1, 0.03, 0, 0.03, 0);
+      const legs = []; for (const x of [-0.07, 0.07]) legs.push(box(g, '#3f8f5a', 0.05, 0.06, 0.05, x, 0.04, 0.06));
+      g.userData.legs = legs;
+      anim.push((t) => { tassel.rotation.z = Math.sin(t * 3) * 0.3; });
+      break;
+    }
+    case 'ppokkeum': {
+      // 목어: 나무 물고기, 비늘 홈, 입에서 거품이 뽀글
+      const c = '#c9954a', d = '#9a6a2e';
+      box(g, c, 0.2, 0.2, 0.34, 0, 0.18, 0);
+      for (const z of [-0.06, 0.02]) box(g, d, 0.21, 0.16, 0.02, 0, 0.18, z);
+      const tail = new THREE.Group(); tail.position.set(0, 0.18, -0.18); g.add(tail);
+      box(tail, c, 0.06, 0.2, 0.1, 0, 0, -0.05);
+      for (const s of [1, -1]) { box(g, '#f4efe2', 0.02, 0.06, 0.06, 0.1 * s, 0.22, 0.1); box(g, '#1d1a18', 0.022, 0.035, 0.035, 0.1 * s, 0.22, 0.11); }
+      box(g, '#5a3a1e', 0.1, 0.04, 0.02, 0, 0.13, 0.171);
+      const bubbles = [0, 1, 2].map((k) => box(g, '#cfe8f6', 0.04, 0.04, 0.04, 0, 0.2, 0.2, { transparent: true, opacity: 0.7 }));
+      anim.push((t) => { tail.rotation.y = Math.sin(t * 5) * 0.35; bubbles.forEach((b, k) => { const u = (t * 0.6 + k / 3) % 1; b.position.set(Math.sin(u * 9 + k) * 0.03, 0.2 + u * 0.35, 0.2 + u * 0.05); b.material.opacity = 0.7 * (1 - u); }); });
+      break;
+    }
+    case 'dongja': {
+      // 아기 동자: 큰 빡빡머리, 회색 승복, 노란 띠. 가끔 두 손을 모아요
+      const skin = '#f3d2b2';
+      box(g, skin, 0.26, 0.24, 0.24, 0, 0.42, 0);
+      box(g, '#e6c3a0', 0.27, 0.05, 0.25, 0, 0.53, 0);
+      eyes(g, 0.43, 0.121, 0.06, 0.04);
+      for (const s of [1, -1]) box(g, '#f0a090', 0.04, 0.02, 0.01, 0.09 * s, 0.38, 0.121);
+      box(g, '#9aa39c', 0.22, 0.22, 0.18, 0, 0.2, 0);
+      box(g, '#e9d27a', 0.23, 0.03, 0.19, 0, 0.16, 0);
+      const arms = [];
+      for (const s of [1, -1]) arms.push(box(g, '#9aa39c', 0.06, 0.14, 0.06, 0.14 * s, 0.22, 0.02));
+      for (const x of [-0.05, 0.05]) box(g, '#5a5a5a', 0.07, 0.08, 0.1, x, 0.04, 0.01);
+      anim.push((t) => { const k = Math.max(0, Math.sin(t * 0.6)) ** 4; arms[0].rotation.x = arms[1].rotation.x = -k * 1.2; arms[0].rotation.z = -k * 0.5; arms[1].rotation.z = k * 0.5; });
+      break;
+    }
+    case 'tiger': {
+      // 민화 아기 호랑이: 주황 몸에 검은 줄, 흰 주둥이, 동그란 눈, 말린 꼬리
+      const c = '#e98b2e', k = '#2a2220';
+      box(g, c, 0.24, 0.2, 0.34, 0, 0.2, 0);
+      for (const z of [-0.1, 0, 0.1]) box(g, k, 0.25, 0.04, 0.03, 0, 0.28, z);
+      box(g, c, 0.28, 0.24, 0.22, 0, 0.38, 0.2);
+      for (const x of [-0.08, 0.08]) box(g, k, 0.03, 0.06, 0.02, x, 0.47, 0.311);
+      box(g, '#f6ecd8', 0.16, 0.08, 0.04, 0, 0.32, 0.31);
+      box(g, '#2a2220', 0.05, 0.03, 0.02, 0, 0.36, 0.33);
+      for (const s of [1, -1]) { box(g, '#fffbe8', 0.07, 0.07, 0.02, 0.08 * s, 0.41, 0.312); box(g, k, 0.04, 0.04, 0.02, 0.08 * s, 0.41, 0.318); box(g, c, 0.07, 0.07, 0.05, 0.11 * s, 0.52, 0.16); }
+      for (const [x, z] of [[0.08, 0.12], [-0.08, 0.12], [0.08, -0.12], [-0.08, -0.12]]) box(g, c, 0.07, 0.12, 0.07, x, 0.06, z);
+      const tail = new THREE.Group(); tail.position.set(0, 0.26, -0.17); g.add(tail);
+      box(tail, c, 0.05, 0.05, 0.14, 0, 0, -0.06); box(tail, k, 0.05, 0.14, 0.05, 0, 0.08, -0.13);
+      anim.push((t) => { tail.rotation.z = Math.sin(t * 2.5) * 0.4; });
+      break;
+    }
+    case 'kkachi': {
+      // 까치: 검은 머리와 꼬리, 흰 배, 푸른 날개 끝. 공중에서 파닥파닥
+      const k = '#1f2328';
+      box(g, k, 0.14, 0.14, 0.14, 0, 0.26, 0.1);
+      box(g, '#f4f4f2', 0.16, 0.14, 0.2, 0, 0.16, 0);
+      box(g, k, 0.16, 0.06, 0.2, 0, 0.24, -0.01);
+      box(g, '#3a4a5a', 0.05, 0.04, 0.26, 0, 0.2, -0.22);
+      box(g, '#2c3a52', 0.06, 0.03, 0.08, 0, 0.21, -0.36);
+      box(g, '#2a2a2a', 0.04, 0.03, 0.06, 0, 0.25, 0.2);
+      for (const s of [1, -1]) box(g, '#fff', 0.02, 0.03, 0.03, 0.071 * s, 0.29, 0.13);
+      const wings = [1, -1].map((s) => { const w = new THREE.Group(); w.position.set(0.08 * s, 0.22, 0); g.add(w); box(w, k, 0.16, 0.03, 0.14, 0.08 * s, 0, 0); box(w, '#3f6fa8', 0.06, 0.032, 0.14, 0.14 * s, 0, 0); return [w, s]; });
+      anim.push((t) => wings.forEach(([w, s]) => (w.rotation.z = Math.sin(t * 14) * 0.6 * s)));
+      break;
+    }
+    case 'toad': {
+      // 복두꺼비: 넓적한 몸, 오돌토돌 등, 입에 금빛 엽전
+      const c = '#7f8a3e';
+      box(g, c, 0.36, 0.16, 0.3, 0, 0.1, 0);
+      box(g, c, 0.32, 0.12, 0.2, 0, 0.2, 0.05);
+      for (const [x, z] of [[-0.1, -0.06], [0.1, -0.06], [0, -0.1], [-0.12, 0.04], [0.12, 0.04]]) box(g, '#6a7432', 0.05, 0.03, 0.05, x, 0.19, z);
+      for (const s of [1, -1]) { box(g, c, 0.09, 0.08, 0.09, 0.11 * s, 0.28, 0.08); box(g, '#f4e48a', 0.06, 0.05, 0.02, 0.11 * s, 0.29, 0.13); box(g, '#1d1a18', 0.03, 0.04, 0.02, 0.11 * s, 0.29, 0.135); }
+      const coin = box(g, '#e0b33a', 0.12, 0.12, 0.02, 0, 0.13, 0.21, { metalness: 0.6, roughness: 0.3 });
+      box(g, '#8a6a1a', 0.035, 0.035, 0.025, 0, 0.13, 0.215);
+      anim.push((t) => { coin.rotation.z = Math.sin(t * 2) * 0.15; });
+      break;
+    }
+    case 'haetae': {
+      // 해태: 돌빛 사자개, 둥근 갈기, 이마에 뿔 하나
+      const c = '#b9b4a8', m = '#9a948a';
+      box(g, c, 0.24, 0.22, 0.34, 0, 0.21, 0);
+      box(g, m, 0.34, 0.3, 0.12, 0, 0.36, 0.14);
+      box(g, c, 0.24, 0.22, 0.18, 0, 0.36, 0.22);
+      box(g, '#7f7a70', 0.04, 0.08, 0.04, 0, 0.51, 0.22);
+      for (const s of [1, -1]) { box(g, '#2a2620', 0.05, 0.05, 0.02, 0.06 * s, 0.4, 0.311); box(g, m, 0.08, 0.08, 0.08, 0.15 * s, 0.24, 0.16); }
+      box(g, '#c25a4a', 0.1, 0.03, 0.02, 0, 0.3, 0.311);
+      for (const [x, z] of [[0.08, 0.12], [-0.08, 0.12], [0.08, -0.12], [-0.08, -0.12]]) box(g, c, 0.08, 0.12, 0.08, x, 0.06, z);
+      const tail = box(g, m, 0.1, 0.12, 0.08, 0, 0.32, -0.2);
+      anim.push((t) => { tail.rotation.y = Math.sin(t * 3) * 0.3; });
+      break;
+    }
+    case 'frog': {
+      // 연잎 배 위의 청개구리, 연잎째 미끄러져 따라와요
+      const leaf = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 16), mat('#4f9a4a'));
+      leaf.position.y = 0.02; g.add(leaf);
+      box(g, '#3f8a3a', 0.02, 0.031, 0.24, 0, 0.02, 0.12);
+      box(g, '#8ccf5a', 0.18, 0.1, 0.16, 0, 0.1, 0);
+      for (const s of [1, -1]) { box(g, '#8ccf5a', 0.07, 0.07, 0.07, 0.06 * s, 0.17, 0.04); box(g, '#1d1a18', 0.035, 0.04, 0.02, 0.06 * s, 0.18, 0.076); box(g, '#7ab84a', 0.06, 0.04, 0.1, 0.1 * s, 0.05, -0.02); }
+      box(g, '#f2a0a8', 0.08, 0.015, 0.02, 0, 0.09, 0.081);
+      const flower = box(g, '#f4b6c6', 0.06, 0.06, 0.06, 0.16, 0.06, -0.12);
+      anim.push((t) => { flower.rotation.y = t; });
+      break;
+    }
+    case 'tteok': {
+      // 찹쌀떡 말랑이: 하얀 말랑 떡, 콩가루 점, 통통 튀며 납작해졌다 늘어나요
+      const body = new THREE.Group(); g.add(body);
+      box(body, '#fbf7ee', 0.3, 0.2, 0.28, 0, 0.1, 0);
+      box(body, '#fbf7ee', 0.24, 0.05, 0.22, 0, 0.22, 0);
+      for (const [x, z] of [[-0.08, -0.06], [0.07, -0.08], [0.1, 0.03]]) box(body, '#e8d4a0', 0.03, 0.01, 0.03, x, 0.248, z);
+      eyes(body, 0.13, 0.141, 0.06, 0.035);
+      for (const s of [1, -1]) box(body, '#f6b1b8', 0.05, 0.025, 0.01, 0.1 * s, 0.1, 0.141);
+      box(body, '#c46a5a', 0.04, 0.02, 0.01, 0, 0.09, 0.141);
+      anim.push((t) => { const k = Math.sin(t * 4); body.scale.set(1 + k * 0.06, 1 - k * 0.08, 1 + k * 0.06); });
+      break;
+    }
+    case 'firefly': {
+      // 반딧불이: 작은 몸, 투명 날개, 꼬리가 노랗게 깜빡깜빡
+      box(g, '#2a2a2e', 0.1, 0.08, 0.12, 0, 0.2, 0.04);
+      box(g, '#c8443a', 0.08, 0.06, 0.06, 0, 0.22, 0.12);
+      eyes(g, 0.23, 0.151, 0.025, 0.025, '#fff');
+      const tail = box(g, '#e8f07a', 0.1, 0.09, 0.12, 0, 0.19, -0.08, { emissive: '#e8f05a', emissiveIntensity: 1 });
+      for (const s of [1, -1]) box(g, '#2a2a2e', 0.012, 0.08, 0.012, 0.03 * s, 0.28, 0.13);
+      const wings = [1, -1].map((s) => { const w = box(g, '#e6f0ff', 0.14, 0.01, 0.08, 0.08 * s, 0.25, 0, { transparent: true, opacity: 0.55 }); return [w, s]; });
+      anim.push((t) => { wings.forEach(([w, s]) => (w.rotation.z = Math.sin(t * 20) * 0.5 * s)); tail.material.emissiveIntensity = 0.3 + (Math.sin(t * 2.5) * 0.5 + 0.5) * 1.4; });
       break;
     }
     case 'pumpkin': {

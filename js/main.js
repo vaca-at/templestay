@@ -956,7 +956,7 @@ function renderCreatorOptions() {
   $('#opt-skin').innerHTML = SKIN_TONES.map((s, i) => `<button class="swatch" data-skin="${s}" style="background:${s}" aria-pressed="${L.skin === s}" aria-label="${i + 1}번째 색" title="${['가장 밝은', '밝은', '중간', '짙은', '가장 짙은'][i]} 색"></button>`).join('');
   $('#opt-outfit').innerHTML = OUTFITS.filter((o) => !o.hidden).map((o) => `<button class="chip" data-outfit="${o.id}" aria-pressed="${L.outfit === o.id}"><span class="lbl">${o.name}</span><small class="cap">${o.cap}</small></button>`).join('');
   $('#opt-acc').innerHTML = ACCESSORIES.filter(inSeason).map((a) => `<button class="chip" data-acc="${a.id}" aria-pressed="${L.acc === a.id}"><span class="lbl">${a.name}</span><small class="cap">${a.cap}</small></button>`).join('');
-  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden && inSeason(p)).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
+  $('#opt-pet').innerHTML = PETS.filter((p) => !p.hidden && !p.preview && inSeason(p)).map((p) => `<button class="chip" data-pet="${p.id}" aria-pressed="${(L.pet || 'none') === p.id}"><span class="lbl">${p.name}</span><small class="cap">${p.cap}</small></button>`).join('');
 }
 
 function finishCreator() {
@@ -1422,22 +1422,24 @@ function gallery(kind) {
   const items = kind === 'types' || kind === 'men' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: kind === 'men' ? 'm' : 'f', skin: SKIN_TONES[i % 3], pet: 'none' } }))
     : kind === 'outfits' ? OUTFITS.filter((o) => !o.hidden).map((o, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', outfit: o.id, pet: 'none' } }))
     : kind === 'monk' ? CHAR_TYPES.map((t, i) => ({ look: { ...defaultLook(), type: t.id, gender: i % 2 ? 'm' : 'f', pet: 'none' }, scene: 'in' }))
-    : kind === 'pets' ? PETS.filter((p) => !p.hidden && inSeason(p) && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
+    : kind === 'newpets' ? PETS.filter((p) => p.preview).map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
+    : kind === 'pets' ? PETS.filter((p) => !p.hidden && !p.preview && inSeason(p) && p.id !== 'none').map((p, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i % 8].id, gender: i % 2 ? 'm' : 'f', pet: p.id } }))
     : ACCESSORIES.map((a, i) => ({ look: { ...defaultLook(), type: CHAR_TYPES[i].id, gender: i % 2 ? 'm' : 'f', acc: a.id, pet: 'none' } }));
   const acts = (params.get('acts') || '').split(',');
-  const gap = kind === 'pets' ? 1.7 : 1.3;
+  const isPets = kind === 'pets' || kind === 'newpets';
+  const gap = isPets ? 1.7 : 1.3;
   items.forEach((it, i) => {
     const av = new Avatar(it.look, CHAR_TYPES[i % 8].name);
     if (it.scene) av.dress(it.scene);
-    av.group.position.set((i - (items.length - 1) / 2) * gap - (kind === 'pets' ? 0.35 : 0), 0, 0);
+    av.group.position.set((i - (items.length - 1) / 2) * gap - (isPets ? 0.35 : 0), 0, 0);
     if (acts[i]) av.play(acts[i]);
     if (params.get('speed')) av.speed = +params.get('speed'); // 시안용: 걷기·뛰기 모습 보기
     scene.add(av.group);
     galleryAvatars.push(av);
   });
   camera.fov = 40; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.6, kind === 'pets' ? 15 : 9.6);
-  camera.lookAt(0, 0.85, 0);
+  camera.position.set(0, kind === 'newpets' ? 1.3 : 1.6, kind === 'newpets' ? 10.5 : isPets ? 15 : 9.6);
+  camera.lookAt(0, kind === 'newpets' ? 0.6 : 0.85, 0);
   controls.enabled = false;
 }
 
