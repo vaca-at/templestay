@@ -1072,8 +1072,12 @@ export function buildExterior(loc) {
     spawn: new THREE.Vector3(0, 0, 12),
     spawnRot: Math.PI,
     camDist: 8,
-    // 산보 길: 법당 뒤를 돌아 마당 가장자리를 한 바퀴
-    walkPath: [[-11, -16.5], [11, -16.5], [14, -4], [15, 8], [7, 16], [-7, 16], [-15, 8], [-14, -4]].map(([x, z]) => new THREE.Vector3(x, 0, z)),
+    // 산보 길: 법당 건물을 오른쪽에 두고 시계 방향으로 도는 둥근 길 (건물 가운데 0,-9 / 석등·계단 앞을 지나게 넉넉히)
+    // 앞(남쪽)에서 서쪽(-x)으로 출발 → 뒤 → 동쪽 → 다시 앞
+    walkPath: Array.from({ length: 28 }, (_, k) => {
+      const a = (-2 * Math.PI * k) / 28;
+      return new THREE.Vector3(11.5 * Math.sin(a), 0, -8 + 10.5 * Math.cos(a));
+    }),
     radius: R0 - 2.2,
     blockers: [
       { minX: -hall.userData.footprint.w, maxX: hall.userData.footprint.w, minZ: -9 - hall.userData.footprint.d, maxZ: -9 + hall.userData.footprint.d },

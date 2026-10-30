@@ -304,6 +304,9 @@ body:not(.admin) .place .stay { display: none !important; }
 #online-pill { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #online-pill i { width: 8px; height: 8px; border-radius: 50%; background: #5fd38a; box-shadow: 0 0 0 3px rgba(95, 211, 138, .25); }
 #online-pill b { font-size: 15px; }
+/* 새로고침·링크 복사 단추 그림 (소리·메뉴 단추와 같은 모양) */
+.hud-ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+@media (max-width: 760px) { .hud-right { gap: 6px; } .hud-right .icon-btn { width: 40px; height: 40px; } }
 @media (max-width: 760px) { #online-pill { height: 36px; padding: 0 9px; gap: 5px; font-size: 12.5px; } #online-pill b { font-size: 13.5px; } .hud-right { flex-wrap: nowrap; } }
 #install-ios[hidden], #install-other[hidden] { display: none; }
 /* 불상·탑 고르기 창 */

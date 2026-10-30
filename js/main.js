@@ -96,6 +96,7 @@ const S = {
   walking: false,
 };
 
+if (params.has('debug')) window.__S = S; // 확인용: ?debug 일 때만 상태를 들여다볼 수 있게
 const net = new Net({
   onCounts: () => { renderServerGrid(); updateHud(); },
   onState: handleRemoteState,
@@ -1123,10 +1124,13 @@ function moveMe(dt) {
   if (S.walking && dir) {
     walkDist += g.position.distanceTo(before);
     if (walkDist >= WALK_STEP * 3) {
+      // 세 걸음 걷고 한 번 절 (무릎 꿇고 엎드리는 큰절). 걷던 속도를 0으로 해야 절이 바로 취소되지 않는다
       walkDist = 0;
-      walkBowT = 2.4;
-      S.me.action = 'hapjang';
+      walkBowT = 4.3;
+      me.speed = 0;
+      S.me.action = 'keunjeol';
       S.me.actionT = 0;
+      addRecord('bows', 1);
       pushState(true);
     }
   }
@@ -1312,6 +1316,9 @@ $('#design-chip').onclick = showPlaces;
 // 위치 단추: 바로 옆에 디자인 이름 3개와 서버 번호만 (설명 · 그림 없이). 고르거나 다른 곳을 누르면 닫혀요
 function togglePick() {
   if (!document.body.classList.toggle('show-pick')) return;
+  // 고르기 창은 디자인 단추 바로 옆, 단추 위쪽에 맞춘다 (단추 순서가 바뀌어도 따라감)
+  const r = $('#side-place').getBoundingClientRect();
+  $('#pick-pop').style.top = `${Math.max(8, Math.min(r.top, innerHeight - 260))}px`;
   $('#pick-design').innerHTML = LOCATIONS.map((l) => `<button data-place="${l.id}" aria-pressed="${S.loc?.id === l.id}">${l.name}</button>`).join('');
   $('#pick-server').innerHTML = Array.from({ length: SERVER_COUNT }, (_, i) => `<button data-server="${i + 1}" aria-pressed="${S.server === i + 1}">${i + 1}</button>`).join('');
 }
