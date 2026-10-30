@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>관리자 · 큰법당 템플스테이</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Gowun+Dodum&display=swap">
+<style>
+  /* 관리자 현황판: 한지 바탕, 숫자 세 칸 → 14일 막대 → 서버별 인원 */
+  :root { --bg: #f6f1e7; --card: #fffdf8; --fg: #2b2420; --muted: #6d625a; --line: #e2d8c6; --jade: #2f6f62; --red: #b8463f; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1d1916; --card: #27221e; --fg: #efe7da; --muted: #b3a797; --line: #3d352e; --jade: #6fb5a5; --red: #e07a70; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all;
+    padding: 32px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 20px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-family: "Gowun Batang", serif; font-size: 26px; margin: 0; }
+  h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 400; }
+  a { color: var(--jade); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; }
+  .tile small { color: var(--muted); font-size: 12.5px; }
+  .tile b { font-family: "Gowun Batang", serif; font-size: 30px; font-variant-numeric: tabular-nums; }
+  .tile.live b { color: var(--jade); }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
+  .bars div { flex: 1; height: 100%; display: grid; grid-template-rows: auto 1fr auto; align-items: end; justify-items: center; min-width: 0; }
+  .bars em { font-style: normal; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bars i { display: block; width: 100%; background: var(--jade); border-radius: 4px 4px 0 0; min-height: 2px; }
+  .bars span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  li { display: flex; justify-content: space-between; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; font-variant-numeric: tabular-nums; }
+  form { display: grid; gap: 10px; max-width: 360px; }
+  input { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 999px; padding: 10px 18px; background: var(--jade); color: #fff; font-weight: 700; }
+  button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 400; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .err { color: var(--red); min-height: 1.4em; margin: 0; font-size: 14px; }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) { .tiles { grid-template-columns: 1fr 1fr; } .tile.live { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>큰법당 관리자</h1>
+    <a href="./">← 법당으로</a>
+  </header>
+
+  <section id="login" class="card" hidden>
+    <h2>로그인</h2>
+    <form id="login-form" autocomplete="off">
+      <label for="pw">관리자 비밀번호</label>
+      <input id="pw" type="password" autocomplete="current-password">
+      <p id="err" class="err" role="alert"></p>
+      <button type="submit">들어가기</button>
+      <p class="muted">이 기기에서 30일 동안 로그인이 유지돼요.</p>
+    </form>
+  </section>
+
+  <section id="dash" hidden>
+    <div class="tiles">
+      <div class="tile live"><small>지금 접속</small><b id="t-online">-</b></div>
+      <div class="tile"><small>오늘 방문</small><b id="t-today">-</b></div>
+      <div class="tile"><small>누적 방문</small><b id="t-total">-</b></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>최근 14일 방문</h2>
+      <div id="bars" class="bars"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>지금 사람이 있는 서버</h2>
+      <div id="rooms"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="refresh" class="ghost" type="button">새로 불러오기</button>
+      <button id="logout" class="ghost" type="button">로그아웃</button>
+      <span id="stamp" class="muted"></span>
+    </div>
+    <p class="muted">30초마다 저절로 새로 불러와요. 방문은 기기마다 하루 한 번 숫자만 세고, 누가 왔는지는 남기지 않아요.</p>
+  </section>
+</main>
+
+<script type="module">
+  import { RELAY_URL } from './js/data.js';
+  const $ = (s) => document.querySelector(s);
+  const KEY = 'maeum:adminToken'; // 법당 화면과 같은 입장권 (여기서 로그인하면 법당 화면에서도 관리자)
+  const getTok = () => { try { const t = localStorage.getItem(KEY) || ''; if (t && +t.split('.')[0] < Date.now()) { localStorage.removeItem(KEY); return ''; } return t; } catch { return ''; } };
+  const setTok = (v) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {} };
+  let timer = null;
+
+  function show(logged) {
+    $('#login').hidden = logged; $('#dash').hidden = !logged;
+    clearInterval(timer);
+    if (logged) { load(); timer = setInterval(load, 30000); } else setTimeout(() => $('#pw').focus(), 50);
+  }
+
+  async function load() {
+    const r = await fetch(`${RELAY_URL}/admin/stats`, { headers: { Authorization: `Bearer ${getTok()}` } }).catch(() => null);
+    if (!r) { $('#stamp').textContent = '서버에 닿지 않았어요'; return; }
+    if (r.status === 401) { setTok(''); return show(false); }
+    const s = await r.json();
+    $('#t-online').textContent = s.online; $('#t-today').textContent = s.today; $('#t-total').textContent = s.total;
+    const days = Object.entries(s.days || {}).sort().slice(-14);
+    const max = Math.max(1, ...days.map(([, n]) => n));
+    $('#bars').innerHTML = days.length ? days.map(([d, n]) => `<div title="${d} · ${n}명"><em>${n}</em><i style="height:${(n / max) * 100}%"></i><span>${+d.slice(5, 7)}/${+d.slice(8)}</span></div>`).join('') : '<p class="muted">아직 기록이 없어요</p>';
+    const rooms = Object.entries(s.rooms || {}).sort((a, b) => b[1] - a[1]);
+    $('#rooms').innerHTML = rooms.length ? `<ul>${rooms.map(([k, n]) => `<li><span>큰법당 서버 ${k.split('-')[1]}</span><b>${n}명</b></li>`).join('')}</ul>` : '<p class="muted">지금은 접속한 분이 없어요</p>';
+    $('#stamp').textContent = `${new Date().toLocaleTimeString('ko-KR')} 기준`;
+  }
+
+  $('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('#err').textContent = '';
+    const r = await fetch(`${RELAY_URL}/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('#pw').value.trim() }) }).catch(() => null);
+    if (!r) return ($('#err').textContent = '서버에 닿지 않았어요. 잠시 뒤 다시 해 주세요');
+    if (r.status === 401) return ($('#err').textContent = '비밀번호가 맞지 않아요');
+    setTok((await r.json()).token);
+    $('#pw').value = '';
+    show(true);
+  });
+  $('#refresh').addEventListener('click', load);
+  $('#logout').addEventListener('click', () => { setTok(''); show(false); });
+  show(!!getTok());
+</script>
+</body>
+</html>
