@@ -214,6 +214,81 @@ export function paintView(loc, g, w, h) {
   }
 }
 
+// 창 밖 파노라마: 양쪽 벽 창들을 따라 이어지는 긴 풍경 한 장 (왼쪽 벽 절반 · 오른쪽 벽 절반).
+// 디자인마다 확 다르게: 숲은 침엽수와 단풍, 두물머리는 산 아래 두 강이 만나는 들판, 남해는 수평선 · 섬 · 절벽 바위
+function panoramaTex(loc) {
+  return canvasTex(4096, 512, (g, w, h) => {
+    const r = rng(loc.id.length * 31 + 7);
+    const sky = g.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, loc.sky[0]); sky.addColorStop(0.75, loc.sky[1]); sky.addColorStop(1, loc.sky[1]);
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.55)';
+    for (let i = 0; i < 26; i++) {
+      const x = r() * w, y = h * (0.06 + r() * 0.2), s = 20 + r() * 40;
+      for (let k = 0; k < 4; k++) { g.beginPath(); g.ellipse(x + k * s * 0.8, y + Math.sin(k) * 6, s, s * 0.45, 0, 0, Math.PI * 2); g.fill(); }
+    }
+    const ridge = (base, amp, freq, color, seed) => {
+      g.fillStyle = color; g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 8) g.lineTo(x, h * base - (Math.sin(x * freq + seed) * 0.6 + Math.sin(x * freq * 2.3 + seed * 1.7) * 0.3 + Math.sin(x * freq * 5.1 + seed) * 0.1) * amp);
+      g.lineTo(w, h); g.fill();
+    };
+    if (loc.id === 'forest') {
+      ridge(0.42, 60, 0.004, '#a9c2b2', 1); ridge(0.52, 50, 0.006, '#7fa384', 2); ridge(0.62, 30, 0.01, '#5b8461', 3);
+      for (let x = -20; x < w + 20; x += 14 + r() * 18) {
+        const base = h * (0.8 + r() * 0.14), th = 80 + r() * 100;
+        if (r() < 0.6) {
+          g.fillStyle = ['#2f5a3c', '#3c6b45', '#264d33'][Math.floor(r() * 3)];
+          for (let k = 0; k < 3; k++) { const y = base - th * (0.25 + k * 0.28), ww = th * (0.3 - k * 0.07); g.beginPath(); g.moveTo(x, y - th * 0.32); g.lineTo(x + ww, y + th * 0.1); g.lineTo(x - ww, y + th * 0.1); g.fill(); }
+        } else {
+          g.fillStyle = ['#c0552f', '#e0a03a', '#d47a35', '#a33b2a', '#b8b23a'][Math.floor(r() * 5)];
+          g.beginPath(); g.ellipse(x, base - th * 0.45, th * 0.3, th * 0.4, 0, 0, Math.PI * 2); g.fill();
+        }
+      }
+      g.fillStyle = '#3e5b36'; g.fillRect(0, h * 0.94, w, h * 0.06);
+    } else if (loc.id === 'river') {
+      ridge(0.3, 50, 0.003, '#c9b8b6', 1); ridge(0.38, 55, 0.005, '#a99aa6', 2); ridge(0.46, 45, 0.007, '#8a8597', 3);
+      g.fillStyle = 'rgba(255,240,228,.45)'; g.fillRect(0, h * 0.44, w, h * 0.06);
+      g.fillStyle = '#9aa77a'; g.fillRect(0, h * 0.52, w, h * 0.48);
+      for (let i = 0; i < 60; i++) { g.fillStyle = ['#a9b47f', '#8c9a6a', '#b8ae78'][i % 3]; g.fillRect(r() * w, h * (0.55 + r() * 0.4), 60 + r() * 120, 14 + r() * 20); }
+      g.strokeStyle = '#e7eff3'; g.lineCap = 'round';
+      for (const cx of [w * 0.25, w * 0.75]) {   // 양쪽 벽마다 두 강이 하나로 만나는 곳
+        g.lineWidth = 46;
+        g.beginPath(); g.moveTo(cx - 900, h * 0.62); g.bezierCurveTo(cx - 500, h * 0.6, cx - 250, h * 0.9, cx, h * 0.8); g.stroke();
+        g.beginPath(); g.moveTo(cx + 900, h * 0.6); g.bezierCurveTo(cx + 500, h * 0.66, cx + 250, h * 0.92, cx, h * 0.8); g.stroke();
+        g.lineWidth = 80; g.beginPath(); g.moveTo(cx, h * 0.8); g.quadraticCurveTo(cx + 40, h * 0.95, cx - 60, h * 1.05); g.stroke();
+      }
+      ridge(0.98, 30, 0.012, '#5d6b4a', 5);
+    } else if (loc.id === 'sea') {
+      const hz = h * 0.5;
+      const sea = g.createLinearGradient(0, hz, 0, h); sea.addColorStop(0, '#6aa3c8'); sea.addColorStop(1, '#2b5f86');
+      g.fillStyle = sea; g.fillRect(0, hz, w, h - hz);
+      for (let i = 0; i < 22; i++) {
+        const x = r() * w, s = 40 + r() * 160, far = r();
+        g.fillStyle = far < 0.5 ? '#8fa7b3' : '#5f7d70';
+        g.beginPath(); g.ellipse(x, hz + 2 + far * 14, s, s * (0.18 + r() * 0.15), 0, Math.PI, 0); g.fill();
+      }
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
+      for (let i = 0; i < 160; i++) { const x = r() * w, y = hz + 20 + r() * (h - hz - 30), l = 8 + r() * 26; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y); g.stroke(); }
+      for (let i = 0; i < 9; i++) {   // 절벽 바위와 소나무
+        const x = r() * w, s = 120 + r() * 220;
+        g.fillStyle = '#6d5a4b'; g.beginPath(); g.moveTo(x - s, h); g.lineTo(x - s * 0.6, h * 0.82); g.lineTo(x - s * 0.1, h * 0.76); g.lineTo(x + s * 0.4, h * 0.8); g.lineTo(x + s, h); g.fill();
+        g.fillStyle = '#2f4a32'; g.beginPath(); g.ellipse(x - s * 0.1, h * 0.72, 36, 16, 0, 0, Math.PI * 2); g.fill(); g.fillRect(x - s * 0.1 - 3, h * 0.72, 6, h * 0.05);
+      }
+    } else paintView(loc, g, w, h);
+  });
+}
+
+// 성긴 창살: 테두리 + 세로 살 둘 + 위 칸 잔살만 (바깥이 넓게 보이게)
+function openLattice(frame) {
+  return canvasTex(512, 384, (g, w, h) => {
+    g.fillStyle = frame;
+    g.fillRect(0, 0, w, 16); g.fillRect(0, h - 16, w, 16); g.fillRect(0, 0, 16, h); g.fillRect(w - 16, 0, 16, h);
+    g.fillRect(0, h * 0.24, w, 9);
+    for (const f of [1 / 3, 2 / 3]) g.fillRect(w * f - 5, 0, 10, h);
+    for (let x = 32; x < w; x += 32) g.fillRect(x - 2, 0, 4, h * 0.24);
+  });
+}
+
 function stoneTex() {
   return canvasTex(256, 256, (g, w, h) => {
     const r = rng(3);
@@ -587,13 +662,18 @@ export function buildInterior(loc) {
   wall(L, 1.2, HW - 0.02, 0.6, ZC, -Math.PI / 2, wood);
   wall(HW * 2, 1.2, 0, 0.6, HF - 0.02, Math.PI, wood);
 
-  const viewTex = windowView(loc);
-  const viewMat = new THREE.MeshBasicMaterial({ map: viewTex });
-  const frameTex = lattice(c.pillar, 'rgba(0,0,0,0)', false);
-  const frameMat = new THREE.MeshStandardMaterial({ map: frameTex, transparent: true, alphaTest: 0.4 });
-  for (const s of [-1, 1]) for (const z of [-8, 0, 8, 16]) {
-    const v = wall(4.6, 4.0, s * (HW - 0.03), 4.2, z, -s * Math.PI / 2, viewMat);
-    const f = wall(4.6, 4.0, s * (HW - 0.06), 4.2, z, -s * Math.PI / 2, frameMat);
+  // 창: 기둥 사이를 거의 다 쓰는 큰 창(판벽 위 ~ 들보 아래). 긴 파노라마 한 장이 창을 따라 이어져요
+  const pano = panoramaTex(loc);
+  const frameMat = new THREE.MeshStandardMaterial({ map: openLattice(c.pillar), transparent: true, alphaTest: 0.4 });
+  const BAYS = [[-14, 3.2], [-7.5, 8], [1.5, 8], [10.5, 8], [17.5, 4]];   // [가운데 z, 너비]
+  const WY = 4.55, WH = 6.1;
+  for (const s of [-1, 1]) for (const [z, w] of BAYS) {
+    const t = pano.clone();
+    // 안에서 보면 왼쪽 벽은 -z 쪽으로, 오른쪽 벽은 +z 쪽으로 그림이 이어져요. 왼쪽 벽은 그림 앞 절반, 오른쪽 벽은 뒤 절반
+    const u = s < 0 ? (HF - (z + w / 2)) / L : (z - w / 2 + HD) / L;
+    t.repeat.set(w / L / 2, 1); t.offset.set((s < 0 ? 0 : 0.5) + u / 2, 0); t.needsUpdate = true;
+    const v = wall(w, WH, s * (HW - 0.03), WY, z, -s * Math.PI / 2, new THREE.MeshBasicMaterial({ map: t }));
+    const f = wall(w, WH, s * (HW - 0.06), WY, z, -s * Math.PI / 2, frameMat);
     v.receiveShadow = f.receiveShadow = false;
   }
   // 입구 문 (밖으로 나가는 곳)
