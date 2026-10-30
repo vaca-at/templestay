@@ -461,3 +461,7 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 .body-pick svg { width: 38px; height: 48px; fill: #8f877d; }
 .body-pick[aria-pressed="true"] { border-color: var(--jade); box-shadow: 0 0 0 2px var(--jade); background: #eef6f2; }
 .body-pick[aria-pressed="true"] svg { fill: var(--jade); }
+/* 휴대폰 가로: 높이가 낮아 왼쪽 세로 단추가 조이스틱과 겹치고 사진 단추가 잘려서, 장소 단추 옆 위쪽에 가로로 한 줄 */
+@media (max-height: 520px) and (orientation: landscape) {
+  html body #side-btns { top: max(12px, env(safe-area-inset-top)); left: calc(max(12px, env(safe-area-inset-left)) + 90px); transform: none; display: flex; gap: 6px; }
+}
