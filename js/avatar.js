@@ -104,8 +104,10 @@ function actionPose(action, t, base, seated) {
     case 'beads':
       return mix(base, { aR: [-1.15, 0.45], aL: [-0.9, -0.25], head: 0.22 }, ease(t / 0.4));
     case 'moktak': {
+      // 서 있었으면 그 자리 바닥에 책상다리로 앉아서 쳐요
       const hit = Math.max(0, Math.sin(t * Math.PI * 2 * 1.1)) ** 3;
-      return mix(base, { aL: [-1.0, -0.2], aR: [-1.25 - hit * 0.35, 0.35], head: 0.12 }, ease(t / 0.4));
+      const p = seated ? base : mix(base, SIT_BLOCK, ease(t / 0.6));
+      return mix(p, { aL: [-1.0, -0.2], aR: [-1.25 - hit * 0.35, 0.35], head: 0.12 }, ease(t / 0.4));
     }
     case 'meditate':
       return mix(base, { aL: [-0.62, -0.55], aR: [-0.62, 0.55], head: 0.18, hip: -0.04 }, ease(t / 0.8));
@@ -681,10 +683,11 @@ export class Avatar {
     // 돌탑: 한 번 올릴 때마다 한 층씩 (다섯 층 다 쌓으면 다시 처음부터)
     this.cairn.visible = this.action === 'stones';
     if (this.cairn.visible) {
+      // 돌 세 개까지: 2.4초마다 하나씩 (main.js 가 세 개 다 쌓으면 옆으로 옮겨 가요)
       const n = Math.floor(this.actionT / 2.4), u = this.actionT % 2.4;
-      const shown = (n % 6) + (u > 1.3 ? 1 : 0);
+      const shown = Math.min(3, n + (u > 1.3 ? 1 : 0));
       this.cairn.children.forEach((st, i) => { st.visible = i < shown; });
-      this.handStone.visible = u > 0.1 && u < 1.3 && (n % 6) < 5;
+      this.handStone.visible = u > 0.1 && u < 1.3 && n < 3;
     } else this.handStone.visible = false;
     this.log.visible = this.action === 'bell';
     this.cloth.visible = this.action === 'wash' && this.seated;

@@ -496,3 +496,17 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
 @keyframes eq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
 @media (prefers-reduced-motion: reduce) { .eq s { animation: none; height: 10px; } }
 html body #music-modal .sheet { width: min(700px, calc(100vw - 32px)); max-width: none; }
+
+/* 염주 세기: 오른쪽 가운데 큰 108염주. 지나간 알은 밝게, 지금 알은 금빛 */
+#mala { position: absolute; right: max(16px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + 72px); width: 210px; height: 210px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(18,16,15,.62) 0 58%, rgba(18,16,15,.35) 59% 100%); pointer-events: none; }
+#mala[hidden] { display: none; }
+#mala svg { width: 100%; height: 100%; display: block; }
+#mala-ring { transition: transform .35s ease-out; }
+#mala circle.b { fill: #6b3b22; stroke: rgba(0,0,0,.35); stroke-width: .6; }
+#mala circle.b.done { fill: #b07a4a; }
+#mala circle.b.now { fill: #f2c94c; stroke: #fff; stroke-width: 1.2; }
+#mala circle.mo { fill: #c84a3a; }
+.mala-n { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #fff; font-family: var(--display); font-variant-numeric: tabular-nums; }
+.mala-n b { font-size: 34px; line-height: 1; } .mala-n small { font-size: 12px; opacity: .75; } .mala-n em { font-style: normal; font-size: 11px; opacity: .75; min-height: 1em; }
+@media (max-width: 760px) { #mala { width: 150px; height: 150px; top: calc(max(12px, env(safe-area-inset-top)) + 110px); } .mala-n b { font-size: 26px; } }

@@ -498,7 +498,15 @@ function doAction(id) {
     syncActionButtons();
     return;
   }
+  const stonesWasOn = !!S.stones;
   stopWalk();
+  if (id === 'stones') {
+    const on = !stonesWasOn;
+    S.target = null; stopStones(); S.me.stop();
+    if (on) startStones();
+    net.sendAct({ a: id, on }); pushState(true); syncActionButtons();
+    return;
+  }
   // 방석에 앉아서 하는 동작(발우공양 · 발우 씻기 · 책 읽기 · 사경)은 서 있으면 먼저 빈 방석에 앉는다
   if (ACTIONS.find((a) => a.id === id)?.seat && S.seat == null && S.active.seats?.length && S.me.action !== id) {
     const seat = S.scene === 'room' ? S.active.seats[0] : freeSeat(S.active.seats, false);
@@ -524,7 +532,7 @@ function startLoop(id) {
 }
 
 function syncActionButtons() {
-  const on = (id) => id === 'walk' ? (S.walking && S.walkMode === 'walk') || walkStarting : id === 'tapdori' ? S.walking && S.walkMode === 'tapdori' : S.me?.action === id;
+  const on = (id) => id === 'walk' ? (S.walking && S.walkMode === 'walk') || walkStarting : id === 'tapdori' ? S.walking && S.walkMode === 'tapdori' : id === 'stones' ? !!S.stones : S.me?.action === id;
   document.querySelectorAll('.act').forEach((b) => b.setAttribute('aria-pressed', String(on(b.dataset.act))));
   const sanbo = on('walk');
   $('#btn-sanbo').setAttribute('aria-pressed', String(sanbo));
@@ -536,6 +544,7 @@ let walkStarting = false;   // 산보: 합장하고 걷기 시작하기 전 1.8�
 // 직접 움직이면(장소 옮기기 · 앉기 · 일어서기 · 동작) 하던 산보 · 탑돌이를 멈춘다
 function stopWalk() {
   if (S.walkMode === 'tapdori' && S.me?.action === 'tapdori') S.me.stop();
+  stopStones();
   S.walking = false;
   S.walkMode = null;
   walkStarting = false;
@@ -582,6 +591,71 @@ function startWalk(path = S.active.walkPath, mode = 'walk') {
     S.target = { pos: path[k], speed: 1.5, onArrive: () => go((k + 1) % path.length) };
   };
   go(i);
+}
+
+// ───────── 염주 · 목탁 세기 ─────────
+// 염주: 108알을 1초에 한 알씩 (한 바퀴 108초). 목탁: 치는 횟수 (위쪽 108배 칸을 같이 써요)
+const MALA_N = 108;
+let malaShown = -1, moktakShown = -1;
+function buildMala() {
+  if ($('#mala-ring').childElementCount) return;
+  let h = '';
+  for (let i = 0; i < MALA_N; i++) { const a = (i / MALA_N) * Math.PI * 2 + Math.PI / 2; h += `<circle class="b" cx="${(Math.cos(a) * 92).toFixed(2)}" cy="${(Math.sin(a) * 92).toFixed(2)}" r="3.6"/>`; }
+  $('#mala-ring').innerHTML = h + '<circle class="mo" cx="0" cy="102" r="6"/>';   // 모주(어미 알)는 아래
+}
+function updateCounters() {
+  const act = S.me?.action;
+  if (act === 'beads') {
+    const total = Math.floor(S.me.actionT), n = total % MALA_N, round = Math.floor(total / MALA_N);
+    if (total !== malaShown) {
+      buildMala(); $('#mala').hidden = false;
+      const beads = $('#mala-ring').querySelectorAll('circle.b');
+      beads.forEach((b, i) => b.setAttribute('class', `b${i < n ? ' done' : ''}${i === n ? ' now' : ''}`));
+      // 지금 알이 늘 아래(엄지 자리)에 오도록 염주를 돌려요
+      $('#mala-ring').style.transform = `rotate(${-(n / MALA_N) * 360}deg)`;
+      $('#mala-count').textContent = n;
+      $('#mala-round').textContent = round ? `${round}바퀴 돌았어요` : '';
+      if (total > 0 && n === 0) { bowl(0.5); toast(`염주 한 바퀴 (108알)를 돌렸어요`); addRecord('beads', 1); }
+      malaShown = total;
+    }
+  } else if (malaShown !== -1) { $('#mala').hidden = true; malaShown = -1; }
+  if (act === 'moktak') {
+    const n = Math.max(0, Math.floor(S.me.actionT * 1.1 + 0.25) - 1);
+    if (n !== moktakShown) { $('#bae-counter').innerHTML = `<small>목탁</small><b>${n}</b><small>번</small>`; $('#bae-counter').hidden = false; moktakShown = n; }
+  } else if (moktakShown !== -1) { if (act !== 'bae108') $('#bae-counter').hidden = true; moktakShown = -1; }
+}
+
+// ───────── 돌탑 쌓기 ─────────
+// 돌 세 개를 쌓으면 그 탑은 그 자리에 남기고, 옆으로 몇 걸음 옮겨 가서 또 쌓아요 (마당 끝에 닿으면 반대쪽으로)
+const cairns = [];
+function startStones() {
+  standUp(true);
+  S.stones = { dir: 1 };
+  S.me.play('stones');
+}
+function stopStones() { S.stones = null; }
+function stepStones() {
+  const me = S.me;
+  if (me.action === 'stones' && me.actionT >= 7.4) {
+    // 다 쌓은 탑을 그 자리에 내려놓고
+    me.cairn.updateWorldMatrix(true, true);
+    const c = new THREE.Group();
+    me.cairn.children.slice(0, 3).forEach((st) => { const m = st.clone(); m.visible = true; c.add(m); });
+    me.cairn.matrixWorld.decompose(c.position, c.quaternion, c.scale);
+    S.active.group.add(c); cairns.push(c);
+    if (cairns.length > 9) cairns.shift().removeFromParent();
+    me.stop();
+    // 오른쪽으로 1.6칸 옮겨 가요. 마당 끝이면 방향을 바꿔요
+    const g = me.group, right = new THREE.Vector3(-Math.cos(g.rotation.y), 0, Math.sin(g.rotation.y));
+    let to = g.position.clone().addScaledVector(right, 1.6 * S.stones.dir);
+    if (S.active.radius && Math.hypot(to.x, to.z) > S.active.radius - 1) { S.stones.dir *= -1; to = g.position.clone().addScaledVector(right, 1.6 * S.stones.dir); }
+    const face = g.rotation.y;
+    S.target = { pos: to, speed: 1.2, face, onArrive: () => { if (S.stones) { me.play('stones'); pushState(true); syncActionButtons(); } } };
+    pushState(true);
+  } else if (!me.action && !S.target) {
+    // 길이 막혀 멈췄으면 그 자리에서 다시 쌓아요
+    me.play('stones'); pushState(true);
+  }
 }
 
 // ───────── 기록 (이 기기에만) ─────────
@@ -1110,8 +1184,9 @@ function moveMe(dt) {
     // Shift 를 누르거나 조이스틱을 끝까지 밀면 뛴다
     if (canRun() && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(joy.x, joy.y) > 0.92)) speed = RUN_SPEED;
   } else if (S.walking && walkBowT > 0) {
-    // 산보: 세 걸음마다 멈춰 서서 합장하는 동안은 걷지 않는다
+    // 산보 · 탑돌이: 세 걸음마다 멈춰 서서 반배하는 동안은 걷지 않는다. 탑돌이는 절을 마치면 다시 합장한 채로
     walkBowT -= dt;
+    if (walkBowT <= 0 && S.walkMode === 'tapdori') { S.me.action = 'tapdori'; S.me.actionT = 1; pushState(true); }
   } else if (S.target) {
     tmpV.copy(S.target.pos).sub(g.position).setY(0);
     if (tmpV.length() < 0.18) {
@@ -1120,7 +1195,7 @@ function moveMe(dt) {
       t.onArrive?.();
     } else { dir = tmpV.normalize(); speed = S.target.run && canRun() ? RUN_SPEED : S.target.speed || SPEED; }
   }
-  if (dir && S.me.action && S.me.action !== 'meditate' && !(S.walking && S.me.action === 'tapdori')) { S.me.stop(); syncActionButtons(); }
+  if (dir && S.me.action && S.me.action !== 'meditate' && !(S.walking && S.me.action === 'tapdori')) { S.me.stop(); if (!S.stones) syncActionButtons(); }
   const before = g.position.clone();
   if (dir) {
     g.position.addScaledVector(dir, speed * dt);
@@ -1132,7 +1207,7 @@ function moveMe(dt) {
   }
   me.speed = dir ? g.position.distanceTo(before) / Math.max(dt, 1e-4) : 0;
   // 산보: 세 걸음(한 걸음 약 0.75칸) 걸을 때마다 한 번 합장
-  if (S.walking && S.walkMode === 'walk' && dir) {
+  if (S.walking && (S.walkMode === 'walk' || S.walkMode === 'tapdori') && dir) {
     walkDist += g.position.distanceTo(before);
     if (walkDist >= WALK_STEP * 3) {
       // 세 걸음 걷고 한 번 반배 (합장하고 허리 숙이기). 걷던 속도를 0으로 해야 절이 바로 취소되지 않는다
@@ -1200,6 +1275,8 @@ function loop() {
     stepCameraTurn(dt);
     controls.update();
     S.me.update(dt, ACTIONS);
+    updateCounters();
+    if (S.stones) stepStones();
     if (!S.me.action && document.querySelector('.act[aria-pressed="true"]')) syncActionButtons();
     soundFor(S.me, 1);
     // 이름표: 내 캐릭터까지 거리보다 먼 사람은 거리만큼 키워(최대 2배) 내 이름표보다 작아지지 않게, 화면이 낮으면 모두 조금 크게
