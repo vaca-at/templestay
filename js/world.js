@@ -333,20 +333,126 @@ function stoneLantern() {
   return g;
 }
 
-function pagoda(levels = 3) {
+// ───────── 마당 탑 다섯 가지 (실제 탑의 모양만 따서 만든 모형) ─────────
+// 쌓아 올리기 도우미: add() 는 지금 높이 y 위에 상자를 올리고 y 를 올린다
+function stacker(color) {
   const g = new THREE.Group();
-  const s = mat('#a59f94');
+  const m = mat(color, { roughness: 0.92 });
+  const dark = mat('#2a2420');
   let y = 0;
-  const add = (w, h, d = w) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), s); o.position.y = y + h / 2; o.castShadow = o.receiveShadow = true; g.add(o); y += h; };
-  add(3, 0.5); add(2.6, 0.6); add(2.0, 0.35);
-  for (let i = 0; i < levels; i++) {
-    const w = 1.5 - i * 0.25;
-    add(w, 1.1 - i * 0.2);
-    add(w + 1.0, 0.18); add(w + 0.6, 0.18);
+  const put = (geo, h, material = m, lift = 0) => {
+    const o = new THREE.Mesh(geo, material); o.position.y = y + h / 2 + lift; o.castShadow = o.receiveShadow = true; g.add(o); return o;
+  };
+  const S = {
+    g, m, dark,
+    get y() { return y; },
+    add(w, h, d = w) { put(new THREE.BoxGeometry(w, h, d), h); y += h; },
+    // 亞자 모양: 네모 둘을 열십자로 겹친다
+    cross(w, h, inner) { put(new THREE.BoxGeometry(w, h, inner), h); put(new THREE.BoxGeometry(inner, h, w), h); y += h; },
+    // 지붕돌: 아래 받침 계단 + 넓은 지붕돌 + 귀가 살짝 들린 네 모서리
+    roof(w, h, steps = 2, lift = 0.06) {
+      for (let i = 0; i < steps; i++) { const sw = w * (0.62 + 0.08 * i); put(new THREE.BoxGeometry(sw, 0.06, sw), 0.06); y += 0.06; }
+      put(new THREE.BoxGeometry(w, h, w), h);
+      for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const c = new THREE.Mesh(new THREE.BoxGeometry(w * 0.16, h * 0.7, w * 0.16), m);
+        c.position.set(sx * w * 0.44, y + h + lift * 0.5, sz * w * 0.44); c.castShadow = true; g.add(c);
+      }
+      y += h;
+      put(new THREE.BoxGeometry(w * 0.55, h * 0.6, w * 0.55), h * 0.6); y += h * 0.6;
+    },
+    // 상륜부: 노반, 복발, 보주를 꿴 쇠꼬챙이
+    finial(h = 1) {
+      put(new THREE.BoxGeometry(0.3, 0.14, 0.3), 0.14); y += 0.14;
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, h, 8), mat('#6f6a62')); rod.position.y = y + h / 2; g.add(rod);
+      for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.11 - i * 0.02, 10, 8), m); b.position.y = y + 0.2 + i * h * 0.28; g.add(b); }
+      y += h;
+    },
+    door(w, h, faces = 4, at = y) {
+      for (let k = 0; k < faces; k++) {
+        const a = (k / 4) * Math.PI * 2;
+        const d = new THREE.Mesh(new THREE.BoxGeometry(w * 0.32, h * 0.62, 0.05), dark);
+        d.position.set(Math.sin(a) * (w / 2 + 0.01), at - h / 2 - h * 0.05, Math.cos(a) * (w / 2 + 0.01)); d.rotation.y = a; g.add(d);
+      }
+    },
+  };
+  return S;
+}
+
+export const PAGODAS = [
+  { id: 'gahangsa', name: '갈항사지 삼층석탑', from: '통일신라 · 국보', note: '두 단 기단 위 3층, 신라 석탑의 표준형' },
+  { id: 'gyeongcheon', name: '경천사지 십층석탑', from: '고려 · 국보', note: '하얀 대리석, 아래 3층은 亞자 모양' },
+  { id: 'namgyewon', name: '남계원 칠층석탑', from: '고려 · 국보', note: '날씬하게 높이 솟은 7층' },
+  { id: 'yeomgeo', name: '염거화상탑', from: '통일신라 · 국보', note: '팔각 승탑, 연꽃 받침과 기와집 모양 지붕' },
+  { id: 'mireuksa', name: '익산 미륵사지 석탑', from: '백제 · 국보', note: '나무탑을 돌로 옮긴 모양, 1층 가운데 통로' },
+];
+
+export function buildPagoda(id) {
+  if (id === 'gyeongcheon') {
+    const S = stacker('#e9e6df');
+    S.cross(4.0, 0.45, 2.6); S.cross(3.4, 0.5, 2.2); S.cross(2.9, 0.45, 1.9);
+    for (let i = 0; i < 3; i++) { const w = 2.3 - i * 0.12; S.cross(w, 0.62, w * 0.66); S.cross(w + 0.55, 0.16, (w + 0.55) * 0.66); S.add(w * 0.7, 0.08); }
+    for (let i = 0; i < 7; i++) { const w = 1.45 - i * 0.08; S.add(w, 0.5 - i * 0.015); S.roof(w + 0.7, 0.14, 1, 0.05); }
+    S.finial(1.1);
+    return S.g;
   }
-  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.8, 8), mat('#7c766c'));
-  top.position.y = y + 0.4; g.add(top);
-  return g;
+  if (id === 'namgyewon') {
+    const S = stacker('#b7b1a6');
+    S.add(3.0, 0.45); S.add(3.2, 0.12); S.add(2.3, 0.75); S.add(2.6, 0.14);
+    for (let i = 0; i < 7; i++) { const w = 1.25 - i * 0.07; S.add(w, i === 0 ? 0.85 : 0.42); S.roof(w + 0.9, 0.16, 2, 0.08); }
+    S.finial(1.0);
+    return S.g;
+  }
+  if (id === 'yeomgeo') {
+    // 팔각 승탑: 팔각 바닥돌 → 연꽃 받침 → 문짝 새긴 탑몸 → 기와집 지붕 → 연꽃 봉오리
+    const S = stacker('#c9c3b7');
+    const oct = (r1, r2, h) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 8), S.m); o.position.y = S.y + h / 2; o.rotation.y = Math.PI / 8; o.castShadow = o.receiveShadow = true; S.g.add(o); return h; };
+    const petals = (r, y, up) => {
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const p = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), S.m);
+        p.scale.set(0.2, 0.28, 0.12); p.position.set(Math.sin(a) * r, y, Math.cos(a) * r); p.rotation.y = a; p.rotation.x = up ? -0.5 : 0.5; p.castShadow = true; S.g.add(p);
+      }
+    };
+    let h = oct(1.9, 2.0, 0.3); S.add(0.01, h - 0.01);
+    h = oct(1.3, 1.5, 0.45); S.add(0.01, h - 0.01);
+    petals(1.2, S.y + 0.1, false); h = oct(1.15, 1.2, 0.3); S.add(0.01, h - 0.01);
+    h = oct(0.8, 0.8, 0.45); S.add(0.01, h - 0.01);
+    petals(1.0, S.y + 0.05, true); h = oct(1.05, 0.95, 0.22); S.add(0.01, h - 0.01);
+    const bodyY = S.y; h = oct(0.75, 0.75, 1.1); S.add(0.01, h - 0.01);
+    S.door(1.5, 1.1, 4, S.y);
+    // 기와집 지붕: 팔각 처마 + 기와골 여덟 줄
+    h = oct(1.55, 1.6, 0.12); S.add(0.01, h - 0.01);
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 1.5, 0.7, 8), S.m); roof.position.y = S.y + 0.35; roof.rotation.y = Math.PI / 8; roof.castShadow = true; S.g.add(roof);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.5), S.m);
+      r.position.set(Math.sin(a) * 0.82, S.y + 0.42, Math.cos(a) * 0.82); r.rotation.y = a; r.rotation.x = 0.44; S.g.add(r);
+    }
+    S.add(0.01, 0.7);
+    const bud = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), S.m); bud.scale.y = 1.2; bud.position.y = S.y + 0.25; S.g.add(bud);
+    petals(0.32, S.y + 0.1, true);
+    void bodyY;
+    return S.g;
+  }
+  if (id === 'mireuksa') {
+    // 넓고 얕은 지붕돌, 1층 네 면 가운데로 통로
+    const S = stacker('#c2bbae');
+    S.add(5.0, 0.35); S.add(4.4, 0.3);
+    for (let i = 0; i < 6; i++) {
+      const w = 3.3 - i * 0.18;
+      S.add(w, i === 0 ? 1.0 : 0.42);
+      if (i === 0) S.door(w * 1.4, 1.0, 4, S.y);
+      S.roof(w + 1.3, 0.12, 3, 0.07);
+    }
+    return S.g;
+  }
+  // 갈항사지 삼층석탑 (기본)
+  const S = stacker('#b9b3a8');
+  S.add(3.1, 0.5); S.add(3.3, 0.14); S.add(2.4, 0.75); S.add(2.6, 0.14);
+  const ws = [1.55, 1.15, 0.95], hs = [1.15, 0.5, 0.42];
+  for (let i = 0; i < 3; i++) { S.add(ws[i], hs[i]); S.roof(ws[i] + 1.15, 0.22, 3, 0.09); }
+  S.finial(1.0);
+  return S.g;
 }
 
 // ───────── 한옥 지붕 ─────────
@@ -805,6 +911,7 @@ export function buildExterior(loc) {
   const door = hall.userData.door.clone().add(hall.position);
 
   const animated = [];
+  const pagodaPos = new THREE.Vector3(-12, 0, 6); // 디자인마다 아래에서 자리를 정한다
   const isSky = (x, z) => Math.hypot(x, z) < R0 + 2;
   if (loc.id === 'forest') {
     g.add(scatterTrees(h, 700, 5, { maxD: 300 }));
@@ -814,7 +921,7 @@ export function buildExterior(loc) {
     dome.position.set(55, h(55, 70), 70); g.add(dome);
     const ribs = new THREE.Mesh(new THREE.SphereGeometry(9.05, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#f2f2ee', wireframe: true }));
     ribs.position.copy(dome.position); g.add(ribs);
-    const p = pagoda(3); p.position.set(-12, 0, 6); g.add(p);
+    pagodaPos.set(-12, 0, 6);
   }
   if (loc.id === 'river') {
     g.add(scatterTrees(h, 520, 9, { minD: R0 + 6, maxD: 420, autumn: true, skip: (x, z) => h(x, z) < -74 }));
@@ -834,7 +941,7 @@ export function buildExterior(loc) {
       mist.rotation.x = -Math.PI / 2; mist.position.set((i - 3) * 60, -60 + i * 3, 140 + i * 30);
       g.add(mist); animated.push((t) => { mist.position.x = (i - 3) * 60 + Math.sin(t * 0.05 + i) * 30; });
     }
-    const p = pagoda(3); p.position.set(12, 0, 4); g.add(p);
+    pagodaPos.set(12, 0, 4);
     addRailing(g, R0 - 1.5, -0.25 * Math.PI, 1.25 * Math.PI);
   }
   if (loc.id === 'sea') {
@@ -851,7 +958,7 @@ export function buildExterior(loc) {
     g.add(glints);
     animated.push((t) => { glints.material.opacity = 0.4 + Math.sin(t * 1.7) * 0.25; });
     // 절벽 끝 석탑과 바위
-    const p = pagoda(3); p.position.set(9, 0, 10); g.add(p);
+    pagodaPos.set(9, 0, 10);
     const rockMat = mat('#8f8a80');
     const rr = rng(5);
     for (let i = 0; i < 26; i++) {
@@ -862,6 +969,12 @@ export function buildExterior(loc) {
     }
     addRailing(g, R0 - 1.5, -0.15 * Math.PI, 1.15 * Math.PI);
   }
+
+  // 마당 탑 자리: 어떤 탑을 세울지는 main.js 가 고른다 (setPagoda)
+  const pagodaSlot = new THREE.Group();
+  pagodaSlot.position.copy(pagodaPos);
+  pagodaSlot.add(buildPagoda('gahangsa'));
+  g.add(pagodaSlot);
 
   const hemi = new THREE.HemisphereLight(loc.sky[0], '#6b5a44', 1.1);
   g.add(hemi);
@@ -883,7 +996,12 @@ export function buildExterior(loc) {
     // 산보 길: 법당 뒤를 돌아 마당 가장자리를 한 바퀴
     walkPath: [[-11, -16.5], [11, -16.5], [14, -4], [15, 8], [7, 16], [-7, 16], [-15, 8], [-14, -4]].map(([x, z]) => new THREE.Vector3(x, 0, z)),
     radius: R0 - 2.2,
-    blockers: [{ minX: -hall.userData.footprint.w, maxX: hall.userData.footprint.w, minZ: -9 - hall.userData.footprint.d, maxZ: -9 + hall.userData.footprint.d }],
+    blockers: [
+      { minX: -hall.userData.footprint.w, maxX: hall.userData.footprint.w, minZ: -9 - hall.userData.footprint.d, maxZ: -9 + hall.userData.footprint.d },
+      { minX: pagodaPos.x - 1.8, maxX: pagodaPos.x + 1.8, minZ: pagodaPos.z - 1.8, maxZ: pagodaPos.z + 1.8 },
+    ],
+    pagodaSlot,
+    setPagoda(id) { pagodaSlot.clear(); pagodaSlot.add(buildPagoda(id)); pagodaSlot.userData.id = id; },
     fog: new THREE.Fog(loc.fog, 120, 700),
     background: new THREE.Color(loc.sky[1]),
     update: (t) => animated.forEach((f) => f(t)),

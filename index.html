@@ -19,6 +19,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -89,7 +92,7 @@
 <section id="places" class="screen" hidden>
   <div class="places">
     <header class="panel-head">
-      <div><p class="eyebrow">건물 · 배경 · 마당</p><h2>디자인 고르기</h2><p class="sub">내 화면의 풍경만 바뀌어요. 서버와 함께 있는 분들은 그대로예요.</p></div>
+      <h2>디자인 고르기</h2>
       <button class="icon-btn" data-close="places" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button>
     </header>
     <div id="place-list" class="place-list"></div>
@@ -120,6 +123,7 @@
     <button data-menu="sched"><span class="lbl">내 하루 일정</span><small class="cap">산보·독서·공양 시간 정하기</small></button>
     <button data-menu="record"><span class="lbl">내 기록</span><small class="cap">이 기기에 남은 하루 기록</small></button>
     <button data-menu="scroll"><span class="lbl">내 방 족자 문구</span><small class="cap">여러 개 고르면 돌아가며 걸려요</small></button>
+    <button data-menu="relic"><span class="lbl">불상·탑 고르기</span><small class="cap">법당 불상 5점, 마당 탑 5기</small></button>
     <button data-menu="place"><span class="lbl">디자인 고르기</span><small class="cap">건물·배경·마당: 숲·두물머리·남해</small></button>
     <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 100명까지</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
@@ -156,21 +160,8 @@
     <button id="side-sched" aria-label="일정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><small class="cap">내 하루 일정</small></button>
     <button id="side-wish" aria-label="소원"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3"/><ellipse cx="12" cy="11" rx="6" ry="5.5"/><path d="M9 7.5c-1 2-1 5 0 7M15 7.5c1 2 1 5 0 7M10 16.5v4h4v-4"/></svg><small class="cap">소원 올리기</small></button>
   </nav>
-  <!-- 왼쪽 도형 단추: 글씨 없이 도형만, 설명은 커서를 올리면 말풍선으로 -->
-  <nav id="side-btns" aria-label="바로가기">
-    <button id="side-place" aria-label="장소"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg><small class="cap">장소 · 숲 · 두물머리 · 남해</small></button>
-    <button id="side-char" aria-label="꾸미기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3l4 2 4-2 5 4-3 3-2-1v12H8V9l-2 1-3-3z"/></svg><small class="cap">캐릭터 꾸미기</small></button>
-    <button id="side-sched" aria-label="일정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><small class="cap">내 하루 일정</small></button>
-    <button id="side-wish" aria-label="소원"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3"/><ellipse cx="12" cy="11" rx="6" ry="5.5"/><path d="M9 7.5c-1 2-1 5 0 7M15 7.5c1 2 1 5 0 7M10 16.5v4h4v-4"/></svg><small class="cap">소원 올리기</small></button>
-  </nav>
   <nav id="actions" class="glass"></nav>
   <div id="joystick"><div class="knob"></div></div>
-  <!-- 불상 넘기기: 불상 쪽에 커서를 올리면 나온다 -->
-  <div id="buddha-nav" hidden>
-    <button id="buddha-prev" class="glass buddha-arrow" aria-label="이전 불상"><span class="lbl">‹</span></button>
-    <button id="buddha-next" class="glass buddha-arrow" aria-label="다음 불상"><span class="lbl">›</span></button>
-    <p id="buddha-label" class="glass"><b id="buddha-name"></b><small id="buddha-count"></small></p>
-  </div>
   <button id="admin-btn" aria-label="관리자">관리자</button>
 </section>
 
@@ -225,6 +216,25 @@
   </div>
 </div>
 
+<!-- 불상·탑 고르기 -->
+<div id="relic-modal" class="modal" hidden>
+  <div class="sheet">
+    <header class="panel-head"><h2>불상·탑 고르기</h2><button class="icon-btn" data-close="relic-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">‹ › 를 누르면 바로 바뀌어요. 이 기기에 저장되고, 다른 분들 화면은 각자 고른 대로 보여요.</p>
+    <div class="relic-row">
+      <button id="relic-b-prev" class="icon-btn relic-arrow" type="button" aria-label="이전 불상"><span class="lbl">‹</span><small class="cap">이전</small></button>
+      <div class="relic-info"><small class="muted">법당 불상</small><b id="relic-b-name"></b><span id="relic-b-sub" class="muted small"></span></div>
+      <button id="relic-b-next" class="icon-btn relic-arrow" type="button" aria-label="다음 불상"><span class="lbl">›</span><small class="cap">다음</small></button>
+    </div>
+    <div class="relic-row">
+      <button id="relic-p-prev" class="icon-btn relic-arrow" type="button" aria-label="이전 탑"><span class="lbl">‹</span><small class="cap">이전</small></button>
+      <div class="relic-info"><small class="muted">마당 탑</small><b id="relic-p-name"></b><span id="relic-p-sub" class="muted small"></span></div>
+      <button id="relic-p-next" class="icon-btn relic-arrow" type="button" aria-label="다음 탑"><span class="lbl">›</span><small class="cap">다음</small></button>
+    </div>
+    <p class="muted small">불상은 국립중앙박물관 3D 스캔(공공누리 제1유형), 탑은 실제 탑의 모양만 따서 만든 모형이에요. 자세한 출처는 메뉴의 "자료 출처"에 있어요.</p>
+  </div>
+</div>
+
 <!-- 내 방 족자 문구 -->
 <div id="scroll-modal" class="modal" hidden>
   <div class="sheet wide-sheet">
@@ -276,7 +286,7 @@
 <div id="credit-modal" class="modal" hidden>
   <div class="sheet">
     <header class="panel-head"><h2>자료 출처</h2><button class="icon-btn" data-close="credit-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
-    <p class="sub">불상 자료는 모두 국립중앙박물관 3D 데이터이며 공공누리 제1유형(출처표시)으로 써요. 원본 3D 스캔을 웹용 크기·텍스처·압축으로 조정했어요. 법당에서 불상 쪽에 커서를 올리면 ‹ › 로 바꿔 모실 수 있어요.</p>
+    <p class="sub">불상 자료는 모두 국립중앙박물관 3D 데이터이며 공공누리 제1유형(출처표시)으로 써요. 원본 3D 스캔을 웹용 크기·텍스처·압축으로 조정했어요. 메뉴의 "불상·탑 고르기"에서 바꿔 모실 수 있어요.</p>
     <ul class="credit-list">
       <li>금동불좌상 · 고려 · 덕수2116 (금동불좌상·금동보살입상 중 좌불만 골라 씀)</li>
       <li>금동관음보살좌상 · 조선 · 덕수3310</li>
@@ -284,6 +294,7 @@
       <li>부여 군수리 석조여래좌상 · 백제 · 보물 · M번435</li>
       <li>경주 구황동 금제여래좌상 · 통일신라 · 국보 · 본관14752 (스캔에 색이 없어 금빛을 입힘)</li>
     </ul>
+    <p class="sub">마당의 탑 다섯 가지(갈항사지 삼층석탑, 경천사지 십층석탑, 남계원 칠층석탑, 염거화상탑, 익산 미륵사지 석탑)는 국립중앙박물관·국립익산박물관 소장품과 문화유산 정보를 보고 모양만 따서 만든 모형이에요. 실제 크기 비율은 조금씩 다듬었어요.</p>
     <p class="sub">법당, 풍경, 캐릭터는 모두 이 앱에서 직접 만든 3D 모형이에요.</p>
   </div>
 </div>

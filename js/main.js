@@ -11,7 +11,7 @@ import {
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
-import { buildInterior, buildExterior, buildMealHall, buildRoom, buildLantern, paintView } from './world.js';
+import { buildInterior, buildExterior, buildMealHall, buildRoom, buildLantern, paintView, PAGODAS } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls, openScrolls } from './scrolls.js';
 import { setSound, sound, moktak, bowl, coin } from './audio.js';
@@ -117,6 +117,7 @@ function worldFor(locId, which) {
   if (!w[which]) {
     const loc = LOCATIONS.find((l) => l.id === locId);
     w[which] = BUILDERS[which](loc);
+    if (which === 'out') applyPagoda(w.out);
   }
   return w[which];
 }
@@ -150,61 +151,38 @@ async function loadBuddha(world, id = buddhaId) {
     world.buddhaSlot.clear();
     world.buddhaSlot.add(model);
     world.buddhaSlot.userData.scan = id;
-    buddhaBox = null;
   } catch (e) { console.warn('불상 모델을 불러오지 못해 기본 불상을 써요', e); }
 }
 
+// 불상·탑 고르기: 메뉴의 설정 창에서 ‹ › 로 넘긴다 (화면을 가리지 않게). 고른 것은 이 기기에 남는다
 function stepBuddha(step) {
   const i = BUDDHA_IDS.indexOf(buddhaId);
   buddhaId = BUDDHA_IDS[(i + step + BUDDHA_IDS.length) % BUDDHA_IDS.length];
   store.set('buddha', buddhaId);
   for (const w of Object.values(S.worlds)) if (w.in) loadBuddha(w.in);
-  navHoldUntil = performance.now() + 4000;
-  renderBuddhaNav();
+  renderRelics();
 }
 
-// ‹ › 버튼은 불상 둘레에 커서가 있을 때만 (휴대폰은 불상을 누르면 4초 동안)
-let buddhaBox = null, buddhaBoxAt = 0, navHoldUntil = 0;
-const pointer = { x: -1, y: -1 };
-addEventListener('pointermove', (e) => { pointer.x = e.clientX; pointer.y = e.clientY; }, { passive: true });
-function renderBuddhaNav() {
+const PAGODA_IDS = PAGODAS.map((p) => p.id);
+let pagodaId = [params.get('pagoda'), store.get('pagoda', null)].find((id) => PAGODA_IDS.includes(id)) || PAGODA_IDS[0];
+function applyPagoda(world) { if (world.pagodaSlot.userData.id !== pagodaId) world.setPagoda(pagodaId); }
+function stepPagoda(step) {
+  const i = PAGODA_IDS.indexOf(pagodaId);
+  pagodaId = PAGODA_IDS[(i + step + PAGODA_IDS.length) % PAGODA_IDS.length];
+  store.set('pagoda', pagodaId);
+  for (const w of Object.values(S.worlds)) if (w.out) applyPagoda(w.out);
+  renderRelics();
+}
+
+function renderRelics() {
   const B = BUDDHAS[buddhaId];
-  $('#buddha-name').textContent = `${B.name} · ${B.from}`;
-  $('#buddha-count').textContent = `${BUDDHA_IDS.indexOf(buddhaId) + 1} / ${BUDDHA_IDS.length}`;
+  $('#relic-b-name').textContent = B.name;
+  $('#relic-b-sub').textContent = `${B.from} · ${B.no} · ${BUDDHA_IDS.indexOf(buddhaId) + 1} / ${BUDDHA_IDS.length}`;
+  const P = PAGODAS.find((p) => p.id === pagodaId);
+  $('#relic-p-name').textContent = P.name;
+  $('#relic-p-sub').textContent = `${P.from} · ${P.note} · ${PAGODA_IDS.indexOf(pagodaId) + 1} / ${PAGODA_IDS.length}`;
 }
-const corners = Array.from({ length: 8 }, () => new THREE.Vector3());
-function updateBuddhaNav() {
-  const nav = $('#buddha-nav');
-  if (S.mode !== 'world' || S.scene !== 'in' || !S.active?.buddhaSlot) { nav.hidden = true; return; }
-  const now = performance.now();
-  // 화면에서 불상이 차지하는 네모 칸 (0.2초마다 새로 잰다)
-  if (!buddhaBox || now - buddhaBoxAt > 200) {
-    buddhaBoxAt = now;
-    const b = new THREE.Box3().setFromObject(S.active.buddhaSlot);
-    let l = Infinity, r = -Infinity, t = Infinity, btm = -Infinity, behind = false;
-    [b.min, b.max].forEach((p, i) => [b.min, b.max].forEach((q, j) => [b.min, b.max].forEach((s, k) => {
-      const v = corners[i * 4 + j * 2 + k].set([b.min.x, b.max.x][i], [b.min.y, b.max.y][j], [b.min.z, b.max.z][k]).project(camera);
-      if (v.z > 1) behind = true;
-      const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight;
-      l = Math.min(l, x); r = Math.max(r, x); t = Math.min(t, y); btm = Math.max(btm, y);
-    })));
-    buddhaBox = behind ? null : { l, r, t, b: btm };
-  }
-  const bx = buddhaBox;
-  if (!bx) { nav.hidden = true; return; }
-  const pad = 70;
-  const near = pointer.x > bx.l - pad && pointer.x < bx.r + pad && pointer.y > bx.t - pad && pointer.y < bx.b + pad;
-  const show = near || nav.matches(':hover') || now < navHoldUntil;
-  nav.hidden = !show;
-  if (!show) return;
-  const midY = Math.min(innerHeight - 60, Math.max(60, (bx.t + bx.b) / 2));
-  $('#buddha-prev').style.left = `${Math.max(8, bx.l - 52)}px`;
-  $('#buddha-next').style.left = `${Math.min(innerWidth - 52, bx.r + 8)}px`;
-  $('#buddha-prev').style.top = $('#buddha-next').style.top = `${midY - 22}px`;
-  const lab = $('#buddha-label');
-  lab.style.left = `${(bx.l + bx.r) / 2}px`;
-  lab.style.top = `${Math.min(innerHeight - 40, bx.b + 6)}px`;
-}
+function openRelics() { renderRelics(); $('#relic-modal').hidden = false; }
 
 function setWorld(world) {
   if (S.active) scene.remove(S.active.group);
@@ -766,7 +744,7 @@ function updateTimer(dt) {
   if (timerTick < 1) return;
   timerTick = 0;
   const now = new Date();
-  $('#hud-timer').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())} · 머문 시간 ${fmtTime((Date.now() - S.enteredAt) / 1000)}`;
+  $('#hud-timer').innerHTML = `<b>${pad(now.getHours())}:${pad(now.getMinutes())}</b><small>머문 시간 ${fmtTime((Date.now() - S.enteredAt) / 1000)}</small>`;
   // 누적 시간은 관리자에게만
   $('#hud-timer').title = document.body.classList.contains('admin') ? `${S.loc.name}에 머문 시간 모두 ${fmtLong(store.get(`stay:${S.loc.id}`, 0))}` : '머문 시간';
 }
@@ -911,15 +889,13 @@ async function changeDesign(locId) {
 
 function showPlaces() {
   $('#places').hidden = false;
+  // 아주 단순한 바탕: 하늘색 위 · 땅색 아래 두 칸 + 이름만 (설명 없음)
+  const GROUND = { forest: '#6f9070', river: '#8a9cb0', sea: '#4f8db3' };
   $('#place-list').innerHTML = LOCATIONS.map((l) => {
-    const stay = store.get(`stay:${l.id}`, 0);
     const cur = S.loc?.id === l.id;
-    return `<button class="place${cur ? ' current' : ''}" data-place="${l.id}"><canvas width="400" height="300" data-art="${l.id}"></canvas>
-      <div class="body"><h3>${l.name}</h3><span class="where">${l.place}</span><p>${l.desc}</p>
-      ${stay > 60 ? `<span class="stay">이 디자인에서 머문 시간 ${fmtLong(stay)}</span>` : ''}
-      <small class="cap-line">${cur ? '지금 쓰는 디자인' : '눌러서 이 디자인으로 바꾸기 · 서버와 함께 있는 분들은 그대로예요'}</small></div></button>`;
+    const art = `background:linear-gradient(to top, ${GROUND[l.id] || '#8f8878'} 0 32%, transparent 32%), linear-gradient(${l.sky[0]}, ${l.sky[1]})`;
+    return `<button class="place${cur ? ' current' : ''}" data-place="${l.id}" aria-pressed="${cur}"><span class="place-art" style="${art}"></span><b>${l.name}</b><small>${l.place}</small></button>`;
   }).join('') + '<p class="fine credit">불상 자료 · 국립중앙박물관 3D 데이터 5점(덕수2116·덕수3310·본관5191·M번435·본관14752), 공공누리 제1유형</p>';
-  document.querySelectorAll('[data-art]').forEach((c) => paintView(LOCATIONS.find((l) => l.id === c.dataset.art), c.getContext('2d'), c.width, c.height));
 }
 
 // ───────── 캐릭터 꾸미기 ─────────
@@ -1029,7 +1005,8 @@ canvas.addEventListener('pointerup', (e) => {
     }
     if (o.userData.donation) return openWish();
     // 불상을 누르면 (휴대폰) ‹ › 버튼이 4초 동안 나온다
-    if (w.buddhaSlot) { let p = o; while (p && p !== w.buddhaSlot) p = p.parent; if (p) { navHoldUntil = performance.now() + 4000; return; } }
+    // 불상이나 탑을 누르면 불상·탑 고르기 창
+    for (const slot of [w.buddhaSlot, w.pagodaSlot]) if (slot) { let p = o; while (p && p !== slot) p = p.parent; if (p) return openRelics(); }
     if (o.userData.scroll) return openScrolls();
     if (o === w.floor) {
       if (S.me.action && !ACTIONS.find((a) => a.id === S.me.action)?.loop) return;
@@ -1153,7 +1130,6 @@ function loop() {
     for (const [id, r] of S.remotes) if (now - r.seen > 20000) removeRemote(id, false);
     pushState();
     updateContext();
-    updateBuddhaNav();
     updateTimer(dt);
     S.active.update?.(elapsed);
     if (S.active.flames) for (const f of S.active.flames) f.scale.set(1, 1.8 + Math.sin(elapsed * 13 + f.id) * 0.25, 1);
@@ -1216,6 +1192,7 @@ document.addEventListener('click', (e) => {
     if (m === 'sched') openSched();
     if (m === 'record') openRecords();
     if (m === 'scroll') openScrolls();
+    if (m === 'relic') openRelics();
     if (m === 'place') showPlaces();
     if (m === 'server') { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; }
     if (m === 'credit') $('#credit-modal').hidden = false;
@@ -1235,18 +1212,6 @@ $('#btn-wish').onclick = openWish;
 $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivity(b.act); };
 $('#sched-chip').onclick = openSched;
 $('#design-chip').onclick = showPlaces;
-// 왼쪽 도형 단추
-$('#side-place').onclick = showPlaces;
-$('#side-char').onclick = openCreator;
-$('#side-sched').onclick = openSched;
-$('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
-// 숫자 키 1~8 = 아래 동작 칸 차례대로
-addEventListener('keydown', (e) => {
-  if (S.mode !== 'world' || e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
-  const n = /^Digit([1-9])$/.exec(e.code)?.[1];
-  const btn = n && document.querySelectorAll('#actions .act')[n - 1];
-  if (btn) { e.preventDefault(); btn.click(); }
-});
 // 왼쪽 도형 단추
 $('#side-place').onclick = showPlaces;
 $('#side-char').onclick = openCreator;
@@ -1381,15 +1346,16 @@ async function demo(which) {
   if (params.get('toast')) toast(params.get('toast'));
   if (params.has('sched')) openSched();
   if (params.has('record')) openRecords();
-  if (params.has('bnav')) navHoldUntil = Infinity;
+  if (params.has('relic')) openRelics();
   updateHud();
   updateSchedChip();
 }
 
 // ───────── 시작 ─────────
-$('#buddha-prev').onclick = () => stepBuddha(-1);
-$('#buddha-next').onclick = () => stepBuddha(1);
-renderBuddhaNav();
+$('#relic-b-prev').onclick = () => stepBuddha(-1);
+$('#relic-b-next').onclick = () => stepBuddha(1);
+$('#relic-p-prev').onclick = () => stepPagoda(-1);
+$('#relic-p-next').onclick = () => stepPagoda(1);
 
 (async () => {
   if (!params.has('demo') && !params.has('gallery')) preloadNet();

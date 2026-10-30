@@ -302,6 +302,18 @@ body:not(.admin) .place .stay { display: none !important; }
 @media (pointer: coarse) { #side-btns { top: 40%; } }
 @media (max-height: 520px) { #side-btns { gap: 6px; } #side-btns button { width: 42px; height: 42px; } }
 
+/* 시계 칩: 위 시각, 아래 머문 시간 두 줄 */
+#hud-timer { display: grid; justify-items: center; line-height: 1.2; border-radius: 16px; padding: 6px 13px; }
+#hud-timer b { font-size: 14px; }
+#hud-timer small { font-size: 11px; color: var(--ink-soft); }
+
+/* 디자인 고르기: 단순한 색 바탕 + 이름만 */
+.places { width: min(720px, 100%); }
+.place { grid-template-rows: none; justify-items: center; gap: 2px; padding-bottom: 12px; text-align: center; }
+.place .place-art { display: block; width: 100%; aspect-ratio: 16 / 9; }
+.place b { font-family: var(--display); font-size: 19px; margin-top: 8px; }
+.place small { font-size: 12.5px; color: var(--ink-soft); }
+
 /* 불상 넘기기 ‹ › : 불상 쪽에 커서를 올리면 불상 양옆에 */
 #buddha-nav { position: absolute; inset: 0; pointer-events: none; }
 #buddha-nav > * { pointer-events: auto; }
@@ -310,18 +322,10 @@ body:not(.admin) .place .stay { display: none !important; }
 #buddha-label { position: absolute; transform: translateX(-50%); margin: 0; padding: 5px 12px; border-radius: 999px; font-size: 13px; white-space: nowrap; display: flex; gap: 8px; align-items: baseline; }
 #buddha-label small { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .credit-list { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
-
-/* 왼쪽 도형 단추(도형만) · 아래 동작 칸(글씨만): 반투명 먹색 하나로, 글씨는 고운바탕 */
-#side-btns { position: absolute; left: max(12px, env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); display: grid; gap: 8px; }
-#side-btns button, #actions .act { background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); }
-#side-btns button { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; }
-#side-btns svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#side-btns .cap { display: none; }
-#side-btns button:hover, #actions .act:hover { background: rgba(18, 16, 15, .72); }
-#actions { background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; gap: 6px; counter-reset: act; }
-#actions .act { counter-increment: act; position: relative; min-width: 62px; height: 50px; padding: 0 12px; border-radius: 14px; align-content: center; font-family: var(--display); font-weight: 700; font-size: 14.5px; }
-#actions .act svg { display: none; }
-#actions .act::before { content: counter(act); position: absolute; left: 6px; top: 3px; font-family: var(--body); font-weight: 400; font-size: 10px; opacity: .7; }
-#actions .act[aria-pressed="true"] { background: rgba(18, 16, 15, .72); color: #fff; outline: 2px solid #fff; outline-offset: -2px; }
-@media (pointer: coarse) { #side-btns { top: 40%; } }
-@media (max-height: 520px) { #side-btns { gap: 6px; } #side-btns button { width: 42px; height: 42px; } }
+/* 불상·탑 고르기 창 */
+.relic-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
+.relic-info { display: grid; gap: 2px; text-align: center; min-width: 0; }
+.relic-info b { font-family: var(--display); font-size: 18px; }
+.relic-info small { font-size: 11px; letter-spacing: .08em; }
+.relic-arrow .lbl { font-size: 26px; line-height: 1; }
+.relic-arrow { border: 1px solid var(--line); }
