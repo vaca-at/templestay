@@ -104,12 +104,13 @@ function buildHair(head, style, H, S, hy, fz) {
       box(head, H, W, 0.1, 0.16, 0, hy + 0.08, fz - 0.06);
       break;
     case 'braids': // 양갈래 땋은 머리
-      top(); backHair(0.32); sides(0.32); bangs(0.11);
-      // 귀 뒤에서 내려와 어깨 앞으로 늘어지게: 마디마디 굵기를 바꿔 땋은 느낌
+      // 옆머리를 귀 아래까지 내려 옆통수를 덮고, 거기서 땋은 머리가 이어져 어깨 앞으로 늘어져요
+      top(); backHair(0.5); sides(0.5, 0.1); bangs(0.11);
       for (const s of [1, -1]) {
-        for (let k = 0; k < 5; k++) box(head, H, 0.12 - (k % 2) * 0.03, 0.11, 0.11 - (k % 2) * 0.02, (side - 0.01) * s, hy - 0.5 - k * 0.1, 0.06);
-        box(head, tie, 0.11, 0.05, 0.11, (side - 0.01) * s, hy - 1.0, 0.06);
-        box(head, H, 0.07, 0.08, 0.07, (side - 0.01) * s, hy - 1.06, 0.06);
+        box(head, H, 0.13, 0.12, 0.16, (side + 0.005) * s, hy - 0.44, 0.04);   // 귀 아래 묶은 곳
+        for (let k = 0; k < 5; k++) box(head, H, 0.12 - (k % 2) * 0.03, 0.11, 0.11 - (k % 2) * 0.02, (side - 0.01) * s, hy - 0.54 - k * 0.1, 0.06);
+        box(head, tie, 0.11, 0.05, 0.11, (side - 0.01) * s, hy - 1.04, 0.06);
+        box(head, H, 0.07, 0.08, 0.07, (side - 0.01) * s, hy - 1.1, 0.06);
       }
       break;
     case 'bowl': // 바가지 머리: 눈썹까지 덮은 두툼한 앞머리
