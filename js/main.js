@@ -1386,7 +1386,22 @@ const PET_GROUP = { ai: 1, claude: 1, drone: 1, coffee: 2, icecoffee: 2, book: 2
 const petGroup = (p) => (p.season ? 3 : PET_GROUP[p.id] ?? 0);
 
 function renderMusic() {
-  $('#music-list').innerHTML = TRACKS.map((t, i) => `<button class="chip" data-music="${t.id}" aria-pressed="${music() === t.id}"><span class="lbl">${i + 1}. ${t.name}</span><small class="cap">${t.cap}</small></button>`).join('');
+  // 카드: 왼쪽 동그란 그림 · 이름과 설명 · 오른쪽 위 '녹음/합성' 표시. 고른 곡은 소리 막대가 움직여요
+  const ICON = {
+    bowl: '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7c1-1.5 2-1.5 3 0s2 1.5 3 0"/>',
+    all: '<path d="M4 6h11M4 12h11M4 18h7"/><path d="M17 15l4 3-4 3z"/>',
+    jong: '<path d="M8 4h8l1 3v6l2 3H5l2-3V7z"/><path d="M12 19v2"/>',
+    wind: '<path d="M12 3v4M8 7h8l-1 6H9z"/><path d="M12 13v5"/><circle cx="12" cy="20" r="1.5"/>',
+    rec: '<path d="M4 12h2M8 8v8M12 5v14M16 9v6M20 11v2"/>',
+  };
+  $('#music-list').innerHTML = TRACKS.map((t, i) => {
+    const on = music() === t.id, kind = ICON[t.id] ? t.id : 'rec', rec = t.src || t.list;
+    return `<button class="music-card" data-music="${t.id}" aria-pressed="${on}">
+      <span class="mc-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[kind]}</svg></span>
+      <span class="mc-text"><b>${i + 1}. ${t.name}</b><small>${t.cap}</small></span>
+      <span class="mc-tag">${on ? '<i class="eq"><s></s><s></s><s></s></i>' : rec ? '녹음' : '합성'}</span>
+    </button>`;
+  }).join('');
 }
 function pickMusic(id) {
   store.set('music', id);

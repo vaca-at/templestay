@@ -474,3 +474,25 @@ body.photo #photo-flash { display: block; position: fixed; inset: 0; background:
   html body #context-btns .ctx { width: 128px; }
 }
 #btn-sanbo[aria-pressed="true"] { outline: 2px solid #fff; outline-offset: -2px; background: rgba(18, 16, 15, .78); }
+
+/* 법당 음악 카드: 두 칸 격자 (휴대폰은 한 칸), 모든 카드 높이·칸 맞춤 */
+.music-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 520px) { .music-grid { grid-template-columns: 1fr; } }
+.music-card { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 68px; padding: 10px 12px; border-radius: 16px;
+  border: 1px solid var(--line); background: #fff; text-align: left; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+.music-card:hover { border-color: #c9bfae; transform: translateY(-1px); }
+.music-card[aria-pressed="true"] { border-color: var(--jade); background: var(--jade-soft); box-shadow: 0 0 0 1px var(--jade) inset; }
+.mc-ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #f3ede2; color: #7a5a3a; }
+.music-card[aria-pressed="true"] .mc-ico { background: var(--jade); color: #fff; }
+.mc-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mc-text { display: grid; gap: 2px; min-width: 0; padding-right: 34px; }
+.mc-text b { font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-text small { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-tag { position: absolute; top: 8px; right: 10px; font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: #f3ede2; color: #7a6a5a; }
+.music-card[aria-pressed="true"] .mc-tag { background: transparent; padding: 2px 0; }
+.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.eq s { display: block; width: 3px; background: var(--jade); border-radius: 2px; animation: eq 1s ease-in-out infinite; }
+.eq s:nth-child(2) { animation-delay: -.3s; } .eq s:nth-child(3) { animation-delay: -.6s; }
+@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+@media (prefers-reduced-motion: reduce) { .eq s { animation: none; height: 10px; } }
+html body #music-modal .sheet { width: min(700px, calc(100vw - 32px)); max-width: none; }
