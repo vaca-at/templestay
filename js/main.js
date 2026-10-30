@@ -13,6 +13,7 @@ import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
 import { buildInterior, buildExterior, buildMealHall, buildRoom, buildLantern, paintView } from './world.js';
 import { Net, preloadNet } from './net.js';
+import { hangScroll, stopScrolls, openScrolls } from './scrolls.js';
 import { setSound, sound, moktak, bowl, coin } from './audio.js';
 
 const $ = (s) => document.querySelector(s);
@@ -203,6 +204,8 @@ async function goScene(which, { instant = false } = {}) {
     controls.update();
   }
   S.me.tag.visible = which !== 'room';
+  // 내 방 족자는 들어올 때마다 문구가 바뀐다
+  if (which === 'room') hangScroll(world); else stopScrolls();
   refreshRemoteVisibility();
   updateHud();
   pushState(true);
@@ -690,6 +693,7 @@ function updateHud() {
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
   $('#btn-stand').hidden = S.seat == null || S.scene === 'room';
+  $('#btn-scroll').hidden = S.scene !== 'room';
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
 }
 
@@ -968,6 +972,7 @@ canvas.addEventListener('pointerup', (e) => {
       return;
     }
     if (o.userData.donation) return openWish();
+    if (o.userData.scroll) return openScrolls();
     if (o === w.floor) {
       if (S.me.action && !ACTIONS.find((a) => a.id === S.me.action)?.loop) return;
       pauseAuto();
@@ -1151,6 +1156,7 @@ document.addEventListener('click', (e) => {
     if (m === 'char') openCreator();
     if (m === 'sched') openSched();
     if (m === 'record') openRecords();
+    if (m === 'scroll') openScrolls();
     if (m === 'place') showPlaces();
     if (m === 'server') { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; }
     if (m === 'credit') $('#credit-modal').hidden = false;

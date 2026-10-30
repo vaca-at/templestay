@@ -112,6 +112,7 @@
     <button data-menu="char"><span class="lbl">캐릭터 꾸미기</span><small class="cap">캐릭터·옷·내 옆 친구 바꾸기</small></button>
     <button data-menu="sched"><span class="lbl">내 하루 일정</span><small class="cap">산보·독서·공양 시간 정하기</small></button>
     <button data-menu="record"><span class="lbl">내 기록</span><small class="cap">이 기기에 남은 하루 기록</small></button>
+    <button data-menu="scroll"><span class="lbl">내 방 족자 문구</span><small class="cap">여러 개 고르면 돌아가며 걸려요</small></button>
     <button data-menu="place"><span class="lbl">디자인 고르기</span><small class="cap">건물·배경·마당: 숲·두물머리·남해</small></button>
     <button data-menu="server"><span class="lbl">서버 바꾸기</span><small class="cap">서버마다 100명까지</small></button>
     <button data-menu="mywish"><span class="lbl">내가 올린 소원</span><small class="cap">이 기기에서 올린 소원 모아 보기</small></button>
@@ -139,6 +140,7 @@
     <button id="btn-wish" class="glass ctx" hidden><span class="lbl">복전함에 소원 올리기</span><small class="cap">소원지를 쓰면 연등으로 걸려요</small></button>
     <button id="btn-resume" class="glass ctx" hidden><span class="lbl">하루 일정으로 돌아가기</span><small class="cap">지금 시간에 할 일로 가요</small></button>
     <button id="btn-stand" class="glass ctx" hidden><span class="lbl">일어서기</span><small class="cap">자리에서 일어나 걷기</small></button>
+    <button id="btn-scroll" class="glass ctx" hidden><span class="lbl">족자 문구 고르기</span><small class="cap">여러 개 고르면 돌아가며 걸려요</small></button>
   </div>
   <nav id="actions" class="glass"></nav>
   <div id="joystick"><div class="knob"></div></div>
@@ -193,6 +195,20 @@
       <button id="sched-reset" class="ghost small-btn" type="button"><span class="lbl">기본 일정으로</span><small class="cap">출퇴근 산보·독서·점심 공양</small></button>
     </div>
     <button id="sched-save" class="primary wide" type="button"><span class="lbl">저장하기</span><small class="cap">이 기기에 저장되고 바로 적용돼요</small></button>
+  </div>
+</div>
+
+<!-- 내 방 족자 문구 -->
+<div id="scroll-modal" class="modal" hidden>
+  <div class="sheet wide-sheet">
+    <header class="panel-head"><h2>내 방 족자 문구</h2><button class="icon-btn" data-close="scroll-modal" aria-label="닫기"><span class="lbl">✕</span><small class="cap">닫기</small></button></header>
+    <p class="sub">체크한 문구 가운데 하나가 무작위로 걸려요. 방에 들어갈 때마다, 머무는 동안에는 3분마다 바뀌어요. 족자를 눌러도 이 창이 열려요.</p>
+    <div id="scroll-rows" class="sched-rows"></div>
+    <div class="row wrap">
+      <button id="scroll-add" class="ghost small-btn" type="button"><span class="lbl">+ 문구 더하기</span><small class="cap">10자까지, 풀이는 16자까지</small></button>
+      <button id="scroll-reset" class="ghost small-btn" type="button"><span class="lbl">기본 문구로</span><small class="cap">일체유심조·무소유·인연생기·자비·마음 속 부처 찾기</small></button>
+    </div>
+    <button id="scroll-save" class="primary wide" type="button"><span class="lbl">저장하기</span><small class="cap">이 기기에 저장되고 바로 걸려요</small></button>
   </div>
 </div>
 

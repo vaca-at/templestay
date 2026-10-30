@@ -276,3 +276,7 @@ body:not(.admin) .place .stay { display: none !important; }
 /* 디자인 고르기: 지금 쓰는 디자인 표시 */
 .place.current { border-color: var(--jade); box-shadow: 0 0 0 2px var(--jade); }
 #design-chip b { font-family: var(--display); }
+/* 족자 문구 고르기 */
+.scroll-row { display: grid; grid-template-columns: auto minmax(90px, 1fr) minmax(110px, 1.4fr) auto; gap: 6px; align-items: center; }
+.scroll-row input[type="text"] { font: inherit; font-size: 14px; padding: 8px 9px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); min-width: 0; }
+.scroll-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--jade); }

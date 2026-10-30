@@ -934,9 +934,19 @@ function scroll(text, sub) {
   return canvasTex(256, 640, (cg, w, h) => {
     cg.fillStyle = '#efe4c8'; cg.fillRect(0, 0, w, h);
     cg.fillStyle = '#6b4a33'; cg.fillRect(0, 0, w, 24); cg.fillRect(0, h - 24, w, 24);
-    cg.fillStyle = '#2b2220'; cg.font = `700 64px ${FONT_TITLE}`; cg.textAlign = 'center';
-    [...text].forEach((ch, i) => cg.fillText(ch, w / 2, 110 + i * 78));
-    if (sub) { cg.font = `400 22px ${FONT_TITLE}`; cg.fillStyle = '#7a5a40'; [...sub].forEach((ch, i) => cg.fillText(ch, w - 40, 100 + i * 28)); }
+    // 세로 글씨. 글자가 많으면 크기를 줄여 족자 안에 맞추고, 띄어쓰기는 반 칸만 띈다
+    const chars = [...String(text).trim()];
+    const units = chars.reduce((n, ch) => n + (ch === ' ' ? 0.45 : 1), 0) || 1;
+    const step = Math.min(78, (h - 210) / units);
+    cg.fillStyle = '#2b2220'; cg.font = `700 ${Math.round(step * 0.82)}px ${FONT_TITLE}`; cg.textAlign = 'center'; cg.textBaseline = 'middle';
+    let y = 70 + step / 2;
+    for (const ch of chars) { if (ch === ' ') { y += step * 0.45; continue; } cg.fillText(ch, w / 2 - (sub ? 10 : 0), y); y += step; }
+    if (sub) {
+      const sc = [...String(sub).replace(/\s+/g, '')];
+      const sstep = Math.min(28, (h - 200) / sc.length);
+      cg.font = `400 ${Math.round(sstep * 0.8)}px ${FONT_TITLE}`; cg.fillStyle = '#7a5a40';
+      sc.forEach((ch, i) => cg.fillText(ch, w - 36, 90 + i * sstep));
+    }
     cg.fillStyle = '#b8463f'; cg.fillRect(w / 2 - 18, h - 90, 36, 36);
   });
 }
@@ -1036,12 +1046,19 @@ export function buildRoom(loc) {
   const quilt2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.8), mat('#f2ead8')); quilt2.position.set(-HW + 0.8, 0.52, HD - 0.8); g.add(quilt2);
   const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.5), new THREE.MeshStandardMaterial({ map: scroll('일체유심조', '모든것은마음이짓는다') }));
   sc.position.set(0, 2.0, -HD + 0.05); g.add(sc);
+  sc.userData.scroll = true;
   const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), mat('#5d5a50')); cushion.position.set(0, 0.05, -0.65); cushion.receiveShadow = true; g.add(cushion);
   cushion.userData.seats = 'room';
   roomLights(g, '#ffd9a0', { size: 5, at: [-4, 6, 2] });
   const seat = { id: 0, pos: new THREE.Vector3(0, 0, -0.65), rot: Math.PI, y: 0.1 };
   return {
     group: g, floor, seats: [seat], exitDoor: door,
+    // 족자 문구 바꿔 걸기
+    setScroll(text, sub) {
+      sc.material.map.dispose();
+      sc.material.map = scroll(text, sub);
+      sc.material.needsUpdate = true;
+    },
     spawn: seat.pos.clone(), spawnRot: Math.PI,
     exitZ: HD - 0.5, camDist: 2.8, minDist: 1.4, maxDist: 4.6,
     bounds: { minX: -HW + 0.4, maxX: HW - 0.4, minZ: -HD + 0.4, maxZ: HD - 0.4 },
