@@ -1230,6 +1230,7 @@ export function buildInterior(loc) {
 // ───────── 외부 ─────────
 const R0 = 22;
 
+const RW = -34;   // 두물머리 강물 높이 (마당에서 내려다보이게)
 function heightFn(id) {
   if (id === 'forest') {
     return (x, z) => {
@@ -1244,19 +1245,23 @@ function heightFn(id) {
     };
   }
   if (id === 'river') {
+    // 수종사(운길산 중턱)에서 내려다보는 두물머리: 앞쪽으로 숲 비탈이 내려가고, 아래로 넓은 두 강이 만나 흘러가요.
+    // 강 건너는 둥글고 낮은 산이 겹겹이
     const arms = riverPaths();
     return (x, z) => {
       const d = Math.hypot(x, z);
-      let h = -70 * smooth(R0 - 2, R0 + 60, d) + noise(x, z) * 5 * smooth(R0, R0 + 30, d);
-      h += 120 * smooth(220, 400, d) * (0.55 + 0.45 * noise(x * 0.4, z * 0.4));
-      if (z < 0) h += 30 * smooth(30, 120, -z);
-      if (d > 60) {
+      let h = RW * Math.pow(smooth(R0 - 2, R0 + 140, d), 0.5) + noise(x, z) * 5 * smooth(R0, R0 + 30, d);
+      if (z < 0) h += 40 * smooth(20, 140, -z) + noise(x * 0.8, z * 0.8) * 10 * smooth(20, 60, -z);
+      if (d > 120) {
         const rd = distToPaths(x, z, arms);
-        h = Math.min(h, -79 + smooth(8, 26, rd) * 30 + smooth(26, 90, rd) * 400);
-        if (rd < 30) h = Math.min(h, -79 + rd * 0.2);
-        // 두 물줄기가 만나는 곳의 작은 섬
-        const ci = Math.exp(-((x + 10) ** 2 + (z - 154) ** 2) / 128);
-        h = Math.max(h, -79 + ci * 6);
+        // 강에서 멀어질수록 둥근 산 (높이는 낮게)
+        const hill = RW + smooth(50, 160, rd) * (12 + 26 * (0.5 + 0.5 * noise(x * 0.35, z * 0.35)));
+        h = h + (hill - h) * smooth(110, 200, d);
+        if (rd < 48) h = Math.min(h, RW - 0.5);
+        else if (rd < 70) h = Math.min(h, RW + (rd - 48) * 0.3);
+        // 두 물이 만나는 곳의 작은 섬
+        const ci = Math.exp(-((x + 20) ** 2 + (z - 200) ** 2) / 260);
+        h = Math.max(h, RW + ci * 5);
       }
       return h;
     };
@@ -1286,12 +1291,12 @@ function heightFn(id) {
 }
 
 function riverPaths() {
-  // 두 강줄기가 화면 앞쪽에서 만나 하나로 흘러간다
+  // 북한강(왼쪽)과 남한강(오른쪽)이 앞쪽 아래에서 만나 한강이 되어 멀리 흘러가요
   const left = [], right = [], main = [];
   for (let t = 0; t <= 1; t += 0.05) {
-    left.push([-320 + t * 300 + Math.sin(t * 5) * 20, 90 + t * 70]);
-    right.push([300 - t * 290 + Math.sin(t * 4 + 1) * 18, 220 - t * 60]);
-    main.push([-10 + Math.sin(t * 3) * 40, 160 + t * 260]);
+    left.push([-600 + t * 590 + Math.sin(t * 4) * 30, 120 + t * 60]);
+    right.push([600 - t * 610 + Math.sin(t * 3 + 1) * 30, 260 - t * 80]);
+    main.push([-10 + Math.sin(t * 2.4) * 80, 180 + t * 700]);
   }
   return [left, right, main];
 }
@@ -1327,7 +1332,7 @@ function terrain(id) {
     if (id === 'forest') tmp.lerp(autumn, 0.35 + 0.3 * noise(x * 0.7, z * 0.7));
     if (d > R0 && d < R0 + 30 && id !== 'forest') tmp.lerp(rock, 0.6);
     if (id === 'sea' && y < -56) tmp.copy(sand);
-    if (id === 'river' && y < -76) tmp.copy(sand);
+    if (id === 'river' && y < RW + 3) tmp.copy(sand);
     if (d < R0 - 1) tmp.set('#b3a88f');
     colors.push(tmp.r, tmp.g, tmp.b);
   }
@@ -1433,22 +1438,31 @@ export function buildExterior(loc) {
     pagodaPos.set(-12, 0, 6);
   }
   if (loc.id === 'river') {
-    g.add(scatterTrees(h, 900, 9, { minD: R0 + 6, maxD: 420, autumn: true, skip: (x, z) => h(x, z) < -74 }));
+    g.add(scatterTrees(h, 1500, 9, { minD: R0 + 4, maxD: 640, autumn: true, skip: (x, z) => h(x, z) < RW + 4 || (z > 0 && Math.hypot(x, z) < R0 + 34 && Math.abs(x) < z * 0.8) }));
     const paths = riverPaths();
-    const water = new THREE.MeshStandardMaterial({ color: '#7fa9c2', roughness: 0.15, metalness: 0.25 });
-    const river = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), water);
-    river.rotation.x = -Math.PI / 2; river.position.y = -76.5; g.add(river);
-    // 두물머리 느티나무 한 그루
+    // 강물: 하늘을 비추는 잔잔한 물 (가까운 곳은 조금 짙게)
+    const rGeo = new THREE.PlaneGeometry(2400, 2400, 40, 40); rGeo.rotateX(-Math.PI / 2);
+    const rp = rGeo.attributes.position, rc = [], cN = new THREE.Color('#6f93a3'), cF = new THREE.Color('#c9d8dc'), tc = new THREE.Color();
+    for (let i = 0; i < rp.count; i++) { tc.copy(cN).lerp(cF, smooth(150, 900, Math.hypot(rp.getX(i), rp.getZ(i)))); rc.push(tc.r, tc.g, tc.b); }
+    rGeo.setAttribute('color', new THREE.Float32BufferAttribute(rc, 3));
+    const river = new THREE.Mesh(rGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.12, metalness: 0.3 }));
+    river.position.y = RW + 0.4; g.add(river);
+    // 두물머리 400년 느티나무 (물 만나는 곳)
     const [mx, mz] = paths[2][0];
-    const tree = new THREE.Group();
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 10, 8), mat('#5a3d2a')); tr.position.y = 5; tree.add(tr);
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(9, 1), mat('#c7902f')); crown.position.y = 14; crown.scale.y = 0.7; tree.add(crown);
-    tree.position.set(mx, h(mx, mz) + 0.5, mz - 6); g.add(tree);
-    // 물안개
-    for (let i = 0; i < 6; i++) {
-      const mist = new THREE.Mesh(new THREE.PlaneGeometry(400, 60), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide }));
-      mist.rotation.x = -Math.PI / 2; mist.position.set((i - 3) * 60, -60 + i * 3, 140 + i * 30);
-      g.add(mist); animated.push((t) => { mist.position.x = (i - 3) * 60 + Math.sin(t * 0.05 + i) * 30; });
+    const zel = heroMaple(55, 2.4, ['#b8862f', '#c99a3a', '#a7762a', '#d4ab4a']); zel.position.set(mx + 30, h(mx + 30, mz - 30) + 0.2, mz - 30); g.add(zel);
+    // 수종사 은행나무: 마당 가장자리에 금빛으로 크게
+    const ginkgo = ['#f2c94c', '#f6d65a', '#e8b83a', '#f9e27a', '#d9a62e'];
+    const gk = heroMaple(77, 1.9, ginkgo); gk.position.set(-25, h(-25, 10), 10); g.add(gk);
+    const gk2 = heroMaple(78, 1.4, ginkgo); gk2.position.set(26, h(26, -2), -2); g.add(gk2);
+    // 물안개: 강 위로 낮게 여러 겹, 천천히 흘러요
+    const mistTex = canvasTex(256, 128, (cg, w, hh) => { const rg = cg.createRadialGradient(w / 2, hh / 2, 4, w / 2, hh / 2, w / 2); rg.addColorStop(0, 'rgba(255,255,255,0.9)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); cg.fillStyle = rg; cg.fillRect(0, 0, w, hh); });
+    const mr = rng(31);
+    for (let i = 0; i < 26; i++) {
+      const mist = new THREE.Mesh(new THREE.PlaneGeometry(220 + mr() * 200, 70 + mr() * 50), new THREE.MeshBasicMaterial({ map: mistTex, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide }));
+      const p = paths[i % 3][Math.floor(mr() * 20)];
+      mist.rotation.x = -Math.PI / 2; mist.position.set(p[0], RW + 2 + mr() * 6, p[1]);
+      const x0 = p[0], ph = mr() * 6;
+      g.add(mist); animated.push((t) => { mist.position.x = x0 + Math.sin(t * 0.04 + ph) * 25; });
     }
     pagodaPos.set(12, 0, 4);
     addRailing(g, R0 - 1.5, -0.25 * Math.PI, 1.25 * Math.PI);
@@ -1524,8 +1538,8 @@ export function buildExterior(loc) {
     // 마당은 바닥보다 산·강·바다가 보이게: 조금 멀리, 덜 내려다보고, 시선은 지평선 쪽
     camDist: 9,
     // 남해(보리암)는 산꼭대기에서 바다를 내려다보는 풍경이라 조금 더 높이서 아래로
-    camRise: loc.id === 'sea' ? 0.36 : 0.3,
-    camLookY: loc.id === 'sea' ? 1.4 : 2.8,
+    camRise: loc.id === 'forest' ? 0.3 : 0.36,
+    camLookY: loc.id === 'forest' ? 2.8 : 1.4,
     // 산보 길: 법당 건물을 오른쪽에 두고 시계 방향으로 도는 둥근 길 (건물 가운데 0,-9 / 석등·계단 앞을 지나게 넉넉히)
     // 앞(남쪽)에서 서쪽(-x)으로 출발 → 뒤 → 동쪽 → 다시 앞
     walkPath: Array.from({ length: 28 }, (_, k) => {
@@ -1539,7 +1553,7 @@ export function buildExterior(loc) {
     ],
     pagodaSlot,
     setPagoda(id) { pagodaSlot.clear(); pagodaSlot.add(buildPagoda(id)); pagodaSlot.userData.id = id; },
-    fog: loc.id === 'sea' ? new THREE.Fog(loc.fog, 260, 1500) : new THREE.Fog(loc.fog, 120, 700),
+    fog: loc.id === 'forest' ? new THREE.Fog(loc.fog, 120, 700) : new THREE.Fog(loc.fog, 260, 1500),
     background: new THREE.Color(loc.sky[1]),
     update: (t) => { sky.material.uniforms.time.value = t; animated.forEach((f) => f(t)); },
   };
