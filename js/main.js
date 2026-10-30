@@ -823,9 +823,9 @@ const QUOTES = [
 ];
 // 로딩 뒤 3D 풍경 네 가지 중 하나가 무작위로 나온다 (?loading=1~4 로 고정). 글씨는 모두 같다
 const LOADING_VIEWS = [
-  // 1 두물정사: 마당 위를 크게 돌며 산과 강을 둘러본다
+  // 1 두물머리 물안개: 마당 위를 크게 돌며 산과 강을 둘러본다
   { at: () => ['river', 'out'], cam: (t) => { const a = t * 0.05; camera.position.set(Math.sin(a) * 26, 14, Math.cos(a) * 26 + 6); camera.lookAt(Math.sin(a + 2.6) * 60, -8, Math.cos(a + 2.6) * 60 + 40); } },
-  // 2 숲울림당: 마당을 낮게 한 바퀴, 법당과 탑이 번갈아 지나간다
+  // 2 단풍 산: 마당을 낮게 한 바퀴, 법당과 탑이 번갈아 지나간다
   { at: () => ['forest', 'out'], cam: (t) => { const a = t * 0.06; camera.position.set(Math.sin(a) * 19, 5, Math.cos(a) * 19 - 2); camera.lookAt(0, 3.5, -5); } },
   // 3 보리암: 금산 바위 위에서 해가 걸린 남해, 까만 섬들을 좌우로 천천히
   { at: () => ['sea', 'boriam'], cam: (t) => { const a = Math.sin(t * 0.04) * 0.35; camera.position.set(Math.sin(a) * 4, 14, -4); camera.lookAt(Math.sin(a) * 300, -120, 900); } },

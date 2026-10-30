@@ -609,7 +609,7 @@ export function buildHallBuilding(loc) {
     end.position.set(s * ridgeLen / 2, ridge.position.y + 0.2, 0); end.rotation.z = -0.3 * s; g.add(end);
   }
   // 현판
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.07), new THREE.MeshStandardMaterial({ map: signboard(loc.name), roughness: 0.6 }));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.07), new THREE.MeshStandardMaterial({ map: signboard('큰법당'), roughness: 0.6 })); // 현판은 디자인과 상관없이 모두 큰법당
   sign.position.set(0, 1 + colH + 0.45, D / 2 + 0.42); g.add(sign);
   // 입구 앞 등
   const l1 = stoneLantern(); l1.position.set(-3.5, 0, D / 2 + 4.6); g.add(l1);

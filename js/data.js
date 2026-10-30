@@ -10,7 +10,7 @@ export const SERVER_CAP = 100;
 export const LOCATIONS = [
   {
     id: 'forest',
-    name: '숲울림당',
+    name: '단풍 산',
     place: '수목원 둘레 산자락',
     desc: '단풍 든 수목원 숲길을 따라 오르면 나오는 고요한 법당',
     sky: ['#9cc6e8', '#e9efe6'],
@@ -19,7 +19,7 @@ export const LOCATIONS = [
   },
   {
     id: 'river',
-    name: '두물정사',
+    name: '두물머리 물안개',
     place: '두물머리가 내려다보이는 산꼭대기',
     desc: '두 강이 하나로 만나는 물줄기가 발아래 펼쳐지는 산정 법당',
     sky: ['#f3c9a8', '#fbeee0'],
@@ -28,7 +28,7 @@ export const LOCATIONS = [
   },
   {
     id: 'sea',
-    name: '해조암',
+    name: '남해 윤슬',
     place: '남해 섬들이 보이는 바위 절벽',
     desc: '절벽 끝 암자에서 다도해 섬들과 수평선을 바라보는 법당',
     sky: ['#7fb6e0', '#e6f1f6'],
