@@ -20,15 +20,6 @@ export const LOCATIONS = [
     interior: { wall: '#efe6d2', floor: '#4a2f22', pillar: '#6b2c22', beam: '#2f7d6d', accent: '#c8443a', lamp: '#ffd9a0' },
   },
   {
-    id: 'river',
-    name: '두물머리 물안개',
-    place: '두물머리가 내려다보이는 산꼭대기',
-    desc: '두 강이 하나로 만나는 물줄기가 발아래 펼쳐지는 산정 법당',
-    sky: ['#f3c9a8', '#fbeee0'],
-    fog: '#f1e3d6',
-    interior: { wall: '#f2ebdd', floor: '#3d2a20', pillar: '#5c2a20', beam: '#24607a', accent: '#d9673b', lamp: '#ffe2b8' },
-  },
-  {
     id: 'sea',
     name: '남해 윤슬',
     place: '남해 섬들이 보이는 바위 절벽',
@@ -36,6 +27,15 @@ export const LOCATIONS = [
     sky: ['#7fb6e0', '#e6f1f6'],
     fog: '#d9e8ef',
     interior: { wall: '#ece8de', floor: '#3a2b24', pillar: '#55302a', beam: '#2c6f8f', accent: '#b8463f', lamp: '#fff0c8' },
+  },
+  {
+    id: 'river',
+    name: '두물머리 물안개',
+    place: '두물머리가 내려다보이는 산꼭대기',
+    desc: '두 강이 하나로 만나는 물줄기가 발아래 펼쳐지는 산정 법당',
+    sky: ['#f3c9a8', '#fbeee0'],
+    fog: '#f1e3d6',
+    interior: { wall: '#f2ebdd', floor: '#3d2a20', pillar: '#5c2a20', beam: '#24607a', accent: '#d9673b', lamp: '#ffe2b8' },
   },
 ];
 

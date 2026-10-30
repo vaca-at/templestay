@@ -1468,7 +1468,7 @@ export function buildExterior(loc) {
     addRailing(g, R0 - 1.5, -0.25 * Math.PI, 1.25 * Math.PI);
   }
   if (loc.id === 'sea') {
-    g.add(scatterTrees(h, 1400, 21, { minD: R0 + 3, maxD: 520, autumn: false, skip: (x, z) => h(x, z) < -50 || (z > 0 && Math.hypot(x, z) < R0 + 40 && Math.abs(x) < z * 0.9) }));
+    g.add(scatterTrees(h, 1400, 21, { minD: R0 + 3, maxD: 520, autumn: false, skip: (x, z) => h(x, z) < -50 || Math.hypot(x, z) > 170 || (z > 0 && Math.hypot(x, z) < R0 + 40 && Math.abs(x) < z * 0.9) }));   // 섬에는 나무 없이 (가까운 산비탈만)
     // 바다: 가까운 쪽 쪽빛 → 먼 쪽 하늘빛
     const seaGeo = new THREE.PlaneGeometry(2400, 2400, 60, 60); seaGeo.rotateX(-Math.PI / 2);
     const sp = seaGeo.attributes.position, seaCols = [], cNear = new THREE.Color('#2f6f8f'), cFar = new THREE.Color('#9cc2d6'), cShal = new THREE.Color('#5fa9a8'), tc = new THREE.Color();
