@@ -1,4 +1,4 @@
-// 소리는 녹음 파일 없이 Web Audio로 합성한다: 목탁, 싱잉볼(풍경), 동전, 바람, 법당 음악 다섯 곡
+// 소리는 녹음 파일 없이 Web Audio로 합성한다: 목탁, 싱잉볼(풍경), 동전, 바람, 법당 음악 다섯 곡 (실제 녹음 한 곡은 assets/audio)
 let ctx = null, master = null, ambient = null;
 export const sound = { on: false };
 
@@ -65,10 +65,12 @@ function startAmbient() {
 }
 function stopAmbient() { try { ambient?.src.stop(); } catch {} ambient = null; }
 
-// ───────── 법당 음악 다섯 곡 ─────────
+// ───────── 법당 음악: 실제 녹음 한 곡 + 합성 다섯 곡 ─────────
 // 녹음 파일 없이 여기서 합성해요 (저작권 걱정 없는 소리). 가락은 모두 이 사이트에서 새로 지었어요.
 // 곡마다 step(st, at, out) 이 한 박을 out 에 예약하고 다음 박까지 남은 초를 돌려줘요.
+// src 가 있는 곡은 실제 녹음 파일을 처음 고를 때 한 번 받아서 끝없이 이어 틀어요.
 export const TRACKS = [
+  { id: 'gakwonsa', name: '각원사 법당 염불', cap: '실제 법당 안 녹음', src: 'assets/audio/gakwonsa-chant.m4a' },
   { id: 'yeombul', name: '나무아미타불', cap: '목탁에 맞춘 염불 가락' },
   { id: 'banya', name: '반야심경 독경', cap: '목탁 박자로 읊는 경' },
   { id: 'jong', name: '범종', cap: '길게 울리는 새벽 범종' },
@@ -210,14 +212,37 @@ export function playTrack(id, out, { from = out.context.currentTime + 0.1, until
   };
 }
 
+// 녹음 파일: 받아서 푼 소리를 기억해 두고, 다 받기 전에 다른 곡을 고르면 틀지 않아요
+const recorded = new Map();
+function loadRecording(src) {
+  if (!recorded.has(src)) recorded.set(src, fetch(src).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).catch((e) => { recorded.delete(src); throw e; }));
+  return recorded.get(src);
+}
+function playRecording(src, out) {
+  let src_ = null, stopped = false;
+  const g = ctx.createGain(); g.gain.value = 0; g.connect(out);
+  loadRecording(src).then((buf) => {
+    if (stopped) return;
+    src_ = ctx.createBufferSource(); src_.buffer = buf; src_.loop = true;
+    src_.connect(g); src_.start();
+    g.gain.setTargetAtTime(1.4, ctx.currentTime, 0.8);
+  }).catch(() => {});
+  return () => {
+    stopped = true;
+    g.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+    setTimeout(() => { try { src_?.stop(); } catch {} g.disconnect(); }, 2000);
+  };
+}
+
 let musicId = null, stopMusic = null, musicGain = null;
 export function setMusic(id) {
-  musicId = TRACKS.some((t) => t.id === id) ? id : null;
+  const track = TRACKS.find((t) => t.id === id);
+  musicId = track ? id : null;
   stopMusic?.(); stopMusic = null;
   if (!sound.on || !musicId) return;
   ensure();
   if (!musicGain) { musicGain = ctx.createGain(); musicGain.gain.value = 0.6; musicGain.connect(master); }
-  stopMusic = playTrack(musicId, musicGain);
+  stopMusic = track.src ? playRecording(track.src, musicGain) : playTrack(musicId, musicGain);
 }
 export const music = () => musicId;
 
