@@ -15,6 +15,8 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
+/* 두 번 눌러 확대 막기 (두 손가락 확대·축소는 3D 화면 카메라가 받아요) */
+html { touch-action: manipulation; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1c1410; color: var(--ink); font-family: var(--body); -webkit-tap-highlight-color: transparent; word-break: keep-all; }
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
@@ -240,7 +242,7 @@ body:not(.admin) .place .stay { display: none !important; }
 #design-chip b { font-family: var(--display); }
 /* 족자 문구 고르기 */
 .scroll-row { display: grid; grid-template-columns: auto minmax(90px, 1fr) minmax(110px, 1.4fr) auto; gap: 6px; align-items: center; }
-.scroll-row input[type="text"] { font: inherit; font-size: 14px; padding: 8px 9px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); min-width: 0; }
+.scroll-row input[type="text"] { font: inherit; font-size: 16px; padding: 8px 9px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); min-width: 0; }
 .scroll-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--jade); }
 
 /* 장소 줄·동작 줄: 큰 글자만, 작은 설명은 커서를 올리면 말풍선으로 (js/tip.js) */
@@ -359,7 +361,7 @@ body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
 .creator .chips { gap: 5px; }
 .creator .chip { padding: 6px 11px; font-size: 13.5px; border-radius: 10px; }
 .creator .swatch { width: 26px; height: 26px; }
-.field input { padding: 8px 12px; font-size: 15px; }
+.field input { padding: 8px 12px; font-size: 16px; }   /* 16px 보다 작으면 아이폰이 누르는 순간 화면을 확대해요 */
 #creator-done { padding: 11px 18px; }
 .creator > * { min-width: 0; }
 .creator .field { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }

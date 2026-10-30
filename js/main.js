@@ -1482,6 +1482,26 @@ async function demo(which) {
   updateHud();
 }
 
+// ───────── 화면 확대 막기 ─────────
+// 두 손가락은 3D 화면 확대·축소(카메라)에만 써요. 아이폰 사파리는 페이지 확대 금지를 무시해서
+// 페이지 확대 몸짓을 막고, 그래도 커져 버리면(입력칸 확대 등) 1초 뒤 원래 크기로 되돌려요.
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+const viewportMeta = document.querySelector('meta[name="viewport"]');
+let zoomFix = null;
+visualViewport?.addEventListener('resize', () => {
+  if (visualViewport.scale <= 1.01 || zoomFix) return;
+  zoomFix = setTimeout(() => {
+    zoomFix = null;
+    if (document.activeElement?.matches?.('input, textarea')) return;   // 글자를 쓰는 중에는 그대로
+    const c = viewportMeta.content;
+    viewportMeta.content = c + ', minimum-scale=1';   // 다시 써 넣으면 사파리가 1배로 돌아가요
+    setTimeout(() => (viewportMeta.content = c), 50);
+  }, 1000);
+});
+// 입력칸에서 나오면(법명 · 소원지 다 쓰고) 커진 화면이 있으면 되돌리기
+document.addEventListener('focusout', () => setTimeout(() => { if (visualViewport?.scale > 1.01) visualViewport.dispatchEvent(new Event('resize')); }, 300));
+
 // ───────── 시작 ─────────
 $('#relic-b-prev').onclick = () => stepBuddha(-1);
 $('#relic-b-next').onclick = () => stepBuddha(1);
