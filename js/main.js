@@ -11,7 +11,7 @@ import {
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
-import { buildInterior, buildExterior, buildMealHall, buildRoom, buildLantern, paintView, PAGODAS } from './world.js';
+import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls, openScrolls } from './scrolls.js';
 import { setSound, sound, moktak, bowl, coin } from './audio.js';
@@ -113,7 +113,7 @@ const net = new Net({
 });
 
 // ───────── 월드 ─────────
-const BUILDERS = { in: buildInterior, out: buildExterior, meal: buildMealHall, room: buildRoom };
+const BUILDERS = { in: buildInterior, out: buildExterior, meal: buildMealHall, room: buildRoom, boriam: buildBoriamView };
 function worldFor(locId, which) {
   const w = (S.worlds[locId] ||= {});
   if (!w[which]) {
@@ -251,8 +251,8 @@ async function goScene(which, { instant = false } = {}) {
 function placeCameraBehind(dist) {
   const me = S.me.group;
   const back = new THREE.Vector3(Math.sin(me.rotation.y), 0, Math.cos(me.rotation.y)).multiplyScalar(-dist);
-  controls.target.copy(me.position).add(new THREE.Vector3(0, 1.1, 0));
-  camera.position.copy(controls.target).add(back).add(new THREE.Vector3(0, dist * 0.42, 0));
+  controls.target.copy(me.position).add(new THREE.Vector3(0, S.active.camLookY ?? 1.1, 0));
+  camera.position.copy(me.position).add(back).add(new THREE.Vector3(0, 1.1 + dist * 0.42, 0));
   controls.update();
 }
 
@@ -344,11 +344,35 @@ function sitOn(seat, { auto = false } = {}) {
   g.rotation.y = seat.rot ?? Math.PI;
   S.me.seated = true;
   S.me.stop();
-  if (S.scene !== 'room') placeCameraBehind(S.active.camDist || 5);
+  if (S.scene !== 'room') turnCameraToFace(S.active.camDist || 5);
   updateHud();
   pushState(true);
   return true;
 }
+
+// 앉으면 카메라가 옆으로 천천히 돌아 앞에서 내 얼굴을 비춘다. 화면을 끌거나 걸으면 바로 멈춘다
+let camTurn = null;
+function turnCameraToFace(dist) {
+  const g = S.me.group;
+  const off = camera.position.clone().sub(controls.target);
+  camTurn = {
+    t: 0,
+    from: { yaw: Math.atan2(off.x, off.z), r: Math.hypot(off.x, off.z), y: off.y, at: controls.target.clone() },
+    to: { yaw: g.rotation.y + 0.4, r: dist * 0.8, y: dist * 0.2, at: g.position.clone().add(new THREE.Vector3(0, 0.95, 0)) },
+  };
+}
+function stepCameraTurn(dt) {
+  if (!camTurn) return;
+  camTurn.t = Math.min(1, camTurn.t + dt / 1.4);
+  const e = camTurn.t * camTurn.t * (3 - 2 * camTurn.t);
+  const { from, to } = camTurn;
+  const yaw = from.yaw + Math.atan2(Math.sin(to.yaw - from.yaw), Math.cos(to.yaw - from.yaw)) * e;
+  const r = from.r + (to.r - from.r) * e;
+  controls.target.lerpVectors(from.at, to.at, e);
+  camera.position.set(controls.target.x + Math.sin(yaw) * r, controls.target.y + from.y + (to.y - from.y) * e, controls.target.z + Math.cos(yaw) * r);
+  if (camTurn.t >= 1) camTurn = null;
+}
+controls.addEventListener('start', () => { camTurn = null; });
 
 // 빈자리를 누르면 그 자리까지 천천히 걸어가서 앉는다 (내 방은 자리가 하나라 바로)
 function walkToSeat(seat) {
@@ -368,6 +392,7 @@ function walkToSeat(seat) {
 
 function standUp(silent) {
   if (S.seat == null) return;
+  camTurn = null;
   const back = S.me.group.rotation.y;
   S.seat = null;
   S.me.seated = false;
@@ -783,54 +808,60 @@ const QUOTES = [
   '오늘 할 일은 오늘의 나에게 맡겨요.',
   '조용한 곳에서는 작은 소리도 잘 들려요.',
 ];
-const LOADING_V = Math.min(5, Math.max(1, +params.get('loading') || 1));
+// 로딩 뒤 3D 풍경 네 가지 중 하나가 무작위로 나온다 (?loading=1~4 로 고정). 글씨는 모두 같다
+const LOADING_VIEWS = [
+  // 1 두물정사: 마당 위를 크게 돌며 산과 강을 둘러본다
+  { at: () => ['river', 'out'], cam: (t) => { const a = t * 0.05; camera.position.set(Math.sin(a) * 26, 14, Math.cos(a) * 26 + 6); camera.lookAt(Math.sin(a + 2.6) * 60, -8, Math.cos(a + 2.6) * 60 + 40); } },
+  // 2 숲울림당: 마당을 낮게 한 바퀴, 법당과 탑이 번갈아 지나간다
+  { at: () => ['forest', 'out'], cam: (t) => { const a = t * 0.06; camera.position.set(Math.sin(a) * 19, 5, Math.cos(a) * 19 - 2); camera.lookAt(0, 3.5, -5); } },
+  // 3 보리암: 금산 바위 위에서 해가 걸린 남해, 까만 섬들을 좌우로 천천히
+  { at: () => ['sea', 'boriam'], cam: (t) => { const a = Math.sin(t * 0.04) * 0.35; camera.position.set(Math.sin(a) * 4, 14, -4); camera.lookAt(Math.sin(a) * 300, -120, 900); } },
+  // 4 법당 안: 들어갈 법당 문 앞에서 부처님 쪽으로 천천히 다가간다
+  { at: (locId) => [locId, 'in'], cam: (t) => { camera.position.set(Math.sin(t * 0.07) * 2.5, 3.2, 12 - (1 - Math.cos(t * 0.12)) * 3.5); camera.lookAt(0, 3.6, -13); } },
+];
+const LOADING_N = params.get('loading') ? Math.min(4, Math.max(1, +params.get('loading') || 1)) : 1 + Math.floor(Math.random() * LOADING_VIEWS.length);
+const LOADING_VIEW = LOADING_VIEWS[LOADING_N - 1];
 let loadP = 0;
-function setLoad(p, msg) {
+function setLoad(p) {
   loadP = Math.max(loadP, p);
-  const el = $('#loading');
-  el.style.setProperty('--p', loadP / 100);
-  el.querySelectorAll('.ld-pct').forEach((x) => (x.textContent = `${Math.round(loadP)}%`));
-  if (msg) el.querySelectorAll('.ld-msg').forEach((x) => { if (!x.id) x.textContent = msg; });
-  el.querySelectorAll('.lanterns i').forEach((l, i, all) => l.classList.toggle('on', loadP >= ((i + 1) / all.length) * 100 - 1));
+  $('#loading').style.setProperty('--p', loadP / 100);
+  $('#loading .ld-pct').textContent = `${Math.round(loadP)}%`;
 }
 
-function showLoading() {
+function showLoading(locId) {
   S.mode = 'loading';
-  $('#loading').dataset.v = LOADING_V;
   $('#loading').hidden = false;
+  $('#loading').dataset.view = LOADING_N;
   $('#hud').hidden = true;
   loadP = 0;
-  setLoad(3, '법당 문을 여는 중');
+  setLoad(3);
   $('#ld-quote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-  const n = nextBlock() || currentBlock();
-  $('#ld-next').textContent = n ? `오늘 ${n.start} · ${n.label || ACTIVITIES[n.act].name}` : '큰법당 템플스테이';
-  // 뒤에서는 두물정사 마당을 천천히 돈다
-  setWorld(worldFor('river', 'out'));
+  setWorld(worldFor(...LOADING_VIEW.at(locId)));
   if (S.me) S.me.group.visible = false;
 }
 
 // ───────── 법당 위치 들어가기 ─────────
 async function enterLocation(locId) {
-  showLoading();
+  S.loc = LOCATIONS.find((l) => l.id === locId) || LOCATIONS[0];
+  showLoading(S.loc.id);
   for (const id of [...S.remotes.keys()]) removeRemote(id, false);
   const started = performance.now();
   await sleep(60);
-  S.loc = LOCATIONS.find((l) => l.id === locId) || LOCATIONS[0];
   store.set('lastLoc', S.loc.id);
-  setLoad(15, '법당을 짓는 중');
+  setLoad(15);
   await sleep(30);
   const hall = worldFor(S.loc.id, 'in');
-  setLoad(45, '부처님을 모시는 중');
+  setLoad(45);
   // 서버는 디자인과 상관없이 모두 '큰법당 서버 1~12' 하나로 모인다
   const netReady = net.joinLobby('hall', true);
   await Promise.race([loadBuddha(hall), sleep(8000)]);
-  setLoad(75, '방석을 까는 중');
+  setLoad(75);
   await sleep(30);
   worldFor(S.loc.id, 'meal');
   worldFor(S.loc.id, 'room');
-  setLoad(88, '함께 있는 분들을 찾는 중');
+  setLoad(88);
   await Promise.race([netReady, sleep(4000)]);
-  setLoad(100, '들어가요');
+  setLoad(100);
   const min = params.has('hold') ? 1e9 : 2200;
   await sleep(Math.max(0, min - (performance.now() - started)));
   await fade(true);
@@ -1088,12 +1119,11 @@ function loop() {
   elapsed += dt;
 
   if (S.mode === 'loading') {
-    const a = elapsed * 0.05;
-    camera.position.set(Math.sin(a) * 26, 14, Math.cos(a) * 26 + 6);
-    camera.lookAt(Math.sin(a + 2.6) * 60, -8, Math.cos(a + 2.6) * 60 + 40);
+    LOADING_VIEW.cam(elapsed);
     S.active?.update?.(elapsed);
   } else if (S.mode === 'world') {
     moveMe(dt);
+    stepCameraTurn(dt);
     controls.update();
     S.me.update(dt, ACTIONS);
     if (!S.me.action && document.querySelector('.act[aria-pressed="true"]')) syncActionButtons();

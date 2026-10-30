@@ -34,34 +34,12 @@
 <canvas id="scene"></canvas>
 <div id="fade"></div>
 
-<!-- 로딩: 뒤에서는 두물머리 풍경이 천천히 돈다. data-v 로 시안 1~5 -->
-<section id="loading" data-v="1">
-  <div class="ld ld1">
-    <p class="eyebrow">산중 3D 법당</p>
-    <h1>큰법당 템플스테이</h1>
-    <div class="bar"><i></i></div>
-    <p class="ld-msg">법당 문을 여는 중</p>
-  </div>
-  <div class="ld ld2">
+<!-- 로딩: 큰 제목, 짧은 문장, 진행 막대. 뒤 3D 풍경은 네 가지 중 무작위 (?loading=1~4 로 고정) -->
+<section id="loading">
+  <div class="ld">
     <h1>큰법당<br>템플스테이</h1>
-    <p class="ld-msg">법당 문을 여는 중</p><b class="ld-pct">0%</b>
-  </div>
-  <div class="ld ld3">
-    <div class="plaque"><span>큰법당</span></div>
-    <p class="sub">템플스테이</p>
-    <div class="incense"><i class="stick"></i><i class="ember"></i></div>
-    <p class="ld-msg">향이 타는 동안 법당을 준비해요</p>
-  </div>
-  <div class="ld ld4">
-    <h1>큰법당 템플스테이</h1>
-    <div class="lanterns"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="ld-msg">연등에 하나씩 불을 켜는 중</p>
-  </div>
-  <div class="ld ld5">
-    <p class="eyebrow">오늘의 한 줄</p>
-    <blockquote id="ld-quote">천천히 걸어도 산은 그 자리에 있어요.</blockquote>
-    <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><b class="ld-pct">0%</b></div>
-    <p class="ld-msg" id="ld-next">큰법당 템플스테이</p>
+    <p id="ld-quote">천천히 걸어도 산은 그 자리에 있어요.</p>
+    <div class="ld-prog"><span class="ld-bar"><i></i></span><b class="ld-pct">0%</b></div>
   </div>
   <p class="ld-credit">불상 자료 · 국가유산청·국립중앙박물관 3D 데이터 6점, 공공누리 제1유형 ·<a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>
 </section>

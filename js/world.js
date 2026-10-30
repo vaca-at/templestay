@@ -713,13 +713,15 @@ export function buildInterior(loc) {
   const sumi = new THREE.Mesh(new THREE.BoxGeometry(9, 1.3, 3.6), altarMat);
   sumi.position.y = 0.65; sumi.castShadow = sumi.receiveShadow = true; altar.add(sumi);
   const top = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.15, 3.9), mat('#3b1f16')); top.position.y = 1.35; altar.add(top);
+  // 불상은 어느 것을 모셔도 1.3배 크게 (자리 전체를 키운다), 광배도 함께 키워 천장 아래에 맞춘다
   const buddhaSlot = new THREE.Group();
   buddhaSlot.position.set(0, 1.42, -0.2);
+  buddhaSlot.scale.setScalar(1.3);
   const buddha = buildBuddha();
   buddha.scale.setScalar(1.15);
   buddhaSlot.add(buddha);
   altar.add(buddhaSlot);
-  const halo = mandorla(); halo.position.set(0, 1.5, -1.3); halo.scale.setScalar(0.95); altar.add(halo);
+  const halo = mandorla(); halo.position.set(0, 1.5, -1.5); halo.scale.setScalar(1.15); altar.add(halo);
   // 촛대, 꽃병, 향로
   const candle = (x) => {
     const cg = new THREE.Group();
@@ -832,6 +834,7 @@ export function buildInterior(loc) {
     spawnRot: Math.PI,
     exitZ: HF - 1.4,
     camDist: 4.2,
+    camLookY: 1.8, // 불상이 커서 카메라 높이는 그대로 두고 시선만 조금 위로
     seats: cushions,
     bounds: { minX: -HW + 0.8, maxX: HW - 0.8, minZ: -HD + 0.8, maxZ: HF - 0.8 },
     blockers: [{ minX: -5, maxX: 5, minZ: -16, maxZ: -10.6 }, { minX: -0.95, maxX: 0.95, minZ: -8.95, maxZ: -7.85 }],
@@ -1285,4 +1288,133 @@ function addRailing(g, r, a0, a1) {
       g.add(rail);
     }
   }
+}
+
+// ───────── 보리암에서 본 남해 (로딩 풍경 전용) ─────────
+// 금산 꼭대기 바위 위에서 해가 걸린 바다 쪽을 본다. 역광이라 겹겹이 놓인 섬이 까맣게 보이고,
+// 멀어질수록 물안개에 묻혀 옅어진다. 앞에는 화강암 바위, 오른쪽 벼랑에 암자 지붕
+export function buildBoriamView(loc) {
+  const g = new THREE.Group();
+  const SEA = -230, haze = '#eadcc2';
+  const sky = skyDome('#9db6d0', '#f6dcaa');
+  sky.scale.setScalar(2); sky.renderOrder = -1; g.add(sky);
+
+  // 해와 바다 위 햇길
+  const sunTex = canvasTex(256, 256, (cg, w) => {
+    const gr = cg.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    gr.addColorStop(0, 'rgba(255,255,245,1)'); gr.addColorStop(0.12, 'rgba(255,246,214,1)');
+    gr.addColorStop(0.3, 'rgba(255,214,150,.45)'); gr.addColorStop(1, 'rgba(255,200,140,0)');
+    cg.fillStyle = gr; cg.fillRect(0, 0, w, w);
+  });
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  sun.position.set(0, 150, 1550); sun.scale.setScalar(420); g.add(sun);
+
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(5000, 5000), new THREE.MeshBasicMaterial({ color: '#97a3a8' }));
+  sea.rotation.x = -Math.PI / 2; sea.position.y = SEA; g.add(sea);
+  const pathTex = canvasTex(128, 512, (cg, w, h) => {
+    const gr = cg.createLinearGradient(0, 0, w, 0);
+    gr.addColorStop(0, 'rgba(255,236,200,0)'); gr.addColorStop(0.5, 'rgba(255,240,210,.9)'); gr.addColorStop(1, 'rgba(255,236,200,0)');
+    cg.fillStyle = gr; cg.fillRect(0, 0, w, h);
+    const fade = cg.createLinearGradient(0, 0, 0, h);
+    fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+    cg.globalCompositeOperation = 'destination-in'; cg.fillStyle = fade; cg.fillRect(0, 0, w, h);
+  });
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(700, 1500), new THREE.MeshBasicMaterial({ map: pathTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.75 }));
+  path.rotation.x = -Math.PI / 2; path.position.set(0, SEA + 0.3, 820); g.add(path);
+  const glints = new THREE.InstancedMesh(new THREE.PlaneGeometry(3, 0.5), new THREE.MeshBasicMaterial({ color: '#fff6dc', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 500);
+  const r = rng(91), M = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  for (let i = 0; i < 500; i++) {
+    const z = 180 + r() * 1300, spread = 40 + z * 0.12;
+    M.compose(new THREE.Vector3((r() - 0.5) * spread * 2 * r(), SEA + 0.5, z), q, new THREE.Vector3(1 + r() * 3, 1, 1));
+    glints.setMatrixAt(i, M);
+  }
+  g.add(glints);
+
+  // 섬: 역광이라 거의 검은 실루엣. 겹겹이 멀어질수록 물안개 빛으로 옅어진다 (안개 대신 거리로 직접 칠한다)
+  const near = new THREE.Color('#0d1216'), far = new THREE.Color('#b3ada2');
+  const island = (x, z, rx, rz, hgt, seed) => {
+    const geo = new THREE.SphereGeometry(1, 48, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const p = geo.attributes.position, rr = rng(seed);
+    const k1 = 1 + Math.floor(rr() * 3), k2 = rr() * 6, k3 = 3 + Math.floor(rr() * 3), k4 = rr() * 6;
+    for (let i = 0; i < p.count; i++) {
+      const a = Math.atan2(p.getZ(i), p.getX(i)), y = p.getY(i);
+      // 봉우리가 두세 개 있는 능선 모양 (정수 배라 이음매가 갈라지지 않는다)
+      p.setY(i, y * Math.max(0.25, 0.7 + 0.35 * Math.sin(a * k1 + k2) + 0.18 * Math.sin(a * k3 + k4)));
+    }
+    geo.computeVertexNormals();
+    const col = near.clone().lerp(far, Math.pow(smooth(250, 2000, z), 1.5));
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, fog: false }));
+    m.scale.set(rx, hgt, rz); m.position.set(x, SEA - 2, z); m.renderOrder = -Math.round(z); g.add(m);
+  };
+  [
+    [-560, 330, 280, 90, 105], [520, 380, 250, 80, 90], [-170, 520, 90, 50, 46], [150, 610, 70, 40, 40],
+    [-760, 700, 300, 120, 115], [720, 760, 280, 100, 100], [-40, 820, 26, 20, 32], [-380, 920, 180, 70, 72],
+    [330, 980, 170, 60, 64], [60, 1150, 130, 50, 52], [-620, 1200, 260, 80, 86], [620, 1260, 240, 80, 76],
+    [-200, 1380, 150, 50, 46], [280, 1460, 120, 40, 40], [-900, 1520, 320, 80, 72], [900, 1540, 280, 70, 62],
+  ].forEach(([x, z, rx, rz, h], i) => island(x, z, rx, rz, h, 300 + i));
+
+  // 금산 비탈: 발밑에서 바다까지 떨어지는 능선 (역광이라 어두운 초록)
+  const h = (x, z) => {
+    const t = smooth(-10, 340, z + noise(x * 0.3, z * 0.3) * 30);
+    const spur = 70 * Math.max(0, Math.cos(x * 0.011 + 0.6)) * smooth(60, 260, z) * (1 - smooth(260, 420, z));
+    return -t * 270 + spur + noise(x * 0.5, z * 0.5) * 10 * (1 - t * 0.6) + (Math.abs(x) > 260 ? (Math.abs(x) - 260) * 0.25 * (1 - t) : 0);
+  };
+  const geo = new THREE.PlaneGeometry(1800, 700, 150, 70);
+  geo.rotateX(-Math.PI / 2); geo.translate(0, 0, 240);
+  const p = geo.attributes.position, colors = [], c = new THREE.Color(), dark = new THREE.Color('#1f2d1b'), mid = new THREE.Color('#38502a');
+  for (let i = 0; i < p.count; i++) {
+    const y = h(p.getX(i), p.getZ(i));
+    p.setY(i, y);
+    c.copy(dark).lerp(mid, 0.5 + 0.5 * noise(p.getX(i), p.getZ(i)) * 0.5);
+    if (y < SEA + 6) c.set('#8f8670');
+    colors.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  ground.receiveShadow = true; g.add(ground);
+  g.add(scatterTrees(h, 420, 57, { minD: 40, maxD: 420, autumn: false, skip: (x, z) => z < 40 || h(x, z) < SEA + 8 }));
+
+  // 화강암 바위: 둥글둥글한 금산 바위. 위치로 정한 울퉁불퉁이라 면이 갈라지지 않는다
+  const granite = new THREE.MeshStandardMaterial({ color: '#a8a093', roughness: 0.95 });
+  const rock = (x, y, z, s, sy = 1, seed = 1) => {
+    const geoR = new THREE.SphereGeometry(1, 22, 16);
+    const pr = geoR.attributes.position;
+    for (let i = 0; i < pr.count; i++) {
+      const vx = pr.getX(i), vy = pr.getY(i), vz = pr.getZ(i);
+      const k = 1 + 0.12 * Math.sin(vx * 3.1 + seed) * Math.cos(vz * 2.7 - seed) + 0.08 * Math.sin(vy * 4.3 + seed * 2);
+      pr.setXYZ(i, vx * k, vy * k * (vy < 0 ? 0.6 : 1), vz * k);
+    }
+    geoR.computeVertexNormals();
+    const m = new THREE.Mesh(geoR, granite);
+    m.scale.set(s, s * sy, s * 0.9); m.position.set(x, y, z); m.rotation.y = seed;
+    m.castShadow = m.receiveShadow = true; g.add(m);
+  };
+  // 오른쪽(화면) 암자 옆 바위 무리, 왼쪽 아래는 낮게만
+  [[-46, 0, 52, 7, 1.3], [-54, 5, 60, 6, 1.6], [-38, -4, 60, 5, 1], [-58, -2, 46, 8, 0.9], [-50, 10, 66, 4.5, 1.4],
+    [-20, -4, 26, 4, 0.7], [18, -9, 16, 6, 0.6], [30, -12, 30, 7, 0.6]].forEach((a, i) => rock(...a, i * 1.7 + 0.4));
+
+  // 오른쪽 벼랑 끝 암자 (바다 쪽으로 처마를 내민 모습)
+  const hall = buildHallBuilding(loc);
+  hall.position.set(-66, -4, 74); hall.rotation.y = 0.95;
+  g.add(hall);
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 14), granite);
+  ledge.position.set(-66, -9.5, 74); ledge.rotation.y = 0.95; g.add(ledge);
+
+  // 빛: 해가 바다 쪽(앞)에 있어 바위와 지붕은 뒤에서 빛을 받는다
+  g.add(new THREE.HemisphereLight('#f6e6c8', '#2a3426', 0.85));
+  const back = new THREE.DirectionalLight('#ffe2b0', 2.0);
+  back.position.set(0, 160, 900); back.castShadow = true;
+  back.shadow.mapSize.set(1024, 1024);
+  Object.assign(back.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60, near: 700, far: 1000 });
+  g.add(back, back.target);
+  const fill = new THREE.DirectionalLight('#dfe6f0', 0.7);
+  fill.position.set(-40, 60, -80); g.add(fill);
+
+  return {
+    group: g,
+    fog: new THREE.Fog(haze, 320, 2300),
+    background: new THREE.Color(haze),
+    update: (t) => { glints.material.opacity = 0.45 + Math.sin(t * 2.1) * 0.3; },
+  };
 }
