@@ -146,10 +146,18 @@ function cushionMat(cloth = '#7a2f2a', band = '#c9a24a', lotus = '#e8b8a0') {
     g.strokeStyle = band; g.lineWidth = 26; g.strokeRect(34, 34, w - 68, h - 68);
     g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 2; g.strokeRect(20, 20, w - 40, h - 40); g.strokeRect(48, 48, w - 96, h - 96);
     g.setLineDash([7, 6]); g.strokeStyle = 'rgba(255,240,210,0.55)'; g.lineWidth = 2; g.strokeRect(62, 62, w - 124, h - 124); g.setLineDash([]);
-    // 가운데 연꽃 수 (여덟 잎)
+    // 가운데 연꽃 수: 위에서 본 연꽃. 끝이 뾰족한 꽃잎 두 겹(바깥 연하게 · 안쪽 진하게), 잎맥, 노란 연밥
+    const petal = (len, wid, fill, vein) => {
+      g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(wid, -len * 0.3, wid * 0.8, -len * 0.8, 0, -len); g.bezierCurveTo(-wid * 0.8, -len * 0.8, -wid, -len * 0.3, 0, 0); g.closePath();
+      const gr = g.createLinearGradient(0, 0, 0, -len); gr.addColorStop(0, fill[0]); gr.addColorStop(1, fill[1]); g.fillStyle = gr; g.fill();
+      g.strokeStyle = 'rgba(120,40,30,0.4)'; g.lineWidth = 2; g.stroke();
+      g.strokeStyle = vein; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -len * 0.12); g.lineTo(0, -len * 0.82); g.stroke();
+    };
     g.save(); g.translate(w / 2, h / 2);
-    for (let i = 0; i < 8; i++) { g.rotate(Math.PI / 4); g.fillStyle = lotus; g.beginPath(); g.ellipse(0, -42, 17, 40, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(120,40,30,0.35)'; g.lineWidth = 2; g.stroke(); }
-    g.fillStyle = band; g.beginPath(); g.arc(0, 0, 18, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 8; i++) { g.save(); g.rotate((i / 8) * Math.PI * 2 + Math.PI / 8); petal(92, 30, ['#f6d6c4', lotus], 'rgba(200,110,100,0.45)'); g.restore(); }
+    for (let i = 0; i < 8; i++) { g.save(); g.rotate((i / 8) * Math.PI * 2); petal(68, 24, ['#f2c2ae', '#e89a92'], 'rgba(170,70,70,0.5)'); g.restore(); }
+    g.fillStyle = '#e9c45a'; g.beginPath(); g.arc(0, 0, 20, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(140,100,30,0.6)'; g.lineWidth = 2; g.stroke();
+    g.fillStyle = 'rgba(120,90,30,0.75)'; for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; g.beginPath(); g.arc(Math.cos(a) * 10, Math.sin(a) * 10, 2.6, 0, Math.PI * 2); g.fill(); } g.beginPath(); g.arc(0, 0, 2.6, 0, Math.PI * 2); g.fill();
     g.restore();
     // 오래 앉은 자리처럼 가운데가 살짝 어둡게
     const rg = g.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, w * 0.6); rg.addColorStop(0, 'rgba(0,0,0,0.12)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
