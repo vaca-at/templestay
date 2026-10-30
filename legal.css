@@ -14,4 +14,4 @@ a { color: var(--jade); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 400; }
-.todo { border-left: 3px solid var(--gold); padding: 8px 12px; }
+.contact { border-left: 3px solid var(--jade); padding: 8px 12px; }
