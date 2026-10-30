@@ -11,7 +11,7 @@ import {
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
-import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS } from './world.js';
+import { buildInterior, buildExterior, buildMealHall, buildRoom, buildBoriamView, buildLantern, paintView, PAGODAS, setPanorama } from './world.js';
 import { Net, preloadNet } from './net.js';
 import { hangScroll, stopScrolls } from './scrolls.js';
 import { openTyping, onTypingOpen } from './typing.js';
@@ -144,12 +144,54 @@ const net = new Net({
 
 // ───────── 월드 ─────────
 const BUILDERS = { in: buildInterior, out: buildExterior, meal: buildMealHall, room: buildRoom, boriam: buildBoriamView };
+// 창밖 풍경: 바깥 3D 풍경을 법당 자리(건물은 숨기고)에서 네 방향으로 찍어 이어 붙인 사진을 창에 붙여요.
+// 디자인마다 한 번만, 화면이 한가할 때 따로 만든 작은 그림판(렌더러)으로 찍어서 지금 화면은 멈추지 않아요
+const panoDone = new Set();
+function capturePanorama(loc) {
+  if (panoDone.has(loc.id) || params.has('nopano')) return;
+  panoDone.add(loc.id);
+  const run = () => {
+    try {
+      const FW = 1024, FH = 512;
+      const r2 = new THREE.WebGLRenderer({ antialias: true });
+      r2.setSize(FW, FH, false);
+      r2.toneMapping = renderer.toneMapping; r2.toneMappingExposure = 1.15; r2.outputColorSpace = renderer.outputColorSpace;
+      const w = buildExterior(loc);
+      // 마당 위 물건(법당 · 탑 · 난간 · 석등)은 숨기고 먼 풍경만 찍어요
+      if (w.hall) w.hall.visible = false;
+      if (w.pagodaSlot) w.pagodaSlot.visible = false;
+      w.group.traverse((o) => { if (o.isMesh && o !== w.floor && o.position.length() < 30 && o.geometry?.type !== 'PlaneGeometry' && !o.isInstancedMesh && o.parent === w.group && Math.abs(o.position.y) < 6) o.visible = false; });
+      // 마당 둘레 가까운 큰 단풍나무(잎 덩어리 묶음)도 빼요: 창 하나를 통째로 붉게 가려서
+      for (const o of w.group.children) { const d = Math.hypot(o.position.x, o.position.z); if (o.isGroup && d > 14 && d < 80 && o.children.some((c) => c.isInstancedMesh)) o.visible = false; }
+      if (w.floor) w.floor.visible = false;
+      const sc = new THREE.Scene(); sc.add(w.group); sc.fog = w.fog; sc.background = w.background;
+      const pm = new THREE.PMREMGenerator(r2); sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; sc.environmentIntensity = ENV;
+      const cam = new THREE.PerspectiveCamera(2 * Math.atan(Math.tan(Math.PI / 4) / 2) * 180 / Math.PI, FW / FH, 0.5, 2500);
+      const out = document.createElement('canvas'); out.width = FW * 4; out.height = FH;
+      const cg = out.getContext('2d');
+      for (let i = 0; i < 4; i++) {
+        // 마당 가장자리 바깥, 높은 곳에서 바라봐요 (가까운 마당 바닥이 창을 채우지 않게)
+        const yaw = -i * Math.PI / 2 - Math.PI / 2;
+        cam.position.set(-Math.sin(yaw) * 19, 14, -Math.cos(yaw) * 19);   // 숲이 시작되는 곳(반지름 25) 안쪽, 나무 위 높이에서
+        cam.rotation.set(-0.16, yaw, 0, 'YXZ');
+        w.update?.(30);
+        r2.render(sc, cam);
+        cg.drawImage(r2.domElement, i * FW, 0);
+      }
+      setPanorama(loc, out);
+      pm.dispose(); r2.dispose(); r2.forceContextLoss();
+    } catch (e) { console.warn('창밖 풍경을 찍지 못했어요', e); }
+  };
+  (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(run, { timeout: 2500 });
+}
+
 function worldFor(locId, which) {
   const w = (S.worlds[locId] ||= {});
   if (!w[which]) {
     const loc = LOCATIONS.find((l) => l.id === locId);
     w[which] = BUILDERS[which](loc);
     if (which === 'out') applyPagoda(w.out);
+    if (['in', 'room', 'meal'].includes(which)) capturePanorama(loc);
   }
   return w[which];
 }

@@ -214,6 +214,14 @@ export function paintView(loc, g, w, h) {
 // 창 밖 파노라마: 양쪽 벽 창들을 따라 이어지는 긴 풍경 한 장 (왼쪽 벽 절반 · 오른쪽 벽 절반).
 // 디자인마다 확 다르게: 숲은 침엽수와 단풍, 두물머리는 산 아래 두 강이 만나는 들판, 남해는 수평선 · 섬 · 절벽 바위
 const panoCache = {};
+// 바깥 3D 풍경을 실제로 찍은 사진(main.js capturePanorama)이 오면 그림을 바꿔 끼워요. 창마다 복제한 그림도 같은 원본을 써서 함께 바뀌어요
+const panoClones = {};
+const panoClone = (loc) => { const t = panoramaTex(loc).clone(); (panoClones[loc.id] ||= []).push(t); return t; };
+export function setPanorama(loc, canvas) {
+  const t = panoramaTex(loc);
+  t.image = canvas; t.needsUpdate = true;
+  for (const c of panoClones[loc.id] || []) c.needsUpdate = true;
+}
 function panoramaTex(loc) {
   return panoCache[loc.id] ||= canvasTex(4096, 512, (g, w, h) => {
     const r = rng(loc.id.length * 31 + 7);
@@ -965,7 +973,7 @@ export function buildInterior(loc) {
   const WY = 4.55, WH = 6.1;
   for (const s of [-1, 1]) for (const [z, w] of BAYS) {
     // 불상 바로 옆 칸은 창 대신 비천 벽화 (양쪽이 마주 보며 날아요)
-    const t = pano.clone();
+    const t = panoClone(loc);
     // 안에서 보면 왼쪽 벽은 -z 쪽으로, 오른쪽 벽은 +z 쪽으로 그림이 이어져요. 왼쪽 벽은 그림 앞 절반, 오른쪽 벽은 뒤 절반
     const u = s < 0 ? (HF - (z + w / 2)) / L : (z - w / 2 + HD) / L;
     t.repeat.set(w / L / 2, 1); t.offset.set((s < 0 ? 0 : 0.5) + u / 2, 0); t.needsUpdate = true;
@@ -1480,6 +1488,7 @@ export function buildExterior(loc) {
       { minX: pagodaPos.x - 1.8, maxX: pagodaPos.x + 1.8, minZ: pagodaPos.z - 1.8, maxZ: pagodaPos.z + 1.8 },
     ],
     pagodaSlot,
+    hall,
     setPagoda(id) { pagodaSlot.clear(); pagodaSlot.add(buildPagoda(id)); pagodaSlot.userData.id = id; },
     fog: loc.id === 'forest' ? new THREE.Fog(loc.fog, 120, 700) : new THREE.Fog(loc.fog, 260, 1500),
     background: new THREE.Color(loc.sky[1]),
@@ -1512,7 +1521,7 @@ function roomShell(g, loc, { HW, HD, CEIL, floorMap, windows = [], doorW = 3 }) 
   const pano = panoramaTex(loc);
   const frameMat = new THREE.MeshStandardMaterial({ map: openLattice(c.pillar), transparent: true, alphaTest: 0.4 });
   windows.forEach(([x, z, ry, w, h], i) => {
-    const t = pano.clone();
+    const t = panoClone(loc);
     t.repeat.set(Math.min(1, (w / h) / 8 * 1.5), 1);
     t.offset.set((0.07 + i * 0.29) % (1 - t.repeat.x), 0); t.needsUpdate = true;
     wall(w, h, x, CEIL * 0.55, z, ry, viewMat(t));
@@ -1663,7 +1672,7 @@ export function buildRoom(loc) {
     cg.strokeStyle = 'rgba(120, 80, 30, 0.35)'; cg.lineWidth = 3;
     for (let i = 0; i <= w; i += 64) { cg.beginPath(); cg.moveTo(i, 0); cg.lineTo(i, h); cg.stroke(); cg.beginPath(); cg.moveTo(0, i); cg.lineTo(w, i); cg.stroke(); }
   }, [4, 4]);
-  const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 3.2, 1.9]], doorW: 1.8 });
+  const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 3.2, 1.9], [HW - 0.03, 1.2, -Math.PI / 2, 2.6, 1.7]], doorW: 1.8 });
   // 경상(낮은 책상), 책, 등, 찻잔
   const desk = new THREE.Group();
   desk.position.set(0, -0.1, -1.3);   // 앉은 자리 바로 앞, 낮게: 책·사경 종이·찻잔이 책상 위에 놓여 보이게
@@ -1680,7 +1689,7 @@ export function buildRoom(loc) {
   const lampLight = new THREE.PointLight('#ffcf8a', 2.5, 6, 1.5); lampLight.position.set(0.55, 0.75, -1.5); g.add(lampLight);
   // 책장, 개어 둔 이불, 족자
   const shelf = new THREE.Group();
-  shelf.position.set(HW - 0.3, 0, -0.6);
+  shelf.position.set(HW - 0.3, 0, -1.9);   // 오른쪽 벽 창 옆 안쪽으로
   const frame = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 1.6), mat('#6b4128')); frame.position.y = 0.9; shelf.add(frame);
   const rr = rng(4);
   for (let r = 0; r < 3; r++) for (let i = 0; i < 7; i++) {
