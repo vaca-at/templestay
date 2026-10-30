@@ -59,7 +59,7 @@ export default {
       const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
       if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
       const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
-      const rooms = {}, live = { scenes: {}, acts: {}, pets: {}, types: {}, designs: {} };
+      const rooms = {}, live = { scenes: {}, acts: {}, pets: {}, types: {}, designs: {}, bodies: {} };
       await Promise.all(Array.from({ length: SERVERS }, (_, i) => `hall-${i + 1}`).map((k) =>
         env.ROOMS.get(env.ROOMS.idFromName(k)).fetch('https://room/live').then((r) => r.json()).then((j) => {
           if (!j.n) return;
@@ -297,13 +297,13 @@ export class Room extends DurableObject {
     if (url.pathname === '/count') return Response.json({ n: this.members().length });
     // 관리자 현황판: 지금 어디서(법당·마당…) 무엇을(합장·108배…) 하는지, 어떤 친구·캐릭터인지 숫자만
     if (url.pathname === '/live') {
-      const out = { n: 0, scenes: {}, acts: {}, pets: {}, types: {}, designs: {} };
+      const out = { n: 0, scenes: {}, acts: {}, pets: {}, types: {}, designs: {}, bodies: {} };
       const add = (g, k) => { if (k) out[g][k] = (out[g][k] || 0) + 1; };
       for (const { a } of this.members()) {
         out.n++;
         add('scenes', clean(a.st.s, 12)); add('acts', clean(a.st.a, 12));
         add('pets', a.st.l?.pet && a.st.l.pet !== 'none' ? clean(a.st.l.pet, 16) : '');
-        add('types', clean(a.st.l?.type, 16)); add('designs', clean(a.st.d, 12));
+        add('types', clean(a.st.l?.type, 16)); add('designs', clean(a.st.d, 12)); add('bodies', clean(a.st.l?.body || 'base', 12));
       }
       return Response.json(out);
     }
@@ -367,7 +367,7 @@ export class Room extends DurableObject {
         this.reportPeak(a.room, this.members().length + (this.members().some((x) => x.ws === ws) ? 0 : 1));
         // 들어올 때 고른 모습을 센다 (누가 골랐는지는 남기지 않고 숫자만)
         const l = m.d.l || {};
-        this.tally({ join: 1, picks: { type: `${clean(l.type, 16)}:${l.gender === 'm' ? 'm' : 'f'}`, pet: clean(l.pet || 'none', 16), outfit: clean(l.outfit || 'own', 16), acc: clean(l.acc || 'none', 16), design: clean(m.d.d, 12) } });
+        this.tally({ join: 1, picks: { type: `${clean(l.type, 16)}:${l.gender === 'm' ? 'm' : 'f'}`, pet: clean(l.pet || 'none', 16), outfit: clean(l.outfit || 'own', 16), acc: clean(l.acc || 'none', 16), design: clean(m.d.d, 12), body: clean(l.body || 'base', 12) } });
       }
       ws.serializeAttachment(a);
       this.broadcast({ t: 'st', id: a.id, d: m.d }, ws);
