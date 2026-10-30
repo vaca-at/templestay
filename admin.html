@@ -72,8 +72,8 @@
   .vbars { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 190px; padding-top: 18px; border-bottom: 1px solid var(--line);
     background: linear-gradient(var(--grid) 1px, transparent 1px) 0 18px / 100% 43px; }
   .vbars .col { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; cursor: default; }
-  .vbars .col i { width: 100%; max-width: 30px; background: var(--jade-pale); border-radius: 4px 4px 0 0; min-height: 2px; }
-  .vbars .col.hi i { background: var(--jade); }
+  .vbars .col i { width: 100%; max-width: 30px; background: var(--faint); opacity: .55; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .vbars .col.hi i { background: var(--jade); opacity: 1; }
   .vbars.amber .col i { background: var(--amber-pale); } .vbars.amber .col.hi i { background: var(--amber); }
   .vbars .col:hover i { filter: brightness(.9); }
   .vbars .col em { position: absolute; font-style: normal; font-size: 11.5px; color: var(--fg); font-variant-numeric: tabular-nums; transform: translateY(-100%); padding-bottom: 2px; }
@@ -82,6 +82,18 @@
   .vbars.hours { gap: 2px; height: 160px; padding-top: 26px; background-position: 0 26px; }
   .headline { font-size: 13.5px; margin: 10px 0 0; }
   .headline b { color: var(--jade); }
+
+  /* 잔디: 한 칸 = 하루, 세로 7칸 = 한 주 (일~토). 많을수록 진한 초록 */
+  .grass-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .grass { display: grid; grid-template-rows: repeat(7, 15px); grid-auto-flow: column; grid-auto-columns: 15px; gap: 3px; }
+  .grass i { border-radius: 3px; background: var(--grid); outline: 1px solid rgba(0,0,0,.04); outline-offset: -1px; }
+  :is(.grass, .grass-legend) i.l1 { background: #c6e3d3; } :is(.grass, .grass-legend) i.l2 { background: #8cc6aa; } :is(.grass, .grass-legend) i.l3 { background: #4f9e80; } :is(.grass, .grass-legend) i.l4 { background: #2f6f62; }
+  .grass i.today { outline: 2px solid var(--fg); outline-offset: -2px; }
+  .grass i.future { background: transparent; outline: none; }
+  @media (prefers-color-scheme: dark) { :is(.grass, .grass-legend) i.l1 { background: #24443a; } :is(.grass, .grass-legend) i.l2 { background: #2f6a58; } :is(.grass, .grass-legend) i.l3 { background: #4f9e80; } :is(.grass, .grass-legend) i.l4 { background: #7fd1b0; } }
+  .grass-legend { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  .grass-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .grass-months { display: grid; grid-auto-flow: column; grid-auto-columns: 15px; gap: 3px; font-size: 11px; color: var(--muted); height: 16px; }
 
   /* 가로 막대 (장소 · 하는 일 · 인기 · 순위) */
   .hbar { display: grid; gap: 7px; }
@@ -173,10 +185,13 @@
 
     <div class="grid">
       <div class="card s8">
-        <div class="card-head"><h2>최근 14일</h2>
+        <div class="card-head"><h2>방문 잔디</h2>
           <div class="seg" id="seg-days" role="group" aria-label="볼 숫자">
             <button type="button" data-m="days" aria-pressed="true">방문</button><button type="button" data-m="joins" aria-pressed="false">입장</button><button type="button" data-m="wish" aria-pressed="false">연등</button><button type="button" data-m="peak" aria-pressed="false">최고 동시접속</button>
           </div></div>
+        <div class="grass-wrap"><div id="grass-m" class="grass-months"></div><div id="grass" class="grass"></div></div>
+        <div class="grass-legend">적게 <i style="background:var(--grid)"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> 많이 · 한 칸이 하루, 세로 한 줄이 한 주 (위가 일요일)</div>
+        <h3 style="margin-top:16px">최근 14일</h3>
         <div id="days" class="vbars"></div><div id="days-x" class="xlab"></div>
         <p id="days-head" class="headline"></p>
       </div>
@@ -312,7 +327,18 @@
     wish: { name: '연등', unit: '개', get: (d) => S.wishDays?.[d] || 0, amber: true },
     peak: { name: '최고 동시접속', unit: '명', get: (d) => S.peaks?.[d]?.n || 0 },
   };
+  // 잔디: 최근 20주. 진하기 4단계는 기록된 날 중 가장 많은 날 기준
+  function renderGrass() {
+    const M = DAY_METRICS[view.days], today = kdayOf(Date.now());
+    const dow = new Date(today + 'T00:00:00Z').getUTCDay(), weeks = 20, n = weeks * 7 - (6 - dow);
+    const ds = lastDays(n), vals = ds.map(M.get), max = Math.max(1, ...vals);
+    const lv = (v) => !v ? '' : v >= max * 0.75 ? 'l4' : v >= max * 0.5 ? 'l3' : v >= max * 0.25 ? 'l2' : 'l1';
+    $('#grass').innerHTML = ds.map((d, i) => `<i class="${lv(vals[i])}${d === today ? ' today' : ''}" data-tip="${md(d)} (${wk(d)}) · ${M.name} ${num(vals[i])}${M.unit}"></i>`).join('') + '<i class="future"></i>'.repeat(6 - dow);
+    // 위쪽 달 이름: 그 주에 1일이 있으면
+    $('#grass-m').innerHTML = Array.from({ length: weeks }, (_, w) => { const f = ds.slice(w * 7, w * 7 + 7).find((d) => d.endsWith('-01')); return `<span>${f ? +f.slice(5, 7) + '월' : ''}</span>`; }).join('');
+  }
   function renderDays() {
+    renderGrass();
     const M = DAY_METRICS[view.days], ds = lastDays(14), vals = ds.map(M.get), max = Math.max(1, ...vals), today = ds[13];
     const top = vals.indexOf(Math.max(...vals));
     $('#days').classList.toggle('amber', !!M.amber);
