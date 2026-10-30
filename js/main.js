@@ -706,6 +706,20 @@ function renderSceneBar() {
     `<button data-scene="${k}" aria-pressed="${S.scene === k}"><span class="lbl">${s.name}</span><small class="cap">${s.cap}</small></button>`).join('');
 }
 
+// 접속인원 누르면 지금 이 서버에 있는 분 이름과 있는 곳을 보여 줘요 (나는 맨 위)
+function renderOnline() {
+  const where = (st) => SCENES[st.s]?.name || '';
+  const others = [...S.remotes.values()].map((r) => r.st).filter((st) => st && st.n)
+    .sort((a, b) => (a.s === S.scene ? 0 : 1) - (b.s === S.scene ? 0 : 1) || String(a.n).localeCompare(String(b.n), 'ko'));
+  const row = (n, place, me) => `<li${me ? ' class="me"' : ''}><b>${escapeHtml(n)}${me ? ' (나)' : ''}</b><small>${escapeHtml(place)}</small></li>`;
+  $('#online-list').innerHTML = `<h4>서버 ${S.server || '-'} · 함께 ${others.length + 1}명</h4><ul>${row(S.profile.name, SCENES[S.scene]?.name || '', true)}${others.map((st) => row(st.n, where(st), false)).join('')}</ul>`;
+}
+function toggleOnline(open = $('#online-list').hidden) {
+  $('#online-list').hidden = !open;
+  $('#online-pill').setAttribute('aria-expanded', String(open));
+  if (open) renderOnline();
+}
+
 function updateHud() {
   if (!S.loc || S.mode !== 'world') return;
   $('#hud-place').textContent = `큰법당 · ${S.loc.name}`;
@@ -715,7 +729,8 @@ function updateHud() {
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
   // 동시접속자: 지금 이 서버에 함께 있는 분 (모두에게 보임)
   $('#online-n').textContent = S.remotes.size + 1;
-  $('#online-pill').title = `큰법당 서버 ${S.server || '-'}에 지금 함께 접속한 분`;
+  $('#online-pill').title = `눌러서 서버 ${S.server || '-'}에 함께 접속한 분 보기`;
+  if (!$('#online-list').hidden) renderOnline();
   // 오른쪽 상황 단추는 장소마다 두 개: 법당 [내 방으로][일어서기] · 마당 [법당으로][산보하기]
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
   $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
@@ -1248,6 +1263,8 @@ const syncSoundBtn = () => {
 
 document.addEventListener('click', (e) => {
   const t = e.target.closest('button');
+  if (t?.id === 'online-pill') return toggleOnline();
+  if (!$('#online-list').hidden && !e.target.closest('#online-list')) toggleOnline(false);
   if (!t) return;
   if (t.dataset.close) { $('#' + t.dataset.close).hidden = true; return; }
   if (t.dataset.act) return doAction(t.dataset.act);
