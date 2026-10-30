@@ -476,10 +476,14 @@ export class Avatar {
 
     // 걷기: 다리와 팔을 흔든다
     if (!this.seated && this.speed > 0.05) {
-      this.walkPhase += dt * (6 + this.speed * 2.5);
-      const s = Math.sin(this.walkPhase) * Math.min(1, this.speed / 2) * 0.6;
-      target = { ...target, lL: [s, 0], lR: [-s, 0], aL: [-s * 0.8, 0.1], aR: [s * 0.8, -0.1] };
+      // 뛸 때(빠를 때)는 보폭이 커지고 몸을 앞으로 숙이며 팔을 굽혀 크게 흔든다
+      const run = Math.min(1, Math.max(0, (this.speed - 3.2) / 1.6));
+      this.walkPhase += dt * (6 + Math.min(this.speed, 3.2) * 2.5 + run * 4);
+      const s = Math.sin(this.walkPhase) * Math.min(1, this.speed / 2) * (0.6 + run * 0.35);
+      target = { ...target, hip: target.hip + run * 0.22, head: target.head - run * 0.12,
+        lL: [s, 0], lR: [-s, 0], aL: [-s * (0.8 + run * 0.5) - run * 0.5, 0.1], aR: [s * (0.8 + run * 0.5) - run * 0.5, -0.1] };
     }
+    this.running = !this.seated && this.speed > 4;
 
     // 처음 나타날 때는 자세를 바로 맞춘다 (앉아 있던 사람이 서 있다가 앉는 모습 방지)
     const k = this.fresh ? 1 : Math.min(1, dt * 9);
@@ -488,7 +492,7 @@ export class Avatar {
     for (const key of KEYS) p[key] = lerp(p[key], target[key], k);
     for (const key of LIMBS) { p[key][0] = lerp(p[key][0], target[key][0], k); p[key][1] = lerp(p[key][1], target[key][1], k); }
 
-    const bob = !this.seated && this.speed > 0.05 ? Math.abs(Math.sin(this.walkPhase)) * 0.04 : 0;
+    const bob = !this.seated && this.speed > 0.05 ? Math.abs(Math.sin(this.walkPhase)) * (this.running ? 0.09 : 0.04) : 0;
     const breathe = Math.sin(performance.now() / 900) * 0.006;
     this.body.position.y = p.y + bob;
     this.hips.rotation.x = p.hip;

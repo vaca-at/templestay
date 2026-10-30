@@ -1032,7 +1032,9 @@ canvas.addEventListener('pointerup', (e) => {
       if (S.me.action && !ACTIONS.find((a) => a.id === S.me.action)?.loop) return;
       pauseAuto();
       standUp();
-      S.target = { pos: h.point.clone().setY(0) };
+      // 마당에서 멀리 누르면 뛰어간다
+      const far = S.scene === 'out' && h.point.distanceTo(S.me.group.position) > 8;
+      S.target = { pos: h.point.clone().setY(0), run: far };
       return;
     }
     if (S.scene === 'out' && h.distance < 60 && Math.abs(h.point.x) < 12 && h.point.z < -1 && h.point.z > -20) {
@@ -1047,6 +1049,8 @@ canvas.addEventListener('pointerup', (e) => {
 const tmpV = new THREE.Vector3();
 const SPEED = 2.7;        // 걷는 속도
 const SEAT_SPEED = 1.8;   // 자리로 걸어갈 때는 더 천천히
+const RUN_SPEED = 5.4;    // 뛰는 속도: 마당과 내 방에서만 (법당·공양간에서는 걷는다)
+const canRun = () => S.scene === 'out' || S.scene === 'room';
 function moveMe(dt) {
   const me = S.me, g = me.group;
   let dx = 0, dz = 0;
@@ -1064,13 +1068,15 @@ function moveMe(dt) {
     const sin = Math.sin(yaw), cos = Math.cos(yaw);
     dir = new THREE.Vector3(dx * cos + dz * sin, 0, -dx * sin + dz * cos);
     if (dir.length() > 1) dir.normalize();
+    // Shift 를 누르거나 조이스틱을 끝까지 밀면 뛴다
+    if (canRun() && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(joy.x, joy.y) > 0.92)) speed = RUN_SPEED;
   } else if (S.target) {
     tmpV.copy(S.target.pos).sub(g.position).setY(0);
     if (tmpV.length() < 0.18) {
       const t = S.target; S.target = null;
       if (t.face != null) g.rotation.y = t.face;
       t.onArrive?.();
-    } else { dir = tmpV.normalize(); speed = S.target.speed || SPEED; }
+    } else { dir = tmpV.normalize(); speed = S.target.run && canRun() ? RUN_SPEED : S.target.speed || SPEED; }
   }
   if (dir && S.me.action && S.me.action !== 'meditate') { S.me.stop(); syncActionButtons(); }
   const before = g.position.clone();
@@ -1334,6 +1340,7 @@ function gallery(kind) {
     if (it.scene) av.dress(it.scene);
     av.group.position.set((i - (items.length - 1) / 2) * gap - (kind === 'pets' ? 0.35 : 0), 0, 0);
     if (acts[i]) av.play(acts[i]);
+    if (params.get('speed')) av.speed = +params.get('speed'); // 시안용: 걷기·뛰기 모습 보기
     scene.add(av.group);
     galleryAvatars.push(av);
   });
