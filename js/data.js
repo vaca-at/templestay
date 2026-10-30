@@ -105,11 +105,12 @@ export const DEFAULT_SCHEDULE = {
   ],
 };
 
+// 장소 줄 순서: 법당 → 내 방 → 마당 → 공양간
 export const SCENES = {
-  out: { name: '마당', cap: '절 주변 산보' },
   in: { name: '법당', cap: '방석에 앉아 예불' },
-  meal: { name: '공양간', cap: '발우공양 하는 곳' },
   room: { name: '내 방', cap: '혼자 책 읽는 곳' },
+  out: { name: '마당', cap: '절 주변 산보' },
+  meal: { name: '공양간', cap: '발우공양 하는 곳' },
 };
 
 export const ACCESSORIES = [
@@ -129,8 +130,9 @@ export const ACTIONS = [
   { id: 'beads', name: '염주', cap: '염주 돌리기 · 다시 누르면 멈춤', verb: '염주를 돌리기 시작했어요', loop: true },
   // 목탁은 동작 막대에서 뺐어요. 예전 버전 이용자가 보내도 그려지도록 숨긴 동작으로만 남김
   { id: 'moktak', name: '목탁', verb: '목탁을 치기 시작했어요', loop: true, auto: true },
-  { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true },
-  { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0 },
+  // 명상 · 손인사는 동작 칸에서 뺐어요 (시간표 명상 · 꾸미기 미리보기 · 다른 분 동작에는 그대로 써요)
+  { id: 'meditate', name: '명상', cap: '고요히 앉아 숨 고르기', verb: '명상에 들었어요', loop: true, auto: true },
+  { id: 'wave', name: '손인사', cap: '손 흔들어 반기기', verb: '손을 흔들어 인사했어요', dur: 2.0, auto: true },
   { id: 'bae108', name: '108배', cap: '절 108번 · 횟수 세어 줌', verb: '108배를 시작했어요', loop: true },
   // 시간표가 알아서 하는 동작 (동작 막대에는 안 나옴)
   { id: 'eat', name: '발우공양', verb: '발우공양을 시작했어요', loop: true, auto: true },
@@ -148,6 +150,18 @@ const NOUN = [
 ];
 export const randomName = () =>
   ADJ[Math.floor(Math.random() * ADJ.length)] + ' ' + NOUN[Math.floor(Math.random() * NOUN.length)];
+
+// 예전에 쓰던 낱말. 이 낱말로 저절로 지어진 법명이면 들어올 때 지금 낱말로 한 번 바꿔 줘요 (직접 지은 이름은 그대로)
+const OLD_ADJ = ['맑은', '푸른', '느린', '작은', '새벽', '단정한', '환한', '조용한', '포근한', '은은한', '따스한', '해맑은', '잔잔한', '다정한', '산뜻한', '느긋한', '상냥한', '정다운', '향긋한', '정갈한'];
+const OLD_NOUN = ['빗방울', '연꽃', '풍경소리', '반딧불', '산딸기', '도토리', '물결', '구름', '이슬', '달빛', '은행잎', '섬그늘', '풀피리', '꽃구름', '달맞이', '별무리', '종소리', '바람결', '이슬비', '들국화', '오솔길', '연못가',
+  '연꽃잎', '연등불', '염주알', '연화대', '향내음', '절마당', '일주문', '탑돌이', '수미산', '극락조', '바라밀', '우담화', '감로수', '새벽종', '보리심', '자비심', '범종각',
+  '처마끝', '돌계단', '옹달샘', '단풍잎', '동백꽃', '목련꽃', '솔방울', '새벽빛', '찻잎향'];
+export function isOldAutoName(name) {
+  const [a, b, more] = String(name || '').split(' ');
+  if (more !== undefined || !b) return false;
+  const adjOk = ADJ.includes(a) || OLD_ADJ.includes(a), nounOk = NOUN.includes(b) || OLD_NOUN.includes(b);
+  return adjOk && nounOk && !(ADJ.includes(a) && NOUN.includes(b));
+}
 
 export const GENDERS = [{ id: 'f', name: '여자', cap: '긴 웨이브 머리' }, { id: 'm', name: '남자', cap: '짧은 머리' }];
 

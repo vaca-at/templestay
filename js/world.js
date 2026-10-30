@@ -177,11 +177,6 @@ function signboard(text) {
   });
 }
 
-// 창문 너머로 보이는 풍경 그림
-function windowView(loc) {
-  return canvasTex(512, 512, (g, w, h) => paintView(loc, g, w, h));
-}
-
 export function paintView(loc, g, w, h) {
   {
     const sky = g.createLinearGradient(0, 0, 0, h);
@@ -216,8 +211,9 @@ export function paintView(loc, g, w, h) {
 
 // 창 밖 파노라마: 양쪽 벽 창들을 따라 이어지는 긴 풍경 한 장 (왼쪽 벽 절반 · 오른쪽 벽 절반).
 // 디자인마다 확 다르게: 숲은 침엽수와 단풍, 두물머리는 산 아래 두 강이 만나는 들판, 남해는 수평선 · 섬 · 절벽 바위
+const panoCache = {};
 function panoramaTex(loc) {
-  return canvasTex(4096, 512, (g, w, h) => {
+  return panoCache[loc.id] ||= canvasTex(4096, 512, (g, w, h) => {
     const r = rng(loc.id.length * 31 + 7);
     const sky = g.createLinearGradient(0, 0, 0, h);
     sky.addColorStop(0, loc.sky[0]); sky.addColorStop(0.75, loc.sky[1]); sky.addColorStop(1, loc.sky[1]);
@@ -1109,9 +1105,16 @@ function roomShell(g, loc, { HW, HD, CEIL, floorMap, windows = [], doorW = 3 }) 
   for (let x = -HW + 1; x < HW; x += 1.6) {
     const r = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, HD * 2), mat('#4a2f22')); r.position.set(x, CEIL - 0.1, 0); g.add(r);
   }
-  const viewMat = new THREE.MeshBasicMaterial({ map: windowView(loc) });
-  const frameMat = new THREE.MeshStandardMaterial({ map: lattice(c.pillar, 'rgba(0,0,0,0)', false), transparent: true, alphaTest: 0.4 });
-  for (const [x, z, ry, w, h] of windows) { wall(w, h, x, CEIL * 0.55, z, ry, viewMat); wall(w, h, x + Math.sin(ry) * 0.03, CEIL * 0.55, z + Math.cos(ry) * 0.03, ry, frameMat); }
+  // 창: 법당과 같은 파노라마에서 창마다 다른 부분을 잘라 보여 주고, 창살은 성기게
+  const pano = panoramaTex(loc);
+  const frameMat = new THREE.MeshStandardMaterial({ map: openLattice(c.pillar), transparent: true, alphaTest: 0.4 });
+  windows.forEach(([x, z, ry, w, h], i) => {
+    const t = pano.clone();
+    t.repeat.set(Math.min(1, (w / h) / 8 * 1.5), 1);
+    t.offset.set((0.07 + i * 0.29) % (1 - t.repeat.x), 0); t.needsUpdate = true;
+    wall(w, h, x, CEIL * 0.55, z, ry, new THREE.MeshBasicMaterial({ map: t }));
+    wall(w, h, x + Math.sin(ry) * 0.03, CEIL * 0.55, z + Math.cos(ry) * 0.03, ry, frameMat);
+  });
   const door = wall(doorW, Math.min(CEIL - 0.4, 2.8), 0, Math.min(CEIL - 0.4, 2.8) / 2, HD - 0.04, Math.PI, new THREE.MeshStandardMaterial({ map: lattice(c.pillar), emissive: '#ffe9c0', emissiveIntensity: 0.12 }));
   return { floor, door };
 }
@@ -1156,7 +1159,8 @@ export function buildMealHall(loc) {
   const HW = 12, HD = 9, CEIL = 5.5;
   const { floor, door } = roomShell(g, loc, {
     HW, HD, CEIL, floorMap: woodFloor('#6a4a34'),
-    windows: [[-HW + 0.03, -4, Math.PI / 2, 3.4, 2.4], [-HW + 0.03, 4, Math.PI / 2, 3.4, 2.4], [HW - 0.03, -4, -Math.PI / 2, 3.4, 2.4], [HW - 0.03, 4, -Math.PI / 2, 3.4, 2.4]],
+    // 양쪽 벽에 큰 창 세 칸씩 (판벽 위 ~ 천장 아래)
+    windows: [-6, 0, 6].flatMap((z) => [[-HW + 0.03, z, Math.PI / 2, 5, 3.6], [HW - 0.03, z, -Math.PI / 2, 5, 3.6]]),
   });
   const seats = [];
   const rows = [[-6.4, 0], [-2.4, Math.PI], [2.0, 0], [6.0, Math.PI]];
@@ -1215,7 +1219,7 @@ export function buildRoom(loc) {
     cg.strokeStyle = 'rgba(120, 80, 30, 0.35)'; cg.lineWidth = 3;
     for (let i = 0; i <= w; i += 64) { cg.beginPath(); cg.moveTo(i, 0); cg.lineTo(i, h); cg.stroke(); cg.beginPath(); cg.moveTo(0, i); cg.lineTo(w, i); cg.stroke(); }
   }, [4, 4]);
-  const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 1.8, 1.4]], doorW: 1.8 });
+  const { floor, door } = roomShell(g, loc, { HW, HD, CEIL, floorMap: jangpan, windows: [[-HW + 0.03, -0.4, Math.PI / 2, 3.2, 1.9]], doorW: 1.8 });
   // 경상(낮은 책상), 책, 등, 찻잔
   const desk = new THREE.Group();
   desk.position.set(0, 0, -1.55);

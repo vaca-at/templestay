@@ -409,3 +409,6 @@ body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
 .options .panel-head h2 { font-size: 18px; }
 @media (max-width: 520px) { #actions { gap: 4px; } #actions .act { min-width: 46px; padding: 0 8px; } }
 .dress-note { margin: 0; padding: 7px 11px; border-radius: 10px; background: var(--jade-soft); color: #1f4d44; font-size: 12px; font-weight: 600; line-height: 1.45; }
+
+/* 상황 단추는 오른쪽 가운데에 세로 한 세트 (하단에는 동작만) — 법당: 내 방으로 · 일어서기, 내 방: 법당으로 · 족자 고르기 */
+#context-btns { left: auto; right: max(12px, env(safe-area-inset-right)); top: 50%; bottom: auto; transform: translateY(-50%); flex-direction: column; align-items: flex-end; gap: 6px; }

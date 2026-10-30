@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   LOCATIONS, CHAR_TYPES, OUTFITS, ACCESSORIES, SKIN_TONES, ACTIONS, SERVER_COUNT, SERVER_CAP, GENDERS,
-  ACTIVITIES, DEFAULT_SCHEDULE, SCENES, BUDDHAS, randomName, defaultLook,
+  ACTIVITIES, DEFAULT_SCHEDULE, SCENES, BUDDHAS, randomName, defaultLook, isOldAutoName,
 } from './data.js';
 import { PETS } from './blocky.js';
 import { Avatar } from './avatar.js';
@@ -70,6 +70,8 @@ resize();
 // 처음 온 사람도 기본 캐릭터로 바로 들어간다 (꾸미기는 나중에)
 let profile = store.get('profile', null);
 if (!profile) { profile = { name: randomName(), look: defaultLook() }; store.set('profile', profile); }
+// 예전 낱말로 저절로 지어진 법명은 지금 낱말로 한 번 바꿔 줘요 (직접 지은 이름은 그대로)
+if (isOldAutoName(profile.name)) { profile.name = randomName(); store.set('profile', profile); }
 profile.look = { ...defaultLook(), ...profile.look };
 if (!CHAR_TYPES.some((t) => t.id === profile.look.type)) profile.look.type = defaultLook().type;
 
@@ -504,7 +506,7 @@ function updateSchedChip() {
   $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
   $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
   const off = b && S.schedule.auto && !S.autoAct && ACTIVITIES[b.act].scene;
-  $('#btn-resume').hidden = !off;
+  $('#btn-resume').hidden = !off || (S.scene === 'room' && ACTIVITIES[b.act].scene === 'in');   // 내 방의 [법당으로]와 겹치지 않게
   if (off) $('#btn-resume .lbl').textContent = `${SCENES[ACTIVITIES[b.act].scene].name}으로`;
 }
 
@@ -711,6 +713,7 @@ function updateHud() {
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
   $('#btn-stand').hidden = S.seat == null || S.scene === 'room';
   $('#btn-scroll').hidden = S.scene !== 'room';
+  $('#btn-hall').hidden = S.scene !== 'room';
   document.querySelectorAll('#scene-bar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === S.scene)));
 }
 
@@ -1191,6 +1194,7 @@ $('#nick-dice').onclick = () => { $('#nick').value = randomName(); };
 $('#creator-done').onclick = finishCreator;
 $('#btn-menu').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#btn-stand').onclick = () => { pauseAuto(); standUp(); };
+$('#btn-hall').onclick = () => { pauseAuto(); goScene('in'); };   // 내 방: [법당으로] [족자 고르기] 한 세트
 $('#btn-wish').onclick = openWish;
 $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivity(b.act); };
 $('#sched-chip').onclick = openSched;

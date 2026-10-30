@@ -39,13 +39,15 @@ function nameTag(text, mine) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 112;
   const g = c.getContext('2d');
-  g.font = '600 46px "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
-  const w = Math.min(500, g.measureText(text).width + 56);
+  // 단추와 같은 반투명 먹색 + 고운바탕. 내 이름표는 조금 더 진하고 흰 테두리
+  g.font = '700 42px "Gowun Batang", "Nanum Myeongjo", serif';
+  const w = Math.min(500, g.measureText(text).width + 52);
   const x = (512 - w) / 2;
-  g.fillStyle = mine ? 'rgba(126, 74, 34, 0.82)' : 'rgba(30, 28, 26, 0.5)';
+  g.fillStyle = mine ? 'rgba(18, 16, 15, 0.78)' : 'rgba(18, 16, 15, 0.55)';
   g.beginPath();
-  if (g.roundRect) g.roundRect(x, 18, w, 76, 38); else g.rect(x, 18, w, 76);
+  if (g.roundRect) g.roundRect(x, 20, w, 72, 22); else g.rect(x, 20, w, 72);
   g.fill();
+  if (mine) { g.strokeStyle = 'rgba(255, 255, 255, 0.85)'; g.lineWidth = 4; g.stroke(); }
   g.fillStyle = '#fffaf0';
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(text, 256, 58);
