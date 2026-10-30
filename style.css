@@ -330,20 +330,43 @@ body:not(.admin) .place .stay { display: none !important; }
 .relic-arrow .lbl { font-size: 26px; line-height: 1; }
 .relic-arrow { border: 1px solid var(--line); }
 
-/* 단추 최소화: 위 왼쪽 칩 하나 · 위 오른쪽 아이콘 둘 · 장소 줄은 왼쪽 장소 단추 옆에서만, 모두 반투명 먹색 */
-#design-chip, #sched-chip { display: none !important; }
-#server-chip, .hud-right .icon-btn, #context-btns .ctx { background: rgba(18, 16, 15, .55); color: #fff; border-color: rgba(255, 255, 255, .14); box-shadow: none; }
-#server-chip .cap, .hud-right .icon-btn .cap, #context-btns .ctx .cap { display: none; }
-#server-chip .lbl { display: flex; gap: 6px; align-items: baseline; }
-#server-chip #hud-server { font-size: 12px; opacity: .75; }
-#server-chip .lbl::after { content: "▾"; font-size: 11px; opacity: .7; }
+/* 단추 최소화 · 통일: 모든 단추는 반투명 먹색 + 고운바탕, 글은 짧게.
+   위 왼쪽 칩은 없애고(디자인 · 서버는 왼쪽 위치 단추), 위 오른쪽은 소리 · 메뉴 아이콘 둘, 장소 줄은 왼쪽 위 세로로 */
+#server-chip, #design-chip, #sched-chip { display: none !important; }
+#hud button, #hud .toast, #menu { font-family: var(--display); }
+.hud-right .icon-btn, #context-btns .ctx, #scene-bar, #welcome, #menu, #pick-pop { background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; }
+.hud-right .icon-btn .cap, #context-btns .ctx .cap { display: none; }
 .hud-right .icon-btn { width: 44px; height: 44px; padding: 0; place-items: center; align-content: center; border-radius: 14px; }
 #context-btns { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 70px); }
-#context-btns .ctx { padding: 8px 16px; font-size: 13.5px; font-family: var(--display); }
-#scene-bar { display: none; }
-body.show-scenes #scene-bar { display: grid; left: calc(max(12px, env(safe-area-inset-left)) + 62px); top: 50%; bottom: auto; transform: translateY(-50%); gap: 4px; padding: 6px; border-radius: 16px; background: rgba(18, 16, 15, .72); border-color: rgba(255, 255, 255, .14); }
-body.show-scenes #scene-bar button { color: #fff; font-family: var(--display); font-weight: 700; padding: 9px 18px; }
-body.show-scenes #scene-bar button:hover:not([aria-pressed="true"]) { background: rgba(255, 255, 255, .12); }
-body.show-scenes #side-place { outline: 2px solid #fff; outline-offset: -2px; }
-/* 메뉴 맨 위: 시각 · 머문 시간, 새로고침 */
-#menu #hud-timer { display: flex; gap: 8px; align-items: baseline; justify-content: center; padding: 4px 0 6px; background: none; border: 0; box-shadow: none; }
+#context-btns .ctx { padding: 9px 18px; font-size: 14px; font-weight: 700; }
+/* 장소 줄: 왼쪽 위 세로 */
+#scene-bar { display: grid; left: max(12px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top)); bottom: auto; transform: none; gap: 2px; padding: 4px; border-radius: 14px; }
+#scene-bar button { color: #fff; font-weight: 700; padding: 8px 12px; font-size: 14px; }
+#scene-bar button:hover:not([aria-pressed="true"]) { background: rgba(255, 255, 255, .12); }
+/* 알림은 위 가운데로 (왼쪽 위는 장소 줄 자리) */
+#toasts { left: 50%; transform: translateX(-50%); top: max(12px, env(safe-area-inset-top)); justify-items: center; }
+#toasts .toast { justify-self: center; }
+/* 왼쪽 도형 단추는 장소 줄 아래 */
+#side-btns { top: calc(max(12px, env(safe-area-inset-top)) + 192px); transform: none; }
+@media (pointer: coarse) { #side-btns { top: calc(max(12px, env(safe-area-inset-top)) + 192px); } }
+/* 위치 단추 옆 작은 창: 디자인 이름 · 서버 번호만 */
+#pick-pop { display: none; position: absolute; z-index: 20; left: calc(max(12px, env(safe-area-inset-left)) + 62px); top: calc(max(12px, env(safe-area-inset-top)) + 192px); width: 224px; padding: 10px; border-radius: 14px; gap: 6px; background: rgba(18, 16, 15, .78); }
+body.show-pick #pick-pop { display: grid; }
+body.show-pick #side-place { outline: 2px solid #fff; outline-offset: -2px; }
+#pick-pop > b { font-size: 12px; opacity: .7; }
+.pick-row { display: grid; gap: 4px; }
+.pick-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+#pick-pop button, #welcome .small-btn { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px; padding: 7px 10px; font-weight: 700; }
+#pick-pop button:hover, #welcome .small-btn:hover { background: rgba(255, 255, 255, .2); }
+#pick-pop button[aria-pressed="true"] { background: var(--jade); border-color: var(--jade); }
+.pick-grid button { padding: 6px 0 !important; }
+/* 환영 창: 한 줄 인사 + 단추 셋 */
+#welcome { width: auto; padding: 14px 18px; justify-items: center; }
+#welcome b { font-size: 16px; }
+#welcome .row { justify-content: center; }
+/* 메뉴: 먹색 바탕, 맨 위 시각 · 머문 시간 */
+#menu button:hover { background: rgba(255, 255, 255, .1); }
+#menu .cap { color: rgba(255, 255, 255, .6); }
+.menu-links { border-top-color: rgba(255, 255, 255, .15); color: rgba(255, 255, 255, .6); }
+#menu #hud-timer { display: flex; gap: 8px; align-items: baseline; justify-content: center; padding: 4px 0 6px; background: none; border: 0; }
+#menu #hud-timer small { color: rgba(255, 255, 255, .6); }

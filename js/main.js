@@ -497,20 +497,6 @@ function schedTick() {
 }
 setInterval(schedTick, 5000);
 
-// "산보 시간이니 마당으로 갈까요?" 환영 창이 떠 있으면 닫힌 뒤에 물어봐요
-let askBlock = null;
-function askSched(b) {
-  askBlock = b;
-  if (!$('#welcome').hidden || !store.get('welcomed', false)) return;
-  const def = ACTIVITIES[b.act], place = SCENES[def.scene].name;
-  $('#sched-ask-t').textContent = `${b.label || def.name} 시간이니 ${place}으로 갈까요?`;
-  $('#sched-ask-go .cap').textContent = `${b.start}–${b.end} · ${place}에서 ${def.name}`;
-  $('#sched-ask').hidden = false;
-  $('#btn-resume').hidden = true;
-}
-$('#welcome').addEventListener('click', (e) => { if (e.target.closest('button') && askBlock) setTimeout(() => askBlock && askSched(askBlock)); });
-$('#sched-ask-go').onclick = () => { $('#sched-ask').hidden = true; const b = askBlock; askBlock = null; if (b && currentBlock() === b) applyActivity(b.act); };
-$('#sched-ask-stay').onclick = () => { $('#sched-ask').hidden = true; askBlock = null; updateSchedChip(); };
 
 function updateSchedChip() {
   const b = currentBlock();
@@ -518,8 +504,8 @@ function updateSchedChip() {
   $('#sched-now').textContent = b ? `지금 · ${b.label || ACTIVITIES[b.act].name} ${b.start}–${b.end}` : n ? `다음 · ${n.start} ${n.label || ACTIVITIES[n.act].name}` : '오늘 일정 끝';
   $('#sched-cap').textContent = !S.schedule.auto ? '자동으로 움직이기 꺼짐 · 눌러서 고치기' : S.autoAct ? '하루 일정대로 움직이는 중 · 눌러서 고치기' : '눌러서 하루 일정 고치기';
   const off = b && S.schedule.auto && !S.autoAct && ACTIVITIES[b.act].scene;
-  $('#btn-resume').hidden = !off || !$('#sched-ask').hidden;   // "갈까요?" 창이 떠 있으면 겹치지 않게
-  if (off) $('#btn-resume .cap').textContent = `${ACTIVITIES[b.act].name} · ${SCENES[ACTIVITIES[b.act].scene].name}으로 가요`;
+  $('#btn-resume').hidden = !off;
+  if (off) $('#btn-resume .lbl').textContent = `${SCENES[ACTIVITIES[b.act].scene].name}으로`;
 }
 
 function renderSchedEditor(draft) {
@@ -1210,9 +1196,15 @@ $('#btn-resume').onclick = () => { const b = currentBlock(); if (b) applyActivit
 $('#sched-chip').onclick = openSched;
 $('#design-chip').onclick = showPlaces;
 // 왼쪽 도형 단추
-// 장소 단추: 바로 옆에 마당 · 법당 · 공양간 · 내 방이 펼쳐져요 (다른 곳을 누르면 닫혀요)
-$('#side-place').onclick = () => document.body.classList.toggle('show-scenes');
-addEventListener('pointerdown', (e) => { if (!e.target.closest('#scene-bar, #side-place')) document.body.classList.remove('show-scenes'); });
+// 위치 단추: 바로 옆에 디자인 이름 3개와 서버 번호만 (설명 · 그림 없이). 고르거나 다른 곳을 누르면 닫혀요
+function togglePick() {
+  if (!document.body.classList.toggle('show-pick')) return;
+  $('#pick-design').innerHTML = LOCATIONS.map((l) => `<button data-place="${l.id}" aria-pressed="${S.loc?.id === l.id}">${l.name}</button>`).join('');
+  $('#pick-server').innerHTML = Array.from({ length: SERVER_COUNT }, (_, i) => `<button data-server="${i + 1}" aria-pressed="${S.server === i + 1}">${i + 1}</button>`).join('');
+}
+$('#side-place').onclick = togglePick;
+addEventListener('pointerdown', (e) => { if (!e.target.closest('#pick-pop, #side-place')) document.body.classList.remove('show-pick'); });
+$('#pick-pop').addEventListener('click', (e) => { if (e.target.closest('button')) document.body.classList.remove('show-pick'); });
 $('#side-char').onclick = openCreator;
 $('#side-sched').onclick = openSched;
 $('#side-wish').onclick = () => { if (S.scene === 'in') openWish(); else toast('소원은 법당 안 복전함에서 올려요'); };
