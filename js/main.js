@@ -1429,6 +1429,7 @@ async function demo(which) {
   if (params.has('sched')) openSched();
   if (params.has('record')) openRecords();
   if (params.has('relic')) openRelics();
+  if (params.get('act') === 'bae108') { $('#bae-counter').innerHTML = '<small>108배</small><b>12</b><small>/ 108</small>'; $('#bae-counter').hidden = false; }
   updateHud();
   updateSchedChip();
 }
