@@ -228,14 +228,18 @@ setInterval(() => { if (S.active) scene.environmentIntensity = ENV * applyDaylig
 
 // 정각마다 범종 한 번 (소리를 켠 분만 들려요)
 let bellHour = null;
-setInterval(() => {
+// 다른 창에 있으면 타이머가 늦게 돌아서, 정각부터 2분 안이면 울려요 (창으로 돌아온 순간에도 확인)
+function hourBell() {
   const k = new Date(Date.now() + 9 * 3600e3);
-  if (k.getUTCMinutes() !== 0 || bellHour === k.getUTCHours()) return;
+  if (k.getUTCMinutes() > 1 || bellHour === k.getUTCHours()) return;
+  if (document.hidden) return;   // 안 보이는 창에서는 소리가 막혀요. 돌아오면 그때 울려요
   bellHour = k.getUTCHours();
   if (S.mode !== 'world' || !sound.on) return;
   bigBell();
   toast(`${bellHour % 12 || 12}시, 범종이 울려요`);
-}, 5000);
+}
+setInterval(hourBell, 5000);
+document.addEventListener('visibilitychange', hourBell);
 
 // ───────── 내 캐릭터 ─────────
 function makeMe() {

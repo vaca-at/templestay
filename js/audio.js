@@ -202,8 +202,14 @@ export function setMusic(id) {
 export const music = () => musicId;
 
 // 정각 범종: 음악과 따로, 조금 낮은 대종 소리로 한 번
+// 휴대폰 · 노트북 스피커는 100Hz 아래를 거의 못 내서, 낮은 울림(맥놀이)에 '댕' 하는 타격음과 중간 배음을 얹어요.
+// 종이 울리는 동안 법당 음악은 잠깐 작게
+const JONG_STRIKE = [[2.76, 0.22, 2.2], [3.9, 0.16, 1.4], [5.4, 0.1, 0.9], [7.1, 0.06, 0.5]];
 export function bigBell(vol = 1) {
   if (!sound.on) return;
   ensure();
-  ring(ctx.currentTime + 0.05, 96, JONG, 0.9 * vol, master, 0.01);
+  const t = ctx.currentTime + 0.05;
+  ring(t, 140, JONG, 1.5 * vol, master, 0.01);
+  ring(t, 140, JONG_STRIKE, 1.2 * vol, master, 0.003);
+  if (musicGain) { musicGain.gain.setTargetAtTime(0.18, t, 0.3); musicGain.gain.setTargetAtTime(0.6, t + 9, 2); }
 }
