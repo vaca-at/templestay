@@ -1,13 +1,29 @@
 // 관리자: 화면 아래 투명한 버튼 → 비밀번호 → 방문 수·지금 접속·서버별 인원.
+// 로그인하면 서버가 30일짜리 입장권을 주고, 이 기기에는 비밀번호 대신 입장권만 남는다 ("나가기"로 지움).
 // 관리자로 들어가 있는 동안만 body 에 .admin 을 붙여서, 숨겨 둔 인원·누적 숫자가 보이게 한다.
 // 방문은 기기마다 하루 한 번 숫자만 센다 (누가 왔는지는 남기지 않음).
 import { RELAY_URL, LOCATIONS } from './data.js';
 
 const $ = (s) => document.querySelector(s);
-const KEY = 'maeum:admin';
+const KEY = 'maeum:adminToken';
 const today = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const getPw = () => { try { return sessionStorage.getItem(KEY) || ''; } catch { return ''; } };
-const setPw = (v) => { try { v ? sessionStorage.setItem(KEY, v) : sessionStorage.removeItem(KEY); } catch {} };
+// 입장권: "만료시각.서명". 만료가 지났으면 없는 것으로 본다
+const getPw = () => {
+  try {
+    const t = localStorage.getItem(KEY) || '';
+    if (t && +t.split('.')[0] < Date.now()) { localStorage.removeItem(KEY); return ''; }
+    return t;
+  } catch { return ''; }
+};
+const setPw = (v) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {} };
+try { sessionStorage.removeItem('maeum:admin'); } catch {} // 예전 방식(비밀번호를 탭에 저장)은 지운다
+
+async function login(pw) {
+  const r = await fetch(`${RELAY_URL}/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+  if (r.status === 401) throw new Error('wrong');
+  if (!r.ok) throw new Error('server');
+  return (await r.json()).token;
+}
 
 // 방문 세기
 if (RELAY_URL && !new URLSearchParams(location.search).has('demo')) {
@@ -75,8 +91,9 @@ $('#admin-form').addEventListener('submit', async (e) => {
   if (!pw) return;
   $('#admin-err').textContent = '';
   try {
-    render(await fetchStats(pw));
-    setPw(pw);
+    const token = await login(pw);
+    render(await fetchStats(token));
+    setPw(token);
     setAdmin(true);
     $('#admin-pw').value = '';
     $('#admin-login').hidden = true;
@@ -89,5 +106,5 @@ $('#admin-form').addEventListener('submit', async (e) => {
 // 새로고침: 화면을 처음부터 다시 불러온다
 $('#btn-reload')?.addEventListener('click', () => location.reload());
 
-// 이 탭에서 이미 관리자로 들어와 있으면 그대로 유지
+// 이 기기에 입장권이 있으면 열 때부터 관리자로 (30일 동안, "나가기"를 누르기 전까지)
 if (getPw()) setAdmin(true);

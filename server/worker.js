@@ -25,17 +25,24 @@ export default {
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(req);
     }
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: { ...cors(req), 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '86400' } });
+      return new Response(null, { headers: { ...cors(req), 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Credentials': 'false', 'Access-Control-Max-Age': '86400' } });
     }
     // 방문: 기기마다 하루 한 번 숫자만 센다 (누가 왔는지는 남기지 않음)
     if (url.pathname === '/visit' && req.method === 'POST') {
       await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/visit', { method: 'POST' });
       return json(req, { ok: true });
     }
-    // 관리자: 비밀번호가 맞을 때만 방문 수와 접속 인원을 보여 준다
+    // 관리자 로그인: 비밀번호가 맞으면 30일짜리 입장권을 준다 (기기에는 비밀번호 대신 입장권만 남는다)
+    if (url.pathname === '/admin/login' && req.method === 'POST') {
+      const body = await req.json().catch(() => ({}));
+      if (!env.ADMIN_PASSWORD || !(await same(String(body.password || '').trim(), env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
+      const exp = Date.now() + 30 * 24 * 3600 * 1000;
+      return json(req, { token: `${exp}.${await sign(String(exp), env.ADMIN_PASSWORD.trim())}`, exp });
+    }
+    // 관리자: 입장권(또는 비밀번호)이 맞을 때만 방문 수와 접속 인원을 보여 준다
     if (url.pathname === '/admin/stats') {
-      const auth = req.headers.get('Authorization') || '';
-      if (!env.ADMIN_PASSWORD || !(await same(auth.replace(/^Bearer /, '').trim(), env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
+      const auth = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
+      if (!env.ADMIN_PASSWORD || !(await adminOk(auth, env.ADMIN_PASSWORD.trim()))) return json(req, { error: 'unauthorized' }, 401);
       const stats = await env.STATS.get(env.STATS.idFromName('stats')).fetch('https://stats/read').then((r) => r.json());
       const rooms = {};
       await Promise.all(['hall'].flatMap((loc) => Array.from({ length: 12 }, (_, i) =>
@@ -63,6 +70,18 @@ async function same(a, b) {
   let d = 0;
   for (let i = 0; i < x.length; i++) d |= x[i] ^ y[i];
   return d === 0;
+}
+
+// 입장권 서명: 비밀번호를 열쇠로 한 HMAC. 비밀번호를 바꾸면 예전 입장권은 모두 무효가 된다
+async function sign(msg, secret) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)));
+  return [...mac].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function adminOk(auth, secret) {
+  const m = /^(\d{13})\.([0-9a-f]{64})$/.exec(auth);
+  if (m) return +m[1] > Date.now() && (await same(m[2], await sign(m[1], secret)));
+  return same(auth, secret); // 예전처럼 비밀번호를 바로 보내도 된다
 }
 
 // 한국 시간 기준 날짜
