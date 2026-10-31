@@ -32,7 +32,12 @@
 - **소원 비공개 배포**: 연등에는 색·법명만, 소원 글은 올린 기기에만. 서버가 글 없는 연등을 받아야 하니 **`server` 먼저 `npx wrangler deploy`, 그다음 사이트 push**
 - **법당 음악 귀로 듣고 다듬기**: 다섯 곡 모두 Web Audio 합성(`js/audio.js` 의 `STEPS`). 1·2번 목소리는 합성이라 웅얼거리는 소리에 가까움
 - **관리자 로그인은 구글로만**: 비밀번호 로그인 칸과 `/admin/login` 을 뺐음. **`server` 먼저 `npx wrangler deploy`, 그다음 사이트 push**
-- **`ADMIN_PASSWORD` 바꾸기**: 대화에 노출됐음. 이제 입장권 서명용으로만 쓰니 길고 무작위한 값으로. `server` 폴더에서 `npx wrangler secret put ADMIN_PASSWORD` (바꾸면 기존 로그인은 풀림 → 구글로 다시 로그인)
+- **`ADMIN_PASSWORD`**: 노출된 적 없음 (예전 메모의 '노출'은 컴퓨터를 옮기며 생긴 착오). 이제 사람이 입력하는 비밀번호가 아니라 서버가 관리자 입장권에 도장을 찍는 열쇠로만 써요. 급하지 않고, 원하면 언젠가 `server` 폴더에서 `npx wrangler secret put ADMIN_PASSWORD` 로 길고 무작위한 값으로 바꾸기 (바꾸면 기존 로그인은 풀림 → 구글로 다시 로그인)
+
+## 관리자 로그인 (정해진 것)
+- 관리자 로그인은 **구글 로그인(Firebase Authentication)만** 써요. 비밀번호 로그인은 만들지 않아요.
+- 관리자 계정은 **bellachord@gmail.com** 하나예요.
+- 이용약관 · 개인정보 처리방침에 적힌 연락처 메일(anstjsdud@sen.go.kr, 202609vibe@gmail.com)은 문의 받는 주소일 뿐이에요. 연락처가 달라도 로그인은 늘 bellachord@gmail.com 으로 해요.
 - 신고 테스트 한 건이 관리자 현황판에 남아 있음 → "확인했어요(지우기)"
 - 발우공양 10분 시계와 "공양을 마쳤어요" 창: 모양(`index.html`, `style.css`)만 있고 동작 코드 없음
 
