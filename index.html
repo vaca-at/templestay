@@ -107,6 +107,7 @@
     <span id="hud-timer" title="머문 시간"></span>
     <button data-menu="guide"><span class="lbl">사용 설명서</span><small class="cap">처음이라면 여기부터 · 단추·장소·동작 모두 안내</small></button>
     <button data-menu="settings"><span class="lbl">개인 설정</span><small class="cap">내 기록 · 내 사진 · 계정 · 환경 설정</small></button>
+    <button type="button" onclick="document.getElementById('menu').hidden=true;window.moontrHelp&&moontrHelp.open()"><span class="lbl">문의하기</span><small class="cap">궁금한 점을 남기면 AI 가 먼저 답하고, 관리자도 답해요</small></button>
     <button data-menu="report"><span class="lbl">신고하기</span><small class="cap">욕설·불쾌한 법명이나 소원을 알려 주세요</small></button>
     <p class="menu-links"><button type="button" class="menu-link" data-menu="credit">자료 출처</button> · <a href="terms.html" target="_blank" rel="noopener">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener"><b>개인정보처리방침</b></a></p>
   </div>
@@ -383,5 +384,6 @@
 <script type="module" src="js/share.js"></script>
 <script type="module" src="js/report.js"></script>
 <script type="module" src="js/tip.js"></script>
+<script src="https://moontr.site/help.js" data-app="templestay" defer></script>
 </body>
 </html>
