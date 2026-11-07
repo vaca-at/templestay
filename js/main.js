@@ -898,7 +898,7 @@ function updateHud() {
   if (!S.loc || S.mode !== 'world') return;
   $('#hud-place').textContent = `큰법당 · ${S.loc.name}`;
   $('#design-name').textContent = S.loc.name;
-  $('#hud-server').textContent = S.server ? `· 서버 ${S.server}` : '· 서버 찾는 중';
+  $('#hud-server').textContent = S.server ? `서버 ${S.server}` : '서버 찾는 중';
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
   // 동시접속자: 지금 이 서버에 함께 있는 분 (모두에게 보임)
@@ -907,7 +907,8 @@ function updateHud() {
   if (!$('#online-list').hidden) renderOnline();
   // 오른쪽 상황 단추는 장소마다 두 개: 법당 [내 방으로][일어서기] · 마당 [법당으로][산보하기]
   // 공양간 [법당으로][일어서기] · 내 방 [법당으로][족자 고르기]
-  $('#btn-go .lbl').textContent = S.scene === 'in' ? '내 방으로' : '법당으로';
+  $('#btn-go .lbl').textContent = '법당으로';
+  $('#btn-go').hidden = S.scene === 'in';   // 법당 안에서는 '내 방으로' 단추를 두지 않아요 (장소 줄에서 내 방을 눌러요)
   $('#btn-yard').hidden = S.scene !== 'room';
   $('#btn-stand').hidden = S.seat == null || !['in', 'meal'].includes(S.scene);
   $('#btn-sanbo').hidden = S.scene !== 'out';
@@ -1547,7 +1548,7 @@ addEventListener('keydown', (e) => {
   const btn = n && document.querySelectorAll('#actions .act')[n - 1];
   if (btn) { e.preventDefault(); btn.click(); }
 });
-$('#server-chip').onclick = showPlaces;   // 위 왼쪽 칩 하나: 누르면 디자인 고르기 (서버는 메뉴에서)
+$('#server-chip').onclick = () => { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; };   // 위 왼쪽 서버 칩: 누르면 서버 고르기
 $('#server-refresh').onclick = () => { net.refreshCounts(); renderServerGrid(); toast('인원을 새로 셌어요'); };
 $('#btn-sound').onclick = () => { setSound(!sound.on); store.set('muted', !sound.on); syncSoundBtn(); };
 

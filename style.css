@@ -570,3 +570,18 @@ html body .typing-sheet { width: min(720px, calc(100vw - 32px)); max-width: none
 .g-empty { visibility: hidden; }
 .g0 { background: #ece6da; } .g1 { background: var(--grass1); } .g2 { background: var(--grass2); } .g3 { background: var(--grass3); } .g4 { background: var(--grass4); }
 :root { --grass1: #c6e3cf; --grass2: #8cc7a0; --grass3: #4f9a6e; --grass4: #2f6f4e; }
+
+/* 2026-11-08 단추 다시 놓기: 맨 윗줄 왼쪽에 [접속 인원][서버 칩] 딱 붙여서, 장소 줄은 그 아래로 조금 내리고,
+   꾸미기 등 도형 단추 6개는 오른쪽으로 (왼쪽 아래 조이스틱과 겹치지 않게) */
+.hud-top { flex-direction: row !important; align-items: flex-start; }
+.hud-left { position: relative; flex-wrap: nowrap; gap: 6px; }
+.hud-right { position: static; justify-content: flex-end; flex-wrap: nowrap; }
+#hud #server-chip { display: inline-flex !important; align-items: center; height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(18, 16, 15, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .14); box-shadow: none; font-size: 14px; font-weight: 700; }
+#server-chip #hud-place, #server-chip .cap { display: none; }
+#online-list { left: 0; right: auto; }
+#scene-bar { top: calc(max(12px, env(safe-area-inset-top)) + 58px); }
+#toasts { top: calc(max(12px, env(safe-area-inset-top)) + 58px); }
+#side-btns { left: auto; right: max(12px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + 58px); transform: none; }
+@media (pointer: coarse) { #side-btns { top: calc(max(12px, env(safe-area-inset-top)) + 58px); } }
+#pick-pop { left: auto; right: calc(max(12px, env(safe-area-inset-right)) + 62px); top: calc(max(12px, env(safe-area-inset-top)) + 58px); }
+@media (max-width: 760px) { #hud #server-chip { height: 36px; padding: 0 9px; font-size: 12.5px; } #scene-bar, #toasts, #side-btns, #pick-pop { top: calc(max(12px, env(safe-area-inset-top)) + 50px) !important; } }
