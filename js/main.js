@@ -938,7 +938,7 @@ function renderServerGrid() {
   if (!S.loc) return;
   const counts = net.counts();
   $('#server-title').textContent = '큰법당 서버';
-  $('#server-now').textContent = S.server ? `현재 · 큰법당 서버 ${S.server}` : '서버를 찾는 중이에요';
+  $('#server-now').textContent = S.server ? `지금 내 자리 · 큰법당 서버 ${S.server} · ${SCENES[S.scene]?.name || ''} (${S.loc?.name || ''})` : '서버를 찾는 중이에요';
   let html = '';
   for (let i = 1; i <= SERVER_COUNT; i++) {
     const c = counts[i] || 0;
@@ -1484,6 +1484,7 @@ document.addEventListener('click', (e) => {
     $('#menu').hidden = true;
     const m = t.dataset.menu;
     if (m === 'guide') window.open('guide.html', '_blank', 'noopener');
+    if (m === 'server') { net.refreshCounts(); renderServerGrid(); $('#server-modal').hidden = false; }
     if (m === 'char') openCreator();
     if (m === 'record') openSettings('rec');
     if (m === 'relic') openRelics();
