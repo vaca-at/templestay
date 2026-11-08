@@ -942,12 +942,13 @@ function mirrorWater(geo, tint = '#5d7464', opacity = 0.35) {
 export function buildInterior(loc) {
   const c = loc.interior;
   const g = new THREE.Group();
-  // 불상 쪽(뒤) 16, 입구 쪽(앞) 20. 뒤쪽 넓은 마루는 걷기 · 108배 자리
-  const HW = 13, HD = 16, HF = 20, CEIL = 9;
+  // 가로형 아담한 법당 (2026-11-08): 가로 26m · 앞뒤 18.5m. 불상 쪽(뒤) 16, 입구 쪽(앞) 2.5
+  // 불상 앞에 방석 두 줄(20자리), 그 뒤 입구까지 조금 걷는 마루
+  const HW = 13, HD = 16, HF = 2.5, CEIL = 9;
   const L = HD + HF, ZC = (HF - HD) / 2;
 
   const floorTex = woodFloor(c.floor);
-  floorTex.repeat.set(6, 9);
+  floorTex.repeat.set(6, 4.6);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, L), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55, metalness: 0.05 }));
   floor.rotation.x = -Math.PI / 2; floor.position.z = ZC; floor.receiveShadow = true; g.add(floor);
 
@@ -969,7 +970,7 @@ export function buildInterior(loc) {
   // 창: 기둥 사이를 거의 다 쓰는 큰 창(판벽 위 ~ 들보 아래). 긴 파노라마 한 장이 창을 따라 이어져요
   const pano = panoramaTex(loc);
   const frameMat = new THREE.MeshStandardMaterial({ map: openLattice(c.pillar), transparent: true, alphaTest: 0.4 });
-  const BAYS = [[-14, 3.2], [-7.5, 8], [1.5, 8], [10.5, 8], [17.5, 4]];   // [가운데 z, 너비]
+  const BAYS = [[-14.1, 3.0], [-8.6, 6.0], [-1.6, 6.0]];   // [가운데 z, 너비] 기둥 사이마다 큰 창
   const WY = 4.55, WH = 6.1;
   for (const s of [-1, 1]) for (const [z, w] of BAYS) {
     // 불상 바로 옆 칸은 창 대신 비천 벽화 (양쪽이 마주 보며 날아요)
@@ -989,7 +990,7 @@ export function buildInterior(loc) {
   const pillarMat = mat(c.pillar);
   const dc = dancheong(c.beam, c.accent); dc.wrapS = THREE.RepeatWrapping; dc.repeat.set(5, 1);
   const beamMat = new THREE.MeshStandardMaterial({ map: dc, roughness: 0.7 });
-  const PZ = [-12, -3, 6, 15];
+  const PZ = [-12, -5.2, 1.6];
   for (const x of [-11.7, 11.7]) for (const z of PZ) {
     const p = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, CEIL, 18), pillarMat);
     p.position.set(x, CEIL / 2, z); p.castShadow = true; g.add(p);
@@ -1011,7 +1012,7 @@ export function buildInterior(loc) {
       cg.beginPath(); cg.ellipse(128 + Math.cos(a) * 42, 128 + Math.sin(a) * 42, 36, 16, a, 0, Math.PI * 2); cg.fill();
     }
     cg.fillStyle = '#f2e7c9'; cg.beginPath(); cg.arc(128, 128, 22, 0, Math.PI * 2); cg.fill();
-  }, [9, 12]);
+  }, [9, 6]);
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, L), new THREE.MeshStandardMaterial({ map: ceilTex, roughness: 0.9 }));
   ceil.rotation.x = Math.PI / 2; ceil.position.set(0, CEIL, ZC); g.add(ceil);
 
@@ -1084,7 +1085,7 @@ export function buildInterior(loc) {
   const cushionMesh = new THREE.InstancedMesh(cushionGeo(1.15, 0.13), cushionMat('#6e2c27', '#c9a24a', '#e8b8a0'), cols.length * 2);
   const M = new THREE.Matrix4();
   for (let r = 0; r < 2; r++) for (const x of cols) {
-    const z = -5.6 + r * 2.0;
+    const z = -6.2 + r * 2.0;
     const id = cushions.length;
     M.makeTranslation(x, 0.065, z);
     cushionMesh.setMatrixAt(id, M);
@@ -1117,8 +1118,8 @@ export function buildInterior(loc) {
   const lanternRoot = new THREE.Group();
   g.add(lanternRoot);
   const lanternSlots = [];
-  for (let r = 0; r < 7; r++) for (let k = 0; k < 10; k++) {
-    lanternSlots.push(new THREE.Vector3(-9 + k * 2, 6.6 + ((k + r) % 2) * 0.25, -9 + r * 3.6));
+  for (let r = 0; r < 5; r++) for (let k = 0; k < 11; k++) {
+    lanternSlots.push(new THREE.Vector3(-10 + k * 2, 6.6 + ((k + r) % 2) * 0.25, -9 + r * 2.5));
   }
   const decoColors = ['#f08aa0', '#f2c45a', '#f6f2e8', '#9ad0a8', '#f2a05a'];
   const rr = rng(11);
@@ -1150,9 +1151,9 @@ export function buildInterior(loc) {
     flames,
     buddhaSlot,
     exitDoor,
-    spawn: new THREE.Vector3(0, 0, 15),
+    spawn: new THREE.Vector3(0, 0, -0.6),
     spawnRot: Math.PI,
-    exitZ: HF - 1.4,
+    exitZ: HF - 0.9,
     camDist: 4.2,
     camLookY: 1.8, // 불상이 커서 카메라 높이는 그대로 두고 시선만 조금 위로
     seats: cushions,

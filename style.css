@@ -221,7 +221,6 @@ body.calm #hud > :not(#toasts) { display: none !important; }
 body.admin #admin-btn { opacity: .5; }
 /* 방문 수·접속 인원·누적 숫자는 관리자에게만 */
 body:not(.admin) #hud-people,
-body:not(.admin) .server span,
 body:not(.admin) .server-note,
 body:not(.admin) .place .stay { display: none !important; }
 .menu-links { margin: 6px 0 2px; padding: 8px 14px 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-soft); }

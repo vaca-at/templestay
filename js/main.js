@@ -901,7 +901,7 @@ function updateHud() {
   if (!S.loc || S.mode !== 'world') return;
   $('#hud-place').textContent = `큰법당 · ${S.loc.name}`;
   $('#design-name').textContent = S.loc.name;
-  $('#hud-server').textContent = S.server ? `서버 ${S.server}` : '서버 찾는 중';
+  $('#hud-server').textContent = S.server ? `서버 ${S.server} ▾` : '서버 찾는 중';   // ▾ : 누르면 서버 10개 중에서 골라 옮겨요
   const here = S.scene === 'room' ? 1 : [...S.remotes.values()].filter((r) => r.st.s === S.scene).length + 1;
   $('#hud-people').textContent = `함께 ${S.remotes.size + 1}명 · ${SCENES[S.scene].name} ${here}명`;
   // 동시접속자: 지금 이 서버에 함께 있는 분 (모두에게 보임)
