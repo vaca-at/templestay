@@ -942,7 +942,7 @@ function mirrorWater(geo, tint = '#5d7464', opacity = 0.35) {
 export function buildInterior(loc) {
   const c = loc.interior;
   const g = new THREE.Group();
-  // 불상 쪽(뒤) 16, 입구 쪽(앞) 20. 방석 100개가 들어가도록 앞으로 길게 늘였다
+  // 불상 쪽(뒤) 16, 입구 쪽(앞) 20. 뒤쪽 넓은 마루는 걷기 · 108배 자리
   const HW = 13, HD = 16, HF = 20, CEIL = 9;
   const L = HD + HF, ZC = (HF - HD) / 2;
 
@@ -1078,12 +1078,12 @@ export function buildInterior(loc) {
   spot.target.position.set(0, 3, -13);
   g.add(spot, spot.target);
 
-  // 방석 100개 (10줄 × 가운데 통로 양쪽 5개씩). 한 번에 그리도록 InstancedMesh
+  // 방석 20개 (서버마다 20명): 불상 앞에 10개씩 두 줄 (가운데 통로 양쪽 5개씩). 뒤쪽 마루는 비워서 걷기 · 108배 자리로. 한 번에 그리도록 InstancedMesh
   const cushions = [];
   const cols = [-9.9, -7.85, -5.8, -3.75, -1.7, 1.7, 3.75, 5.8, 7.85, 9.9];
-  const cushionMesh = new THREE.InstancedMesh(cushionGeo(1.15, 0.13), cushionMat('#6e2c27', '#c9a24a', '#e8b8a0'), cols.length * 10);
+  const cushionMesh = new THREE.InstancedMesh(cushionGeo(1.15, 0.13), cushionMat('#6e2c27', '#c9a24a', '#e8b8a0'), cols.length * 2);
   const M = new THREE.Matrix4();
-  for (let r = 0; r < 10; r++) for (const x of cols) {
+  for (let r = 0; r < 2; r++) for (const x of cols) {
     const z = -5.6 + r * 2.0;
     const id = cushions.length;
     M.makeTranslation(x, 0.065, z);
@@ -1565,7 +1565,7 @@ function scroll(text, sub) {
 }
 
 // ───────── 공양간 (발우공양) ─────────
-// 두 줄씩 마주 보고 앉는 자리 4줄 × 15 = 60자리. 자리마다 앞에 발우 네 그릇
+// 가운데 한 줄에 10명씩 마주 보고 앉는 20자리 (서버마다 20명). 자리마다 앞에 발우 네 그릇
 export function buildMealHall(loc) {
   const g = new THREE.Group();
   const HW = 12, HD = 9, CEIL = 5.5;
@@ -1575,8 +1575,8 @@ export function buildMealHall(loc) {
     windows: [-6, 0, 6].flatMap((z) => [[-HW + 0.03, z, Math.PI / 2, 5, 3.6], [HW - 0.03, z, -Math.PI / 2, 5, 3.6]]),
   });
   const seats = [];
-  const rows = [[-6.4, 0], [-2.4, Math.PI], [2.0, 0], [6.0, Math.PI]];
-  const xs = []; for (let x = -10.5; x <= 10.51; x += 1.5) xs.push(x);
+  const rows = [[-2.0, 0], [2.0, Math.PI]];
+  const xs = []; for (let x = -6.75; x <= 6.76; x += 1.5) xs.push(x);
   const n = rows.length * xs.length;
   const cushion = new THREE.InstancedMesh(cushionGeo(1.0, 0.11), cushionMat('#4f5a4a', '#b89a5a', '#d8c8a0'), n);
   const bowl = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.1, 0.11, 16), mat('#4a2418', { roughness: 0.3 }), n * 4);
@@ -1638,8 +1638,8 @@ export function buildMealHall(loc) {
   bowl.castShadow = true;
   g.add(cushion, bowl, rice, soup, tofu, scallion, seaweed, heap, namul, doraji, sesame);
   // 마주 보는 두 줄 사이에 흰 천
-  for (const z of [-4.4, 4.0]) {
-    const cloth = new THREE.Mesh(new THREE.BoxGeometry(23, 0.02, 1.0), mat('#f3efe6'));
+  for (const z of [0]) {
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(15.5, 0.02, 1.0), mat('#f3efe6'));
     cloth.position.set(0, 0.012, z); cloth.receiveShadow = true; g.add(cloth);
   }
   // 앞쪽 벽: 작은 불단과 오관게 족자
